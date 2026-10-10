@@ -207,6 +207,9 @@ export async function whirlpoolTick(world: World, io: GameIO, hooks: TurnHooks):
       w.x = nx;
       w.y = ny;
       io.redrawMap();
+      // A party standing on its ship (X-it at sea) goes down with it, as a party aboard does. The Mac sank the ship
+      // under them and left them standing on the water, with no way off it.
+      if (w.x === world.x && w.y === world.y) return hooks.goWhirlpool();
       io.sound(Sound.Sink);
       io.printMessage(Msg.WhirlpoolSinks);
       io.print('\n');

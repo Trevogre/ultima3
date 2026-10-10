@@ -3,7 +3,7 @@ import { newWorld, FakeIO } from './helpers.ts';
 import { move, board, exit, look, enter, getDirection, PartyShape } from '../src/game/commands.ts';
 import { peerGem } from '../src/game/actions.ts';
 import { unlockToward } from '../src/game/interact.ts';
-import { endTurn, placeMoongates, type TurnHooks } from '../src/game/turn.ts';
+import { endTurn, placeMoongates, whirlpoolTick, type TurnHooks } from '../src/game/turn.ts';
 import { spawnMonster, moveMonsters, monsterCanEnter } from '../src/game/monsters.ts';
 import { MapValue } from '../src/game/tiles.ts';
 import { Location } from '../src/game/party.ts';
@@ -475,6 +475,31 @@ describe('walking into table entries that are not creatures', () => {
 });
 
 describe('the whirlpool', () => {
+  it('takes a party standing on its ship at sea, as one aboard, where the Mac left it on the water', async () => {
+    const world = newWorld();
+    const io = new FakeIO(world.resources);
+    // The party has left its frigate (X-it) a square east of the whirlpool, which is heading east.
+    world.current.tiles.fill(MapValue.Water);
+    Object.assign(world.whirlpool, { x: 30, y: 30, dx: 1, dy: 0 });
+    world.putXYVal(MapValue.Whirlpool, 30, 30);
+    world.putXYVal(MapValue.Frigate, 31, 30);
+    world.x = 31;
+    world.y = 30;
+    world.party.shape = PartyShape.OnFoot;
+    world.whirlpoolTimer = 1;
+    world.rng.range = () => 3; // no change of course this time
+    let taken = 0;
+    await whirlpoolTick(world, io, { ...noHooks, goWhirlpool: async () => void taken++ });
+    expect(taken).toBe(1);
+    // An empty ship elsewhere still just sinks.
+    world.x = 10;
+    world.putXYVal(MapValue.Frigate, 32, 30);
+    world.whirlpoolTimer = 1;
+    await whirlpoolTick(world, io, { ...noHooks, goWhirlpool: async () => void taken++ });
+    expect(taken).toBe(1);
+    expect(world.getXYVal(32, 30)).toBe(MapValue.Whirlpool);
+  });
+
   it('carries a ship to Ambrosia with the classic messages, every line within the message area', async () => {
     const world = newWorld();
     const io = new FakeIO(world.resources);
