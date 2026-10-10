@@ -529,6 +529,36 @@ Every release, with the desktop and Android downloads, is on the
 web version is updated with each release, so it runs the same game as the
 apps.
 
+### v1.0.41, October 10, 2026
+
+- Tips, in the Pause menu and the title's Settings: twelve short topics
+  on how the game works (first steps, levels, food, healing, casters,
+  chests, guilds, dungeons, fights, ships and horses, stats and saving),
+  none of them the quest's answers. A new game points to them once.
+- FX level and Music level dials in the settings turn the sound effects
+  and the music down, from 100% (as loud as ever, where everyone starts)
+  through 10% to Off. Each step is heard as it is taken.
+- The desktop and Android apps say when a newer release is out: the
+  title menu offers "Update (x.y.z)", which opens the release's page to
+  read what changed and download it. The app downloads nothing itself.
+- Added to Steam as a non-Steam game, the desktop app puts the box's art
+  in Steam's library: the portrait and wide capsules, and the demon
+  across the game's page. Steam shows them the next time it starts; art
+  you have set yourself is left alone.
+- While the game loads, the demon from the 1983 box fills the screen in
+  place of "Loading...".
+- The web version now changes only with a release, so it always runs the
+  same game as the apps.
+- Fixed: in controller mode, typing a name showed an empty keyboard. Its
+  keys are drawn, < deletes and > finishes, and the cursor stays where it
+  was between keys.
+- Fixed: Ambrosia's locked doors opened only to a keyboard's U. Walking
+  into one, or Unlock in the touch and controller menus, opens it now, as
+  in a town.
+- Fixed: a party standing on its ship at sea (after X-it) was stranded on
+  the water when the whirlpool took the ship. It now goes down with it,
+  to Ambrosia, as a party aboard does.
+
 ### v1.0.39, September 25, 2026
 
 - The Android app's title menu has a Quit, as the desktop app's does, so
