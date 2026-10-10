@@ -36,6 +36,7 @@ import { commandMenu, hasMagic } from '../game/context.ts';
 import { memberShape } from '../game/combat.ts';
 import { TILE_SETS, helpPages, PAGE_ROWS, PAGE_WIDTH } from './help.ts';
 import { journalLines, journalPage, journalSnapshot } from '../game/journal.ts';
+import { TIPS, tipsPage } from '../game/tips.ts';
 import { CHEATS } from '../game/cheats.ts';
 import { Location } from '../game/party.ts';
 import { buildViewport, VIEW_SIZE, VIEW_CENTRE, type Viewport } from '../game/viewport.ts';
@@ -757,6 +758,7 @@ export class Screen implements GameIO {
         { key: 'F', label: `FX level: ${levelLabel(this.sounds.level)}` },
         { key: 'M', label: `Music: ${onOff(this.musicPlayer.enabled)}` },
         { key: 'U', label: `Music level: ${levelLabel(this.musicPlayer.level)}` },
+        { key: 'G', label: 'Tips' },
         { key: 'H', label: 'Help' },
         ...quit,
         { key: 'B', label: 'Back' },
@@ -824,6 +826,9 @@ export class Screen implements GameIO {
           } finally {
             this.musicPlayer.hear(false);
           }
+          break;
+        case 'G':
+          await this.showTips();
           break;
         case 'H':
           await this.showHelp();
@@ -1009,6 +1014,36 @@ export class Screen implements GameIO {
       }
     } finally {
       journalSnapshot(this.world);
+      this.closePage(wasCovered);
+    }
+  }
+
+  /**
+   * Tips (the Pause menu and the title's Settings): pointers for a new
+   * player, one page over the map as the journal is. Every topic is a
+   * heading, the one under the cursor opened to its text; Up and Down move
+   * the cursor, the page scrolling to keep it in view, and Escape (B) closes.
+   */
+  private async showTips(): Promise<void> {
+    const controller = this.inputMode === 'controller';
+    const wasCovered = this.openPage();
+    let selected = 0;
+    let top = 0;
+    try {
+      for (;;) {
+        const page = tipsPage(TIPS, selected, PAGE_WIDTH, wrapText);
+        const maxTop = Math.max(0, page.lines.length - PAGE_ROWS);
+        if (page.cursorLine < top) top = page.cursorLine;
+        // The opened topic's text in view below its heading, as much of it as the page holds.
+        if (page.openEnd > top + PAGE_ROWS) top = Math.min(page.cursorLine, page.openEnd - PAGE_ROWS);
+        top = Math.max(0, Math.min(maxTop, top));
+        this.drawPage('Tips', page.lines.slice(top), [controller ? 'B close' : 'Esc close', ''], 'Up/Down: topics', page.cursorLine - top);
+        const key = await this.readKey();
+        if (key === Key.Escape || key === Key.B) break;
+        if (key === Key.Up) selected = (selected + TIPS.length - 1) % TIPS.length;
+        else if (key === Key.Down) selected = (selected + 1) % TIPS.length;
+      }
+    } finally {
       this.closePage(wasCovered);
     }
   }

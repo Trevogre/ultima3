@@ -20,6 +20,7 @@ import * as interact from './interact.ts';
 import { attackMonster, showBall } from './combat.ts';
 import { cast, quickHeal, quickSafeChest, quickLight } from './spells.ts';
 import { QUICK_CAST_KEY, SAFE_CHEST_KEY, LIGHT_KEY, VIEW_MAP_KEY } from './context.ts';
+import { TIPS_NUDGE } from './tips.ts';
 import { journalCheck } from './journal.ts';
 import { runDungeon } from './dungeon.ts';
 import { checkAllDead } from './death.ts';
@@ -104,6 +105,11 @@ export class Game {
       world.resurrecting = false;
       await checkAllDead(world, io);
       if (world.done) return;
+      // A new game's first turn points to the Tips, once.
+      if (!world.tipsNudged) {
+        io.print(TIPS_NUDGE);
+        world.tipsNudged = true;
+      }
       io.prompt();
 
       const key = await this.waitForCommand();

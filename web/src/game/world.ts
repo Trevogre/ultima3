@@ -214,6 +214,8 @@ export class World {
    * View map marks each with the moon that opens it. Saved with the game.
    */
   gatesKnown: number[] = [];
+  /** Whether this game has pointed to Tips (Game.run, on a new game's first turn); a game from an older save has. */
+  tipsNudged = true;
 
   /** Wind: 0 calm, 1 north, 2 east, 3 south, 4 west. Blocks ships sailing into it. */
   windDirection = 0;
@@ -652,6 +654,7 @@ export class World {
     this.party.rulesPending = true; // "Choose Thine Adventure!" at the first Journey onward
     this.journal = emptyJournal();
     this.gatesKnown = [];
+    this.tipsNudged = false;
     this.party.location = Location.Sosaria;
     this.party.shape = 0x7e;
     this.x = this.party.surfaceX;

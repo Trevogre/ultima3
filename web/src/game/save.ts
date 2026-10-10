@@ -41,6 +41,8 @@ export interface SaveData {
   journal?: JournalState;
   /** Moongates come out of, 0..7 (version 6 on). */
   moongates?: number[];
+  /** Whether the game has pointed to Tips; a save without it (from before Tips) has. */
+  tipsNudged?: boolean;
 }
 
 function toBase64(bytes: Uint8Array): string {
@@ -85,6 +87,7 @@ export function serialize(world: World): SaveData {
     windDirection: world.windDirection,
     journal: { ...world.journal, clues: [...world.journal.clues], seen: [...world.journal.seen] },
     moongates: [...world.gatesKnown],
+    tipsNudged: world.tipsNudged,
   };
 }
 
@@ -121,6 +124,7 @@ export function restore(world: World, data: SaveData): boolean {
     world.gatesKnown = Array.isArray(data.moongates)
       ? data.moongates.filter((g): g is number => Number.isInteger(g) && g >= 0 && g < 8)
       : [];
+    world.tipsNudged = data.tipsNudged !== false;
     return true;
   } catch {
     return false;
