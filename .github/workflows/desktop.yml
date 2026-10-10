@@ -83,6 +83,15 @@ jobs:
         env:
           # Unsigned macOS builds: skip the notarisation step electron-builder would otherwise attempt.
           CSC_IDENTITY_AUTO_DISCOVERY: false
+      # The app as packaged, launched: it must start and run the game (smoke-built.cjs), or nothing is published.
+      - if: matrix.target == 'linux'
+        run: xvfb-run -a node smoke-built.cjs
+        working-directory: desktop
+        env:
+          ELECTRON_NO_SANDBOX: 1
+      - if: matrix.target != 'linux'
+        run: node smoke-built.cjs
+        working-directory: desktop
       - uses: actions/upload-artifact@v7
         with:
           name: ultima3-${{ matrix.target }}

@@ -197,7 +197,9 @@ result (`ELECTRON_NO_SANDBOX=1` for a root container). `npm run dist`
 builds installers with electron-builder; `.github/workflows/desktop.yml`
 does so on the three platforms for every push to main that touches the
 game or an app (artifacts only) and for every manual run or push to the
-`release` branch (published as a GitHub Release with every file). `desktop/version.cjs` decides the
+`release` branch (published as a GitHub Release with every file). Each
+build is then launched as packaged (`smoke-built.cjs`, under `xvfb-run`
+on Linux), and a build whose game does not start fails the run. `desktop/version.cjs` decides the
 version for every build: major.minor from `desktop/package.json` plus the
 run number in Actions, a timestamped pre-release elsewhere. Builds are
 unsigned; macOS is Apple Silicon only.

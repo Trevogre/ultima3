@@ -11,6 +11,7 @@
     "bundle": "node bundle.cjs",
     "start": "electron .",
     "smoke": "node smoke.cjs",
+    "smoke:built": "node smoke-built.cjs",
     "dist": "node dist.cjs",
     "dist:linux": "node dist.cjs --linux",
     "dist:win": "node dist.cjs --win",

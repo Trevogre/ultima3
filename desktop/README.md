@@ -10,6 +10,7 @@ npm run bundle     # builds ../web with relative paths and copies dist/ into app
 npm start          # runs the app (add --fullscreen, --windowed, --new, --controller)
 npm run smoke      # launches it, screenshots the running game, exits 0 on success
 npm run dist       # installers for this platform into dist/ (dist:linux, dist:win, dist:mac)
+npm run smoke:built  # the same smoke test, of the app as dist/ packaged it
 ```
 
 Builds for all three platforms come from the "Desktop and Android builds"
