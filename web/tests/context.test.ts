@@ -129,6 +129,22 @@ describe('command menu availability', () => {
     expect(again[0].key).toBe('B'); // and first, as the surroundings call for it
   });
 
+  it("offers Unlock first beside one of Ambrosia's doors, greyed without a key", () => {
+    const world = newWorld();
+    world.enterMap(MapId.Ambrosia);
+    world.party.location = Location.Ambrosia;
+    world.monsters.bytes.fill(0);
+    world.x = 11; // east of the door at (10, 6), before the shrine at (6, 6)
+    world.y = 6;
+    world.party.keys = 2;
+    const menu = () => commandMenu(world, 'field', COMMAND_MENUS.field);
+    expect(menu()[0]).toMatchObject({ key: 'U', disabled: false });
+    world.party.keys = 0;
+    expect(menu().find((o) => o.key === 'U')?.disabled).toBe(true);
+    world.x = 12; // a step away: no door beside the party
+    expect(menu().find((o) => o.key === 'U')).toBeUndefined();
+  });
+
   it('shows ladders only when standing on one, and greys the torch when none is carried', () => {
     const world = newWorld();
     world.dungeon.tiles.fill(DungeonCell.Open);

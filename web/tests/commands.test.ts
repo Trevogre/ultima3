@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { newWorld, FakeIO } from './helpers.ts';
 import { move, board, exit, look, enter, getDirection, PartyShape } from '../src/game/commands.ts';
 import { peerGem } from '../src/game/actions.ts';
+import { unlockToward } from '../src/game/interact.ts';
 import { endTurn, placeMoongates, type TurnHooks } from '../src/game/turn.ts';
 import { spawnMonster, moveMonsters, monsterCanEnter } from '../src/game/monsters.ts';
 import { MapValue } from '../src/game/tiles.ts';
@@ -312,6 +313,23 @@ describe('walking into counters and doors', () => {
     world.putXYVal(MapValue.LetterI, 20, 19);
     expect(await move(world, io, 'north')).toBeNull();
     expect(world.y).toBe(20);
+  });
+
+  it("reports Ambrosia's locked doors too, and a key opens one (the door before the shrine at 6,6)", async () => {
+    const world = newWorld();
+    world.enterMap(MapId.Ambrosia);
+    world.party.location = Location.Ambrosia;
+    world.monsters.bytes.fill(0);
+    world.x = 11;
+    world.y = 6;
+    world.party.keys = 1;
+    const io = new FakeIO(world.resources);
+    expect(world.getXYVal(10, 6)).toBe(MapValue.LetterI);
+    expect(await move(world, io, 'west')).toEqual({ kind: 'door', dx: -1, dy: 0 });
+    await unlockToward(world, io, -1, 0);
+    expect(world.party.keys).toBe(0);
+    expect(await move(world, io, 'west')).toBeNull();
+    expect(world.x).toBe(10);
   });
 });
 

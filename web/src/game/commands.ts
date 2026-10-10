@@ -229,11 +229,10 @@ export async function move(world: World, io: GameIO, name: MoveName): Promise<Bu
   const who = world.monsters.at(xs, ys);
   if (who >= 0 && world.monsters.type(who) >= MapValue.Serpent)
     return world.inTownOrCastle ? { kind: 'person', index: who } : { kind: 'monster', dx: spec.dx, dy: spec.dy };
-  if (world.inTownOrCastle) {
-    if (counterWithMerchant(world, xs, ys, spec.dx, spec.dy)) return { kind: 'counter', dx: spec.dx, dy: spec.dy };
-    // Doors only open sideways, as the Unlock command requires.
-    if (world.getXYVal(xs, ys) === MapValue.LetterI && spec.dx !== 0 && spec.dy === 0) return { kind: 'door', dx: spec.dx, dy: spec.dy };
-  }
+  if (world.inTownOrCastle && counterWithMerchant(world, xs, ys, spec.dx, spec.dy)) return { kind: 'counter', dx: spec.dx, dy: spec.dy };
+  // A locked door, in a town or castle or before two of Ambrosia's shrines. Doors only open sideways, as the Unlock
+  // command requires.
+  if (world.getXYVal(xs, ys) === MapValue.LetterI && spec.dx !== 0 && spec.dy === 0) return { kind: 'door', dx: spec.dx, dy: spec.dy };
   if (!(await validDir(world, io, world.getXYVal(world.x + spec.dx, world.y + spec.dy)))) {
     noGo(io);
     return null;

@@ -101,7 +101,8 @@ export function commandAvailability(world: World, scope: CommandScope): Map<stri
     const xs = world.constrain(world.x + dx);
     const ys = world.constrain(world.y + dy);
     if (world.monsters.at(xs, ys) >= 0) creature = true;
-    if (inTown && dx !== 0 && dy === 0 && world.getXYVal(xs, ys) === MapValue.LetterI) door = true;
+    // A door to either side: in a town or castle, or before two of Ambrosia's shrines.
+    if (dx !== 0 && dy === 0 && world.getXYVal(xs, ys) === MapValue.LetterI) door = true;
     if (inTown) {
       const tile = world.getXYVal(xs, ys);
       const isCounter = tile >= MapValue.Wall2 && tile < MapValue.SnakeBottom;
@@ -254,10 +255,11 @@ function fieldSuggestions(world: World): string[] {
     const mon = world.monsters.at(xs, ys);
     if (world.inTownOrCastle) {
       if (mon >= 0 || counterWithMerchant(world, xs, ys, dx, dy)) person = true;
-      if (dx !== 0 && world.getXYVal(xs, ys) === MapValue.LetterI) door = true;
     } else if (mon >= 0) {
       monster = true;
     }
+    // Ambrosia has doors too; they only open sideways.
+    if (dx !== 0 && dy === 0 && world.getXYVal(xs, ys) === MapValue.LetterI) door = true;
   }
   if (monster) out.push('A');
   if (monster && shape === PartyShape.Frigate) out.push('F');
