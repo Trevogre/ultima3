@@ -16,7 +16,8 @@
     "figures": "node tools/compose-figures.ts",
     "graphics-index": "node tools/graphics-index.ts",
     "sfx": "node tools/chip-sfx.ts",
-    "saves": "node --import ./tools/node-ts.mjs tools/saves/showcase.ts"
+    "saves": "node --import ./tools/node-ts.mjs tools/saves/showcase.ts",
+    "fuzz": "node --import ./tools/node-ts.mjs tools/sim/fuzz.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

@@ -17,6 +17,7 @@ npm test          # unit tests (Vitest, run in Node)
 npm run build     # typecheck + production build into dist/
 npm run figures   # writes art/figures/ into the Standard tile sheet
 npm run saves     # writes ../showcase/, the showcase saves (tools/saves/showcase.ts)
+npm run fuzz      # the game played headless at random, checked after every key (tools/sim/fuzz.ts)
 ```
 
 The last Help page in the game shows `Build <hash>`, the short commit hash

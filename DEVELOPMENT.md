@@ -20,6 +20,17 @@ makes them from a new game brought on by the test harness
 `web/tools/node-ts.mjs`, a loader that compiles the game's TypeScript
 (node strips types itself, but not the classes' parameter properties).
 
+Three tools play the game without a person at the keyboard. The fuzzer
+(`npm run fuzz` in `web/`, `web/tools/sim/fuzz.ts`) plays it headless at
+random - fights with random parties and monsters, and travels from towns,
+castles, dungeons, Ambrosia and a frigate - and after every key checks
+what must always hold: where the party stands, its hit points, stats and
+supplies, a fight's squares, a fight that ends. A failure is reported with
+the arguments that replay it (`fights=0 travels=1 seed=N log`). The pilot
+(`web/tools/pilot/bot.js`, its [README](web/tools/pilot/README.md)) plays
+the development build in a browser with a controller's keys only, and
+`web/tools/pilot/shots.mjs` saves its screenshots to `screenshots/`.
+
 The two sheets the README opens with are in [`promo/`](promo/): nine
 screenshots of the Standard experience, and each of the twelve tile sets
 at the opening, in one fight and in one dungeon corridor. The tile-set shots

@@ -25,7 +25,24 @@ export default tseslint.config(
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_', varsIgnorePattern: '^_' }],
     },
   },
-  // The tools' plain JavaScript modules (tools/node-ts.mjs) are outside the TypeScript project: no type information.
-  { files: ['**/*.mjs'], extends: [tseslint.configs.disableTypeChecked] },
+  // The tools' plain JavaScript (tools/node-ts.mjs, the pilot) is outside the TypeScript project: no type information.
+  { files: ['**/*.mjs', 'tools/pilot/*.js'], extends: [tseslint.configs.disableTypeChecked] },
+  { files: ['**/*.mjs'], languageOptions: { globals: { console: 'readonly', Buffer: 'readonly', URL: 'readonly' } } },
+  // The pilot is a script evaluated in the game's page.
+  {
+    files: ['tools/pilot/*.js'],
+    languageOptions: {
+      sourceType: 'script',
+      globals: {
+        window: 'readonly',
+        document: 'readonly',
+        console: 'readonly',
+        performance: 'readonly',
+        fetch: 'readonly',
+        setTimeout: 'readonly',
+        KeyboardEvent: 'readonly',
+      },
+    },
+  },
   prettier,
 );
