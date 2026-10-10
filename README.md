@@ -86,7 +86,10 @@ bottom of this page.
   5. Return to Game Mode with the icon on the desktop, or restart. The
      game is in your library under Non-Steam. If the controls do not
      respond, open the shortcut's controller settings and pick a Gamepad
-     template.
+     template. The first time you play it from there, the game puts the
+     box art in Steam's library (the cover, the banner and the logo),
+     which shows once Steam has restarted; artwork you set yourself is
+     never replaced.
 
   The same link works on any Linux desktop with Flatpak, and the
   terminal line at the bottom of this page installs per user with no
@@ -668,7 +671,9 @@ of the web version.
 
 The code is under the MIT License (see LICENSE), as LairWare released it.
 The game's name, maps, music and other assets are Origin Systems' and are
-included as Leon McNeill describes below.
+included as Leon McNeill describes below. The desktop app's Steam artwork
+is made from the 1983 box painting by Denis Loubet for Origin Systems
+(`web/art/box/`), which remains its owners'.
 
 ---
 

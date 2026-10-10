@@ -34,6 +34,8 @@
       "main.cjs",
       "preload.cjs",
       "updates.cjs",
+      "steamArt.cjs",
+      "build/steam/*.png",
       "app/**/*"
     ],
     "asar": true,

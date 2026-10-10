@@ -12,6 +12,8 @@ const { join, normalize } = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { readFileSync, writeFileSync, existsSync } = require('node:fs');
 const updates = require('./updates.cjs');
+const { installSteamArt } = require('./steamArt.cjs');
+const { homedir } = require('node:os');
 
 // Game Mode runs the app under the gamescope compositor, where Chromium's GPU process has hung whole sessions and
 // its seccomp sandbox has killed apps Steam launched. The game is a 2D canvas that needs neither, so under gamescope
@@ -139,6 +141,19 @@ app.whenReady().then(() => {
   // Nothing in the game needs a permission prompt; deny them all rather than show a dialog.
   session.defaultSession.setPermissionRequestHandler((_wc, permission, callback) => callback(permission === 'clipboard-read' || permission === 'clipboard-sanitized-write'));
   const win = createWindow();
+  // Launched from a non-Steam shortcut, the first time: Steam's library artwork put in place (steamArt.cjs), a moment
+  // after the window is up, apart from everything else. It never throws, and what it did is only logged.
+  setTimeout(() => {
+    installSteamArt({
+      env: process.env,
+      home: homedir(), // $HOME (the Flatpak's is the player's own home)
+      platform: process.platform,
+      artDir: join(__dirname, 'build', 'steam'),
+      noteFile: join(app.getPath('userData'), 'steam-art.json'),
+    })
+      .then((r) => r.result !== 'not from a shortcut' && console.log('steam artwork:', JSON.stringify(r)))
+      .catch(() => {});
+  }, 3000);
   // A smoke test (smoke.cjs): screenshot after the game has drawn, then quit.
   const shot = process.env.ULTIMA3_SMOKE;
   if (shot) {

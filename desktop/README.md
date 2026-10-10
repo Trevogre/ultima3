@@ -53,6 +53,20 @@ gamescope (Steam's Game Mode, where a browser would cover the game), in a
 copy run unpackaged or built locally, or with `--no-update-check`.
 `ULTIMA3_RELEASES_API` points the question elsewhere, for testing.
 
+Added to Steam as a non-Steam game (the Flatpak on a Steam Deck, say), the
+game has no artwork in Steam's library: Steam takes it only from
+`userdata/<account>/config/grid/`, under the shortcut's id. Launched from
+such a shortcut, Steam passes that id (`SteamGameId`), and the app copies
+its artwork there (`steamArt.cjs`, from `build/steam/`): the portrait and
+wide capsules, the hero and the logo, which Steam shows the next time it
+starts. Only for a non-Steam shortcut, only into the account whose
+`shortcuts.vdf` lists it, never over a picture already there, each file
+written aside and linked into place, every failure caught and logged, and
+once per shortcut (a note in the app's data says so; a later version's
+new artwork replaces only the pictures the app put there itself). The
+pictures are made by `web/tools/steam-art.mjs` from the box scan in
+`web/art/box/`.
+
 Linux gets an AppImage and a Flatpak bundle. The Flatpak is built only
 where `flatpak-builder` and the Freedesktop 25.08 runtime, SDK and
 Electron base app are installed, which the Linux job does (on a Linux

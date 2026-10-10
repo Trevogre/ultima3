@@ -292,6 +292,7 @@ src/ui/     browser only
   music.ts        QuickTime music decoder and synthesizer
 src/main.ts       bootstrap, service worker, export/import transfer
 tools/compose-figures.ts   art/figures/ -> the Standard tile sheet
+tools/steam-art.mjs        art/box/ -> the desktop app's Steam artwork (needs ImageMagick 7)
 tiles.html, src/tiles.ts   the tile test page (below)
 debug.html                 the development starts, linked (dev server only)
 tools/chip-sfx.ts          renders the Standard sound effects (npm run sfx)
