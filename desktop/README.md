@@ -60,9 +60,10 @@ The site also serves the newest release as a Flatpak repository, at
 `flatpak-repo.sh`, which downloads the release's bundle, imports it into
 a fresh OSTree repository, signs it with the key in the `FLATPAK_GPG_KEY`
 and `FLATPAK_GPG_KEY_ID` secrets, and writes the `.flatpakrepo` and
-`.flatpakref` files beside it. The release job starts a Pages deploy
-after publishing, so the repository follows each release; a pruned
-repository holds one commit, so nothing is kept between deploys. The
+`.flatpakref` files beside it. The release job starts a Pages deploy of
+the commit it released, so the site's game and the repository both follow
+each release (a push to main deploys nothing); a pruned repository holds
+one commit, so nothing is kept between deploys. The
 service worker leaves `/flatpak/` alone (`navigateFallbackDenylist` in
 `../web/vite.config.ts`), or a browser that had played the game would be
 handed the game instead of the `.flatpakref`.

@@ -509,7 +509,8 @@ above install per user and need none.
 
 Every release, with the desktop and Android downloads, is on the
 [releases page](https://github.com/synthwave-pixel/ultima3/releases). The
-web version always runs the newest.
+web version is updated with each release, so it runs the same game as the
+apps.
 
 ### v1.0.39, September 25, 2026
 
