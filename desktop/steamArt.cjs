@@ -1,8 +1,8 @@
 // Steam's library artwork, put in place by the game itself. Added to Steam as a non-Steam game (the Flatpak on a
 // Steam Deck or Bazzite, say), the game has no artwork in Steam's library: Steam takes it only from its own folder,
 // userdata/<account>/config/grid/, under the shortcut's id. Launched from such a shortcut, Steam tells the game that
-// id (SteamGameId), and the game copies its artwork there (build/steam/, made by web/tools/steam-art.mjs from the box): the portrait and
-// wide capsules, the hero and the logo. Steam shows it the next time it starts.
+// id (SteamGameId), and the game copies its artwork there (build/steam/, made by web/tools/key-art.mjs from the box): the portrait and
+// wide capsules, the hero and a blank logo (with none, Steam writes the game's name over the hero). Steam shows it the next time it starts.
 //
 // It is done once for each shortcut, and nothing in it can harm the game or the player's Steam:
 //   - only for a launch from a non-Steam shortcut (a real Steam app's id, or none, and nothing is done);
@@ -25,7 +25,7 @@ const ART = [
   ['capsule.png', 'p.png'], // the library's portrait capsule
   ['wide.png', '.png'], // the wide capsule
   ['hero.png', '_hero.png'], // the banner across the game's page
-  ['logo.png', '_logo.png'], // the logo laid over the hero
+  ['logo.png', '_logo.png'], // the logo laid over the hero: blank, so the hero shows bare
 ];
 /** Where the logo sits on the hero (Steam's own file for it, as its "Adjust logo position" writes). */
 const LOGO_POSITION = JSON.stringify({ nVersion: 1, logoPosition: { pinnedPosition: 'BottomLeft', nWidthPct: 42, nHeightPct: 62 } });

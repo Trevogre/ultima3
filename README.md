@@ -1,5 +1,7 @@
 # Ultima III: Exodus
 
+![EXODUS: Ultima III, 1983 to 2026, beside the demon from Denis Loubet's box painting](promo/banner.jpg)
+
 *A modernized port of the original game. Both historic and modern play,
 for the browser, Windows, macOS, Linux, Android and the Steam Deck.*
 
@@ -671,9 +673,10 @@ of the web version.
 
 The code is under the MIT License (see LICENSE), as LairWare released it.
 The game's name, maps, music and other assets are Origin Systems' and are
-included as Leon McNeill describes below. The desktop app's Steam artwork
-is made from the 1983 box painting by Denis Loubet for Origin Systems
-(`web/art/box/`), which remains its owners'; its years are set in IM FELL
+included as Leon McNeill describes below. The key art (the banner above,
+the boot screen and the Steam artwork) is made from the 1983 box painting
+by Denis Loubet for Origin Systems (`web/art/box/`), which remains its
+owners'; its years are set in IM FELL
 English by Igino Marini, under the SIL Open Font License (`web/art/fonts/`).
 
 ---

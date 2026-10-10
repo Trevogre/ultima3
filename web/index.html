@@ -34,6 +34,23 @@
           align-items: flex-start;
         }
       }
+      /* The canvas and the boot screen stacked in one cell, the canvas giving its size. Not positioned: the scanlines
+         overlay, placed next to the canvas, is laid out from the page's corner. */
+      #stage {
+        display: grid;
+      }
+      #stage > canvas,
+      #boot {
+        grid-area: 1 / 1;
+      }
+      /* The boot screen (tools/key-art.mjs), over the canvas until the game draws: smooth, a painting; of no size of
+         its own, so the canvas alone sizes the cell. */
+      #boot {
+        width: 100%;
+        height: 100%;
+        contain: size;
+        pointer-events: none;
+      }
       canvas {
         /* Pixel art: never smooth when the browser scales the canvas. */
         image-rendering: pixelated;
@@ -50,8 +67,11 @@
     </style>
   </head>
   <body>
-    <!-- The game draws everything, loading and error text included, on this canvas. -->
-    <canvas id="screen" width="1280" height="768" tabindex="0"></canvas>
+    <!-- The game draws everything, error text included, on this canvas; the box's demon covers it while it loads. -->
+    <div id="stage">
+      <canvas id="screen" width="1280" height="768" tabindex="0"></canvas>
+      <img id="boot" src="boot.jpg" alt="Ultima III is loading" />
+    </div>
     <script type="module" src="/src/main.ts"></script>
   </body>
 </html>

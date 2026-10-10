@@ -1,5 +1,7 @@
 # Ultima III desktop app
 
+![EXODUS: Ultima III, 1983 to 2026, beside the demon from Denis Loubet's box painting](../promo/banner.jpg)
+
 A thin Electron shell around the built game in `../web`. See the developer
 notes in `../web/README.md` for how it fits together, and the root README
 for how to install the builds on Windows, macOS, Linux and the Steam Deck.
@@ -58,13 +60,14 @@ game has no artwork in Steam's library: Steam takes it only from
 `userdata/<account>/config/grid/`, under the shortcut's id. Launched from
 such a shortcut, Steam passes that id (`SteamGameId`), and the app copies
 its artwork there (`steamArt.cjs`, from `build/steam/`): the portrait and
-wide capsules, the hero and the logo, which Steam shows the next time it
-starts. Only for a non-Steam shortcut, only into the account whose
+wide capsules, the hero and a blank logo (the hero shows bare; with no
+logo Steam would write the game's name over it), which Steam shows the
+next time it starts. Only for a non-Steam shortcut, only into the account whose
 `shortcuts.vdf` lists it, never over a picture already there, each file
 written aside and linked into place, every failure caught and logged, and
 once per shortcut (a note in the app's data says so; a later version's
 new artwork replaces only the pictures the app put there itself). The
-pictures are made by `web/tools/steam-art.mjs` from the box scan in
+pictures are made by `web/tools/key-art.mjs` from the box scan in
 `web/art/box/`.
 
 Linux gets an AppImage and a Flatpak bundle. The Flatpak is built only

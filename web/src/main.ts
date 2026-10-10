@@ -113,8 +113,14 @@ function savePrefs(prefs: Prefs): void {
   }
 }
 
-/** Text on the bare canvas before the game (or instead of it, on failure). */
+/** The boot screen (index.html: the box's demon over the canvas while the game loads) taken away. */
+function bootDone(): void {
+  document.getElementById('boot')?.remove();
+}
+
+/** Text on the bare canvas instead of the game, on failure. */
 function canvasNotice(text: string): void {
+  bootDone();
   const canvas = document.getElementById('screen') as HTMLCanvasElement | null;
   const ctx = canvas?.getContext('2d');
   if (!canvas || !ctx) return;
@@ -192,7 +198,6 @@ function pickFile(): Promise<string> {
 
 async function start(): Promise<void> {
   const canvas = document.getElementById('screen') as HTMLCanvasElement;
-  canvasNotice('Loading...');
   const params = new URLSearchParams(location.search);
   const prefs = loadPrefs();
   // Development starts (devStarts.ts, `npm run dev` only): ?peek saves nothing, ?tiles= is a set for this page alone.
@@ -258,6 +263,7 @@ async function start(): Promise<void> {
   window.addEventListener('pointerdown', unlockAudio);
 
   const screen = new Screen(canvas, gfx, images, keyboard, sounds, music, world);
+  bootDone();
   // ?controller starts in controller mode whatever was remembered (a Steam shortcut, a kiosk).
   screen.inputMode = params.has('controller') ? 'controller' : prefs.inputMode;
   screen.tileSetName = tiles;

@@ -1,21 +1,27 @@
-// The desktop app's Steam library artwork (desktop/steamArt.cjs puts it in place), made from the 1983 box painting by
-// Denis Loubet for Origin Systems: art/box/ultima3-box-c64.jpg, the Commodore 64 box's front. The painting is kept at
-// the scan's own resolution or close to it: smooth, a painting, as the box was.
+// The game's key art, made from the 1983 box painting by Denis Loubet for Origin Systems: art/box/ultima3-box-c64.jpg,
+// the Commodore 64 box's front. The painting is kept at the scan's own resolution or close to it: smooth, a painting,
+// as the box was. The desktop app's Steam library artwork (desktop/steamArt.cjs puts it in place), in
+// desktop/build/steam/:
 //   - capsule.png (600x900, the library's portrait capsule): the box, its own title at the top, its border and the
 //     "Commodore 64" label gone (the lava under the label is the left side's, mirrored), its foot fading to dark under
 //     "1983 ~ 2026";
 //   - wide.png (920x430, the wide capsule): the painting below the title to the left, fading into the dark; the title
 //     (tools/title-art.mjs, drawn afresh as vectors) and the years to the right;
-//   - hero.png (3840x1240, across the game's page; no words, Steam lays the logo over it): the demon cut from the
-//     cavern along his wings' outer edges, their finger bones with them, sharp-edged, on a glow of his own reds and
-//     yellows that dies to black at the edges; his eyes and his glowing hands inside Steam's safe zone, the middle
-//     860x380 (x 1490-2350, y 430-810) sure to stay in view as the window is resized, his wings running off the top
-//     and bottom edges; nothing in the top-right corner the Steam Deck's status bar covers;
-//   - logo.png (1280 wide, transparent): the title alone, drawn afresh (tools/title-art.mjs).
+//   - hero.png (3840x1240, across the game's page): the demon cut from the cavern along his wings' outer edges, their
+//     finger bones with them, sharp-edged, on a glow of his own reds and yellows that dies to black at the edges; his
+//     eyes and his glowing hands inside Steam's safe zone, the middle 860x380 (x 1490-2350, y 430-810) sure to stay in
+//     view as the window is resized, his wings running off the top and bottom edges; nothing in the top-right corner
+//     the Steam Deck's status bar covers;
+//   - logo.png: blank. Steam lays the logo over the hero, and with none it writes the game's name there instead; the
+//     hero is shown bare, with no words.
+// Besides them:
+//   - promo/logo.png (1280 wide, transparent): the title alone;
+//   - promo/banner.jpg (1840x860): the wide capsule at twice its size, at the top of the READMEs;
+//   - web/public/boot.jpg (1600x960, the game's 5:3): the hero's middle, the demon alone, shown while the game loads.
 // The years are U5's dateline (its tools/key-art.mjs) - IM FELL English's figures (art/fonts/), a wave between them -
 // cut into stone: the wing's veined red for the cut's floor, a darker copy of it as the wall in shadow along the top
 // and left of each stroke and a lighter copy as the lit wall along the bottom and right, a thin dark outline around.
-// Run `node tools/steam-art.mjs` in web/; it needs ImageMagick 7 (`magick`).
+// Run `node tools/key-art.mjs` in web/; it needs ImageMagick 7 (`magick`).
 import { execFileSync } from 'node:child_process';
 import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -26,14 +32,17 @@ import { titleSvg } from './title-art.mjs';
 
 const WEB = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SCAN = join(WEB, 'art', 'box', 'ultima3-box-c64.jpg');
-const OUT = join(WEB, '..', 'desktop', 'build', 'steam');
+const ROOT = join(WEB, '..');
 const FONT = 'IM FELL English';
 const RESVG = { font: { fontFiles: [join(WEB, 'art', 'fonts', 'IMFeENrm28P.ttf')], loadSystemFonts: false, defaultFontFamily: FONT } };
-const tmp = mkdtempSync(join(tmpdir(), 'steam-art-'));
+const tmp = mkdtempSync(join(tmpdir(), 'key-art-'));
 const t = (name) => join(tmp, name);
 const magick = (...args) => execFileSync('magick', args.flat(Infinity), { stdio: 'inherit' });
-/** Written pictures carry no dates, so the same scan makes the same files. */
-const write = (name) => ['-strip', '-define', 'png:exclude-chunks=date,time', join(OUT, name)];
+/** Written pictures (their paths from the repository's root) carry no dates, so the same scan makes the same files. */
+const write = (...path) => ['-strip', '-define', 'png:exclude-chunks=date,time', join(ROOT, ...path)];
+const steam = (name) => write('desktop', 'build', 'steam', name);
+/** A JPEG, progressive (a coarse picture first, finer as it comes). */
+const jpeg = (quality, ...path) => ['-strip', '-quality', String(quality), '-interlace', 'Plane', join(ROOT, ...path)];
 /** An SVG rendered to a PNG in the temporary folder. */
 const render = (svg, name) => writeFileSync(t(name), new Resvg(svg, RESVG).render().asPng());
 const uri = (name) => `data:image/png;base64,${readFileSync(t(name)).toString('base64')}`;
@@ -282,32 +291,52 @@ try {
     );
   };
 
-  // The logo: the title alone, on nothing.
+  // The logo: the title alone, on nothing. Steam is given a blank one (see above).
   render(titleSvg(1280).svg, 'logo.png');
-  magick(t('logo.png'), write('logo.png'));
+  magick(t('logo.png'), write('promo', 'logo.png'));
+  magick('-size', '1280x720', 'xc:none', steam('logo.png'));
 
   // The portrait capsule: the box, 2:3, its foot fading to dark under the years.
   carve(440, 64, t('years-capsule.png'));
   magick(
     [t('painting.png'), '-gravity', 'center', '-crop', '648x972+0+0', '+repage', '-resize', '600x900!', '-unsharp', '0x0.6+0.4+0'],
     ['-gravity', 'northwest', '(', '-size', '600x240', 'gradient:rgba(0,0,0,0)-rgba(6,1,1,0.96)', ')', '-geometry', '+0+660', '-composite'],
-    [t('years-capsule.png'), '-geometry', '+80+816', '-composite', write('capsule.png')],
+    [t('years-capsule.png'), '-geometry', '+80+816', '-composite', steam('capsule.png')],
   );
 
-  // The wide capsule: the scene to the left fading into the dark, the title and the years to the right, together in
-  // the middle of the height.
-  const title = titleSvg(430);
-  render(title.svg, 'wide-title.png');
-  const [yearsW, yearsH, between] = [330, 48, 14];
-  const titleTop = Math.round((430 - title.height - between - yearsH) / 2);
-  carve(yearsW, yearsH, t('years-wide.png'));
-  magick(t('scene.png'), '-resize', 'x430', '-alpha', 'set', '-channel', 'A', '-fx', 'min(1, (w-1-i)/90)', '+channel', t('wide-scene.png'));
-  magick(
-    ['-size', '430x920', 'gradient:#2a0a06-#050101', '-rotate', '270'],
-    [t('wide-scene.png'), '-geometry', '+0+0', '-composite', t('wide-title.png'), '-geometry', `+460+${titleTop}`, '-composite'],
-    [t('years-wide.png'), '-geometry', `+${460 + 215 - yearsW / 2}+${titleTop + title.height + between}`, '-composite'],
-    ['-depth', '8', write('wide.png')],
-  );
+  /**
+   * The wide capsule at `k` times its 920x430: the scene to the left fading into the dark, the title and the years to
+   * the right, together in the middle of the height; written to `out`.
+   */
+  const wide = (k, out) => {
+    const [width, height] = [920 * k, 430 * k];
+    const title = titleSvg(430 * k);
+    render(title.svg, 'wide-title.png');
+    const [yearsW, yearsH, between] = [330 * k, 48 * k, 14 * k];
+    const titleTop = Math.round((height - title.height - between - yearsH) / 2);
+    carve(yearsW, yearsH, t('years-wide.png'));
+    magick(
+      t('scene.png'),
+      '-resize',
+      `x${height}`,
+      '-alpha',
+      'set',
+      '-channel',
+      'A',
+      '-fx',
+      `min(1, (w-1-i)/${90 * k})`,
+      '+channel',
+      t('wide-scene.png'),
+    );
+    magick(
+      ['-size', `${height}x${width}`, 'gradient:#2a0a06-#050101', '-rotate', '270'],
+      [t('wide-scene.png'), '-geometry', '+0+0', '-composite', t('wide-title.png'), '-geometry', `+${460 * k}+${titleTop}`, '-composite'],
+      [t('years-wide.png'), '-geometry', `+${(460 + 215) * k - yearsW / 2}+${titleTop + title.height + between}`, '-composite'],
+      ['-depth', '8', out],
+    );
+  };
+  wide(1, steam('wide.png'));
+  wide(2, jpeg(88, 'promo', 'banner.jpg'));
 
   // The hero: the demon cut out, on his glow.
   const gray = execFileSync('magick', [t('painting.png'), '-colorspace', 'gray', '-depth', '8', 'gray:-'], { maxBuffer: 1 << 24 });
@@ -344,7 +373,21 @@ try {
     </svg>`,
     'hero.png',
   );
-  magick(t('hero.png'), write('hero.png'));
+  magick(t('hero.png'), steam('hero.png'));
+  // The boot screen: the hero's middle at the game's 5:3, the whole of its height.
+  magick(
+    t('hero.png'),
+    '-gravity',
+    'center',
+    '-crop',
+    '2067x1240+0+0',
+    '+repage',
+    '-filter',
+    'Lanczos',
+    '-resize',
+    '1600x960!',
+    jpeg(80, 'web', 'public', 'boot.jpg'),
+  );
   console.log(`hero: eyes at y ${Math.round((HERO.eyes - HERO.top) * s)}, hands at y ${Math.round((HERO.hands - HERO.top) * s)}`);
 } finally {
   rmSync(tmp, { recursive: true, force: true });

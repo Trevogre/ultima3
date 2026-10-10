@@ -31,13 +31,16 @@ the arguments that replay it (`fights=0 travels=1 seed=N log`). The pilot
 the development build in a browser with a controller's keys only, and
 `web/tools/pilot/shots.mjs` saves its screenshots to `screenshots/`.
 
-The two sheets the README opens with are in [`promo/`](promo/): nine
-screenshots of the Standard experience, and each of the twelve tile sets
-at the opening, in one fight and in one dungeon corridor. The tile-set shots
-are the game canvas captured through the debug hook `window.u3` in a
-development build: each scene is set up once and redrawn in every set, so
-a row compares the same moment. The sheets are laid out on a browser canvas
-and saved as JPEG.
+The READMEs open with the banner, `promo/banner.jpg`: the wide capsule at
+twice its size. It, the logo (`promo/logo.png`), the Steam artwork and the
+boot screen are made by `web/tools/key-art.mjs` from the box (see
+[its README](web/art/box/README.md)). The two sheets after the banner are
+in [`promo/`](promo/): nine screenshots of the Standard experience, and
+each of the twelve tile sets at the opening, in one fight and in one
+dungeon corridor. The tile-set shots are the game canvas captured through
+the debug hook `window.u3` in a development build: each scene is set up
+once and redrawn in every set, so a row compares the same moment. The
+sheets are laid out on a browser canvas and saved as JPEG.
 
 Inside the app, F11 or Alt+Enter toggles full screen, `--fullscreen` and
 `--windowed` on the command line force one or the other, and `--new` and

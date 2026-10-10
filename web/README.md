@@ -1,5 +1,7 @@
 # Ultima III in the browser: developer notes
 
+![EXODUS: Ultima III, 1983 to 2026, beside the demon from Denis Loubet's box painting](../promo/banner.jpg)
+
 A TypeScript port of LairWare's Macintosh remake of Ultima III (the C sources
 in `../Sources`). It renders with plain Canvas 2D, plays sound and music with
 Web Audio, and needs no game engine. What the game is and what changed for
@@ -292,8 +294,8 @@ src/ui/     browser only
   music.ts        QuickTime music decoder and synthesizer
 src/main.ts       bootstrap, service worker, export/import transfer
 tools/compose-figures.ts   art/figures/ -> the Standard tile sheet
-tools/steam-art.mjs        art/box/ -> the desktop app's Steam artwork (needs ImageMagick 7)
-tools/title-art.mjs        the box's EXODUS / ULTIMA III drawn as vectors, for that artwork
+tools/key-art.mjs          art/box/ -> the Steam artwork, the banner, the boot screen (needs ImageMagick 7)
+tools/title-art.mjs        the box's EXODUS / ULTIMA III drawn as vectors, for that art
 tiles.html, src/tiles.ts   the tile test page (below)
 debug.html                 the development starts, linked (dev server only)
 tools/chip-sfx.ts          renders the Standard sound effects (npm run sfx)

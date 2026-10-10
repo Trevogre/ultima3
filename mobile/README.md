@@ -1,5 +1,7 @@
 # Ultima III for Android
 
+![EXODUS: Ultima III, 1983 to 2026, beside the demon from Denis Loubet's box painting](../promo/banner.jpg)
+
 The built game wrapped in [Capacitor](https://capacitorjs.com/) as an
 Android app, for handhelds such as the AYN Odin, the Retroid Pocket and
 any phone or tablet that can sideload an APK. iOS is left out on purpose:
