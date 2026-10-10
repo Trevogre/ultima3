@@ -58,6 +58,18 @@
     }
   }
 
+  /** Whether the game is asking "Who?" (a member's highlight in the stats boxes, the border saying "Who?"). */
+  const askingWho = () => u3.screen.selectedMember >= 0;
+
+  /** Answer a pending "Who?" with the member highlighted (the first offered), as A does. True if one was asked. */
+  async function answerWho() {
+    await idle();
+    if (!askingWho()) return false;
+    await press('A');
+    await idle();
+    return true;
+  }
+
   /** In the open menu, move to the item that matches `re` and choose it. */
   async function choose(re) {
     await idle();
@@ -146,6 +158,7 @@
     let stuck = 0;
     for (let i = 0; i < most; i++) {
       await idle();
+      if (await answerWho()) continue; // a step into Lord British asks who will speak; a direction would only move the highlight
       if (W().combat) await fight();
       if (done(W().x, W().y)) return true;
       const dir = firstStep(done);
@@ -201,7 +214,7 @@
       const dx = w.monsters.x(i) - w.x;
       const dy = w.monsters.y(i) - w.y;
       await press(dx > 0 ? 'right' : dx < 0 ? 'left' : dy > 0 ? 'down' : 'up');
-      await idle();
+      await answerWho(); // Lord British asks who will speak to him
       done.add(i);
       say(
         `talked: ${u3.screen.textRows

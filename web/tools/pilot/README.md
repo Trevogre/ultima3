@@ -41,9 +41,8 @@ repository's root, which its own `.gitignore` keeps out of git. Without it
 running, a shot is only logged.
 
 Where it stops: its paths take a ship's rule at sea, but only walking has
-been tried so far; it does not yet find its way through a dungeon's
-first-person levels; and someone standing in the only way out
-of a room (Lord British's throne room has a single doorway) leaves it
-saying "still inside" once it has waited a while for them to move. Fetch
+been tried so far, and it does not yet find its way through a dungeon's
+first-person levels. A "Who?" question (walking into Lord British asks who
+will speak to him) it answers with the member the game highlights. Fetch
 `bot.js` again after editing it (`?v=${Date.now()}` on the URL gets past
 the cache).
