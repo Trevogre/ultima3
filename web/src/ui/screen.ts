@@ -662,7 +662,7 @@ export class Screen implements GameIO {
    */
   private placeMenu(menu: MenuWindow, place: MenuPlacement): void {
     const longest = Math.max(menu.title.length, ...menu.items.map((s) => s.length));
-    menu.width = Math.min(COLUMNS - 2, longest + 4); // up to the frame's inner edge, for a long title
+    if (menu.columns === 1) menu.width = Math.min(COLUMNS - 2, longest + 4); // up to the frame's inner edge, for a long title
     menu.y = place.row;
     menu.x = Math.floor((COLUMNS - menu.width) / 2);
     // Keep the window (and its hint row) inside the frame; long lists scroll.
@@ -1346,7 +1346,8 @@ export class Screen implements GameIO {
 
   async inputTextAt(x: number, y: number, maxChars: number, numbersOnly: boolean): Promise<string> {
     if (this.inputMode === 'controller') {
-      const result = await this.controllerInput(maxChars, numbersOnly);
+      // The keyboard's window opens on the row above the prompt, over it, as the menu before it did.
+      const result = await this.controllerInput(maxChars, numbersOnly, undefined, y - 1);
       this.drawText((result + ' ').padEnd(maxChars + 1), x, y);
       return result;
     }
@@ -1356,9 +1357,9 @@ export class Screen implements GameIO {
   /**
    * Controller text entry: a spinner for numbers (d-pad up/down by one,
    * left/right by ten), a word list when one is offered, otherwise an
-   * on-screen keyboard.
+   * on-screen keyboard, at `row` when given (else over the map area).
    */
-  private async controllerInput(maxChars: number, numbersOnly: boolean, words?: string[]): Promise<string> {
+  private async controllerInput(maxChars: number, numbersOnly: boolean, words?: string[], row?: number): Promise<string> {
     if (numbersOnly) {
       const max = Math.pow(10, maxChars) - 1;
       let value = 0;
@@ -1396,13 +1397,20 @@ export class Screen implements GameIO {
     const keys = [...ON_SCREEN_KEYBOARD.join(''), OSK_DELETE, OSK_DONE];
     const columns = ON_SCREEN_KEYBOARD[0].length;
     const options = keys.map((k) => ({ key: k, label: k }));
+    const hints = keys.map((k) =>
+      k === OSK_DELETE ? 'A or B: delete the last letter' : k === OSK_DONE ? 'A or Y: done' : 'A: type   B: delete   Y: done',
+    );
     let text = '';
+    let cursor = 0; // the window is made again for each key, the cursor kept where it was
     for (;;) {
       const menu = layoutMenu(
         text || 'Type',
         options.map((o) => o.label),
         columns,
       );
+      menu.hints = hints;
+      if (row !== undefined) this.placeMenu(menu, { row, title: menu.title });
+      menu.cursor = cursor;
       this.openMenu(menu);
       let picked = -1;
       try {
@@ -1431,6 +1439,7 @@ export class Screen implements GameIO {
           }
         }
       } finally {
+        cursor = menu.cursor;
         this.closeMenu();
       }
       if (picked < 0) continue;

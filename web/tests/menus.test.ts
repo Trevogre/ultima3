@@ -7,10 +7,16 @@ import {
   GamepadReader,
   GAMEPAD_REPEAT_FIRST_MS,
   GAMEPAD_REPEAT_MS,
+  drawMenu,
   layoutMenu,
   MENU_SOUNDS,
+  moveCursor,
+  ON_SCREEN_KEYBOARD,
+  OSK_DELETE,
+  OSK_DONE,
 } from '../src/ui/menus.ts';
 import type { InputSource } from '../src/ui/input.ts';
+import { FONT_GLYPHS, type GraphicsSet } from '../src/ui/graphics.ts';
 
 describe('controller stand-ins on the keyboard', () => {
   it('map WASD to the d-pad and the button row and the pad letters to the buttons', () => {
@@ -160,5 +166,49 @@ describe('keys in a menu window', () => {
 
   it('answers with a footstep, the attack and a swing', () => {
     expect(MENU_SOUNDS).toEqual({ move: Sound.Step, choose: Sound.Attack, back: 'Swish1' });
+  });
+});
+
+describe('the on-screen keyboard', () => {
+  const keys = [...ON_SCREEN_KEYBOARD.join(''), OSK_DELETE, OSK_DONE];
+  const columns = ON_SCREEN_KEYBOARD[0].length;
+
+  it('draws every key, each with a cell for the cursor before it', () => {
+    const menu = layoutMenu('Type', keys, columns);
+    const drawn: string[] = [];
+    const gfx = { drawUiPiece: () => {}, drawGlyph: (_c: unknown, ch: string) => drawn.push(ch) } as unknown as GraphicsSet;
+    const ctx = { fillRect: () => {}, save: () => {}, restore: () => {} } as unknown as CanvasRenderingContext2D;
+    drawMenu(ctx, gfx, 32, menu);
+    expect(drawn.join('')).toBe('Type' + keys.join(''));
+    expect(Math.floor((menu.width - 3) / columns)).toBe(2);
+  });
+
+  it('reaches < and > from every column: down into the short last row lands on its last key', () => {
+    const menu = layoutMenu('Type', keys, columns);
+    const at = (k: string) => keys.indexOf(k);
+    menu.cursor = at('9');
+    expect(moveCursor(menu, Key.Down)).toBe(true);
+    expect(keys[menu.cursor]).toBe(OSK_DONE);
+    menu.cursor = at('0');
+    moveCursor(menu, Key.Down);
+    expect(keys[menu.cursor]).toBe(OSK_DELETE);
+    moveCursor(menu, Key.Down); // from the last row, back to the top of the column
+    expect(keys[menu.cursor]).toBe('A');
+    menu.cursor = at('M');
+    moveCursor(menu, Key.Up); // and up from the top to the column's lowest key
+    expect(keys[menu.cursor]).toBe('-');
+  });
+
+  it("uses only keys every set's font can draw (its 96 glyphs from space up)", () => {
+    for (const k of keys) expect(k.charCodeAt(0) - 0x20, k).toBeGreaterThanOrEqual(0);
+    for (const k of keys) expect(k.charCodeAt(0) - 0x20, k).toBeLessThan(FONT_GLYPHS);
+  });
+
+  it('is centred on the screen, too wide for the map area, while a list stays over the map', () => {
+    const grid = layoutMenu('Type', keys, columns);
+    expect(grid.width).toBeGreaterThan(22);
+    expect(grid.x).toBe(Math.floor((40 - grid.width) / 2));
+    const list = layoutMenu('Options', ['Journey onward', 'Settings']);
+    expect(list.x + list.width).toBeLessThanOrEqual(23);
   });
 });

@@ -121,8 +121,9 @@ export const BUTTON_SHORTCUTS: Record<CommandScope, { B: string; X: string; Y: s
 
 /** Rows of the on-screen keyboard used for typing names and words with a controller. */
 export const ON_SCREEN_KEYBOARD = ['ABCDEFGHIJKLM', 'NOPQRSTUVWXYZ', 'abcdefghijklm', 'nopqrstuvwxyz', "0123456789 '-"];
-export const OSK_DELETE = '←';
-export const OSK_DONE = '✓';
+/** The keyboard's delete and done keys: plain ASCII, since every set's font has only the 96 from space up. */
+export const OSK_DELETE = '<';
+export const OSK_DONE = '>';
 
 /** A menu window's state, kept by the Screen and drawn every frame. */
 export interface MenuWindow {
@@ -147,20 +148,31 @@ export interface MenuWindow {
 }
 
 const MAX_ROWS = 12;
+/** The screen's width in cells (Screen's COLUMNS), for a grid too wide for the map area. */
+const SCREEN_COLUMNS = 40;
 
-/** Lay out a menu window over the map area (cells 1..22 in both directions). */
+/**
+ * Lay out a menu window over the map area (cells 1..22 in both directions).
+ * A grid (the on-screen keyboard) gives each column its widest item and the
+ * cursor's cell before it, so it can be wider than the map area; it is
+ * then centred on the whole screen.
+ */
 export function layoutMenu(title: string, items: string[], columns = 1): MenuWindow {
-  const longest = Math.max(title.length, ...items.map((s) => s.length));
+  const longestItem = Math.max(0, ...items.map((s) => s.length));
   const rows = Math.ceil(items.length / columns);
   const visibleRows = Math.min(rows, MAX_ROWS);
-  const width = Math.min(22, Math.max(8, columns > 1 ? columns * (longest + 1) + 3 : longest + 4));
+  const width =
+    columns > 1
+      ? Math.min(SCREEN_COLUMNS - 2, Math.max(title.length + 4, columns * (longestItem + 1) + 3))
+      : Math.min(22, Math.max(8, Math.max(title.length, longestItem) + 4));
   const height = visibleRows + 2;
+  const centre = width > 22 ? SCREEN_COLUMNS / 2 : 12;
   return {
     title,
     items,
     cursor: 0,
     top: 0,
-    x: Math.max(1, Math.floor(12 - width / 2)),
+    x: Math.max(1, Math.floor(centre - width / 2)),
     y: Math.max(1, Math.floor(12 - height / 2)),
     width,
     visibleRows,
@@ -281,7 +293,8 @@ export function moveCursor(menu: MenuWindow, key: string): boolean {
       break;
     case Key.Down:
       next = menu.cursor + c;
-      if (next >= n) next = menu.cursor % c;
+      // Past the end: into a short last row (the keyboard's < and >) its last item, else wrap to the top of the column.
+      if (next >= n) next = Math.floor(menu.cursor / c) < Math.floor((n - 1) / c) ? n - 1 : menu.cursor % c;
       break;
     case Key.Left:
       next = c > 1 ? (menu.cursor % c === 0 ? menu.cursor + c - 1 : menu.cursor - 1) : menu.cursor;
