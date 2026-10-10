@@ -21,8 +21,8 @@ import { type GameIO, Sound } from './io.ts';
  * random draw in `spawnMonster`. `MonBegin` is the terrain each starts on:
  * sea monsters (Serpent, Man-O-War, Pirate) spawn on water, the rest on grass.
  */
-const SPAWN_TYPES = [24, 23, 25, 20, 26, 27, 13, 28, 22, 14, 15, 29, 30, 24];
-const SPAWN_TERRAIN = [4, 4, 4, 4, 4, 4, 0, 4, 4, 0, 0, 4, 4];
+export const SPAWN_TYPES = [24, 23, 25, 20, 26, 27, 13, 28, 22, 14, 15, 29, 30, 24];
+export const SPAWN_TERRAIN = [4, 4, 4, 4, 4, 4, 0, 4, 4, 0, 0, 4, 4];
 
 /** Callbacks the movement code needs from the game loop. */
 export interface MonsterHooks {

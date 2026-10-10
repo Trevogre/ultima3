@@ -133,7 +133,10 @@ export function restore(world: World, data: SaveData): boolean {
 
 /** localStorage wrapper. Every call is guarded: storage may be unavailable or full. */
 export const localSave = {
+  /** A page that is to save nothing over the player's game (?peek, in development): every write is refused. */
+  off: false,
   write(world: World): boolean {
+    if (this.off) return false;
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(serialize(world)));
       return true;

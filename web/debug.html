@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>Development starts</title>
+    <link rel="icon" href="pwa-192.png" type="image/png" />
+    <!--
+      The development starts (src/game/devStarts.ts), each a link: served by
+      `npm run dev` at /debug, never built. Every start here also takes ?peek,
+      so trying one never saves over the game in progress.
+    -->
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      body {
+        margin: 0 auto;
+        max-width: 60rem;
+        padding: 1rem;
+        background: #111;
+        color: #ddd;
+        font:
+          14px/1.5 -apple-system,
+          'Segoe UI',
+          Helvetica,
+          Arial,
+          sans-serif;
+      }
+      h1 {
+        font-size: 1.3rem;
+      }
+      h2 {
+        font-size: 1rem;
+        margin: 1.5rem 0 0.5rem;
+      }
+      a {
+        color: #8cf;
+      }
+      ul {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.25rem 1.25rem;
+        padding: 0;
+        list-style: none;
+      }
+      label {
+        display: block;
+        margin: 0.5rem 0;
+      }
+      code {
+        color: #fc8;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Development starts</h1>
+    <p>
+      Each link opens the game straight into a place or a fight (<code>src/game/devStarts.ts</code>). With
+      <em>peek</em> ticked, nothing the page does is saved over the game in progress.
+    </p>
+    <label><input id="peek" type="checkbox" checked /> peek: save nothing</label>
+    <label>
+      tile set
+      <select id="tiles">
+        <option value="">(as remembered)</option>
+      </select>
+    </label>
+    <h2>The game</h2>
+    <ul id="game"></ul>
+    <h2>Towns, castles and dungeons: entered from the map</h2>
+    <ul id="places"></ul>
+    <h2>Fights on Sosaria: a step east into one</h2>
+    <ul id="fights"></ul>
+    <h2>Pages</h2>
+    <ul>
+      <li><a href="tiles.html">tile sets</a></li>
+    </ul>
+    <script type="module">
+      import { TILE_SETS } from './src/ui/help.ts';
+      import { SPAWN_TYPES } from './src/game/monsters.ts';
+      import { slug } from './src/game/devStarts.ts';
+
+      const bundle = await (await fetch('data/resources.json')).json();
+      const names = bundle.strings.Tiles;
+      const places = Object.entries(bundle.maps)
+        .filter(([id]) => Number(id) >= 400 && Number(id) <= 418)
+        .map(([, map]) => map.name);
+      const fights = [...new Set(SPAWN_TYPES.map((shape) => names[shape]))];
+      const tiles = document.getElementById('tiles');
+      for (const set of TILE_SETS) tiles.append(new Option(set, slug(set)));
+
+      // Every link carries the page's choices: peek and the tile set.
+      const href = (query) => {
+        const parts = [query];
+        if (document.getElementById('peek').checked) parts.push('peek');
+        if (tiles.value) parts.push(`tiles=${tiles.value}`);
+        return `./?${parts.join('&')}`;
+      };
+      const list = (id, entries) => {
+        const ul = document.getElementById(id);
+        ul.replaceChildren(
+          ...entries.map(([text, query]) => {
+            const li = document.createElement('li');
+            const a = document.createElement('a');
+            a.textContent = text;
+            a.href = href(query);
+            li.append(a);
+            return li;
+          }),
+        );
+      };
+      const draw = () => {
+        list('game', [
+          ['the saved game, no title', 'play'],
+          ['a new game, no title', 'play&new'],
+          ['Ambrosia', 'at=ambrosia'],
+          ['Ambrosia, the door before the shrine at 6,6', 'at=ambrosia:11,6'],
+          ["Sosaria, by Lord British's castle", 'at=world:44,18'],
+        ]);
+        list(
+          'places',
+          // The map list keeps the Mac's apostrophe (DardinÕs Pit), shown here as one.
+          places.map((name) => [name.replace(/^Dungeon /, '').replace(/Õ/g, "'"), `at=place:${slug(name.replace(/^Dungeon /, ''))}`]),
+        );
+        list(
+          'fights',
+          fights.map((name) => [name, `at=fight:${slug(name)}`]),
+        );
+      };
+      document.getElementById('peek').addEventListener('change', draw);
+      tiles.addEventListener('change', draw);
+      draw();
+    </script>
+  </body>
+</html>

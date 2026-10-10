@@ -26,6 +26,26 @@ resources change.
 Its output is committed so the game runs straight after `npm install`.
 `?new` on the URL starts a fresh game instead of resuming the last one.
 
+### Development starts
+
+Under `npm run dev` the address bar can put the game somewhere, so
+checking a fix or taking a screenshot is a page load
+(`src/game/devStarts.ts`; none of it is in a build):
+
+- `?play` skips the title: the saved game, or with `?new` a new one.
+- `?at=world:X,Y` on Sosaria; `?at=ambrosia` (or `ambrosia:X,Y`).
+- `?at=place:yew`: a town, castle or dungeon, entered from its square as
+  Enter enters it. Any start of a name that is the only one does
+  (`lcb`, `perinian`); Dawn is raised for it, both moons set new.
+- `?at=fight:orc`: one of Sosaria's roaming monsters just east of the
+  party, and the step into it played, so the fight begins.
+- `?peek`: nothing the page does is saved, not the game, the auto-map nor
+  the settings, so a start never writes over a game in progress.
+- `?tiles=commodore64`: this page's tile set, not remembered.
+
+Any `?at=` skips the title as `?play` does. <http://localhost:5173/debug>
+lists every start as a link, with `?peek` and a tile set to add.
+
 ## What is ported
 
 Everything the Apple II game had:
@@ -271,6 +291,7 @@ src/ui/     browser only
 src/main.ts       bootstrap, service worker, export/import transfer
 tools/compose-figures.ts   art/figures/ -> the Standard tile sheet
 tiles.html, src/tiles.ts   the tile test page (below)
+debug.html                 the development starts, linked (dev server only)
 tools/chip-sfx.ts          renders the Standard sound effects (npm run sfx)
 ```
 

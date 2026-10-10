@@ -1,11 +1,28 @@
 import { fileURLToPath } from 'node:url';
-import { defineConfig } from 'vite';
+import { defineConfig, type Plugin } from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+
+/** /debug in development: the development starts' index (debug.html, src/game/devStarts.ts), its query kept. Never built. */
+function debugIndex(): Plugin {
+  return {
+    name: 'debug-index',
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const m = /^\/debug\/?(\?.*)?$/.exec(req.url ?? '');
+        if (!m) return next();
+        res.statusCode = 302;
+        res.setHeader('Location', `/debug.html${m[1] ?? ''}`);
+        res.end();
+      });
+    },
+  };
+}
 
 export default defineConfig({
   // VITE_BASE lets a deployment under a sub-path (GitHub Pages) prefix asset URLs.
   base: process.env.VITE_BASE ?? '/',
   plugins: [
+    debugIndex(),
     // An installable app that works offline: every asset is cached on first
     // visit (the whole site is a few megabytes), and a new build is fetched in
     // the background and offered from the title menu ("Update: restart").

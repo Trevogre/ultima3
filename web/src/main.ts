@@ -28,7 +28,7 @@ function readWarnedAt(): number | null {
   }
 }
 import { AutoMap, MAP_MODES, type MapMode } from './game/automap.ts';
-import { mainMenu } from './game/menu.ts';
+import { chooseRules, mainMenu } from './game/menu.ts';
 import { GraphicsSet, loadImages } from './ui/graphics.ts';
 import { Keyboard } from './ui/input.ts';
 import { LEVELS, SoundPlayer, SOUND_SETS, validLevel, type SoundSet } from './ui/sound.ts';
@@ -194,8 +194,14 @@ async function start(): Promise<void> {
   canvasNotice('Loading...');
   const params = new URLSearchParams(location.search);
   const prefs = loadPrefs();
+  // Development starts (devStarts.ts, `npm run dev` only): ?peek saves nothing, ?tiles= is a set for this page alone.
+  const dev = import.meta.env.DEV ? await import('./game/devStarts.ts') : null;
+  const peek = dev !== null && params.has('peek');
+  if (peek) localSave.off = true;
+  const tilesAsked = dev?.tileSetAsked(params.get('tiles'), TILE_SETS) ?? null;
+  const tiles = tilesAsked ?? prefs.tiles;
 
-  const [resources, gfx, images] = await Promise.all([loadResources(), GraphicsSet.load(prefs.tiles), loadImages()]);
+  const [resources, gfx, images] = await Promise.all([loadResources(), GraphicsSet.load(tiles), loadImages()]);
 
   // The party never moves diagonally, as on the Apple II (the Mac's option stays in the code, unexposed).
   const world = new World(resources);
@@ -208,7 +214,12 @@ async function start(): Promise<void> {
   world.soundEnabled = prefs.sound;
   world.mapMode = prefs.dungeonMap;
   // The dungeon auto-map keeps its own store; a new game starts it blank.
-  world.autoMap = new AutoMap({ read: () => localStorage.getItem(AUTOMAP_KEY), write: (text) => localStorage.setItem(AUTOMAP_KEY, text) });
+  world.autoMap = new AutoMap({
+    read: () => localStorage.getItem(AUTOMAP_KEY),
+    write: (text) => {
+      if (!peek) localStorage.setItem(AUTOMAP_KEY, text);
+    },
+  });
 
   // Resume the saved game unless the URL asks for a new one (?new).
   if (params.has('new') || !localSave.read(world)) {
@@ -238,15 +249,17 @@ async function start(): Promise<void> {
   const screen = new Screen(canvas, gfx, images, keyboard, sounds, music, world);
   // ?controller starts in controller mode whatever was remembered (a Steam shortcut, a kiosk).
   screen.inputMode = params.has('controller') ? 'controller' : prefs.inputMode;
-  screen.tileSetName = prefs.tiles;
+  screen.tileSetName = tiles;
   screen.scanlines = prefs.scanlines;
   canvas.focus();
 
   // Whatever changes a setting (the menu, a gamepad press, Escape in a fight), remember it.
   const remember = () => {
+    if (peek) return;
     savePrefs({
       inputMode: screen.inputMode,
-      tiles: screen.tileSetName,
+      // A set asked for in the address (development) is this page's alone: the one remembered stays.
+      tiles: screen.tileSetName === tilesAsked ? prefs.tiles : screen.tileSetName,
       scanlines: screen.scanlines,
       autoCombat: world.autoCombat,
       poisonKills: world.poisonKills,
@@ -332,6 +345,17 @@ async function start(): Promise<void> {
   // Quit plugin; a browser tab gets no Quit.
   const plugins = (window as { Capacitor?: { Plugins?: { Quit?: NativeQuit } } }).Capacitor?.Plugins;
   const quit = appQuit(location.protocol, () => window.close(), plugins?.Quit);
+  // ?play and ?at= (development): straight into the game, placed where asked, the start's first key played.
+  if (dev && (params.has('play') || params.has('at'))) {
+    const at = dev.parseAt(params.get('at'));
+    const placed = at ? dev.startAt(world, at) : { key: null };
+    if (typeof placed === 'string') console.warn(`?at=${params.get('at')}: ${placed}`);
+    if (params.has('at') && !at) console.warn(`?at=${params.get('at')}: not a start (see devStarts.ts)`);
+    if (world.party.formed && (!world.party.rulesPending || (await chooseRules(world, screen)))) {
+      if (typeof placed !== 'string' && placed.key) keyboard.push(placed.key);
+      await game.run();
+    }
+  }
   await mainMenu(world, screen, () => game.run(), { save: (w) => localSave.write(w), transfer, update, quit });
 }
 
