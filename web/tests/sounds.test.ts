@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Sound } from '../src/game/io.ts';
-import { SoundPlayer, SOUND_SETS, fileFor } from '../src/ui/sound.ts';
+import { LEVELS, SoundPlayer, SOUND_SETS, fileFor, levelGain, levelLabel, validLevel } from '../src/ui/sound.ts';
 import { EFFECTS } from '../tools/chip-sfx.ts';
 
 const soundNames = Object.values(Sound).flat() as string[];
@@ -83,6 +83,32 @@ describe('sound player', () => {
     expect(started.map((s) => s.name)).toEqual(['sounds/standard/Step.wav', 'sounds/standard/Step.wav', 'sounds/Step.wav']);
     expect(started[0].gain).toBe(1);
     expect(started[2].gain).toBeCloseTo(Math.pow(10, -9 / 20), 5);
+  });
+
+  it('plays each effect at the FX level, on a curve, and none at Off', async () => {
+    const { started } = fakeAudio();
+    let t = 0;
+    const p = new SoundPlayer('sounds/', () => t);
+    p.unlock();
+    p.level = 5;
+    p.play('Step');
+    await tick();
+    await tick();
+    t = 100;
+    p.level = 0;
+    p.play('Step');
+    await tick();
+    await tick();
+    expect(started).toHaveLength(1);
+    expect(started[0].gain).toBeCloseTo(0.25, 5); // half way is a quarter of the gain: each step sounds like one
+  });
+
+  it('shows the levels as the settings do, and keeps only a whole step from a stored setting', () => {
+    expect([0, 1, 6, LEVELS].map(levelLabel)).toEqual(['Off', '10%', '60%', '100%']);
+    expect(levelGain(LEVELS)).toBe(1); // the full level is the game's own loudness
+    expect(levelGain(0)).toBe(0);
+    expect(validLevel(3)).toBe(3);
+    for (const bad of [11, -1, 2.5, '7', undefined]) expect(validLevel(bad)).toBe(LEVELS);
   });
 
   it('detunes the repeated Standard effects a little each play, and never the Lairware set', async () => {

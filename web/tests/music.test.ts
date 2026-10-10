@@ -69,7 +69,7 @@ describe('the music player', () => {
       FakeContext.last = this;
     }
     createGain() {
-      return { gain: { value: 0 }, connect() {} };
+      return { gain: { value: 0, cancelScheduledValues() {} }, connect() {} };
     }
     resume() {
       this.state = 'running';
@@ -112,6 +112,30 @@ describe('the music player', () => {
     m.resume();
     expect(ctx.state).toBe('running');
     expect(m.active).toBe(1); // the same tune, from where it stopped
+  });
+
+  it('plays at the Music level, stops at Off and starts again with a level, and is heard over a pause while dialled', async () => {
+    const m = await player();
+    m.play(1);
+    m.unlock();
+    const gain = () => (m as unknown as { master: { gain: { value: number } } }).master.gain.value;
+    expect(m.volume).toBeCloseTo(0.35, 5); // the full level: as loud as the music always was
+    m.level = 5;
+    expect(m.volume).toBeCloseTo(0.35 / 4, 5);
+    expect(gain()).toBeCloseTo(0.35 / 4, 5);
+    m.level = 0;
+    expect(m.active).toBe(0);
+    m.level = 3;
+    expect(m.active).toBe(1);
+    const ctx = FakeContext.last!;
+    m.pause(); // the Pause menu
+    expect(ctx.state).toBe('suspended');
+    m.hear(true); // its Music level dial
+    expect(ctx.state).toBe('running');
+    m.hear(false);
+    expect(ctx.state).toBe('suspended');
+    m.resume();
+    expect(ctx.state).toBe('running');
   });
 
   it('waits for the unlock, then follows the track the game wants', async () => {

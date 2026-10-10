@@ -35,6 +35,21 @@ const ALIAS: Record<SoundSet, Record<string, string>> = {
 /** The file a set plays for a game sound name (without folder or extension). */
 export const fileFor = (set: SoundSet, name: string): string => ALIAS[set][name] ?? name;
 
+/** The mixer's steps (the Music and FX level settings): a level is 0, off, to LEVELS, the game's own loudness. */
+export const LEVELS = 10;
+/** A level's gain, on a curve (the square) so that each step sounds like one: 1 at LEVELS, as before the setting. */
+export function levelGain(level: number): number {
+  return (Math.max(0, Math.min(LEVELS, level)) / LEVELS) ** 2;
+}
+/** A level as the settings show it: Off, or 10% to 100%. */
+export function levelLabel(level: number): string {
+  return level <= 0 ? 'Off' : `${Math.min(LEVELS, level) * 10}%`;
+}
+/** A remembered level, or `fallback` where it is not a whole step from 0 to LEVELS. */
+export function validLevel(level: unknown, fallback = LEVELS): number {
+  return typeof level === 'number' && Number.isInteger(level) && level >= 0 && level <= LEVELS ? level : fallback;
+}
+
 /** The same effect starts at most this often. */
 const MIN_INTERVAL_MS = 70;
 /** An effect at least this long is not restarted while it plays. */
@@ -115,6 +130,8 @@ export class SoundPlayer {
   private ends = new Map<string, number>();
   enabled = true;
   set: SoundSet = 'Standard';
+  /** The FX level (0..LEVELS); at LEVELS each effect plays at its own gain, as before the setting, at 0 none. */
+  level = LEVELS;
   /** Called with the length in seconds when a long effect starts (the music ducks). */
   onLong: ((seconds: number) => void) | null = null;
 
@@ -144,7 +161,7 @@ export class SoundPlayer {
 
   /** Play a named effect from the current set. Missing files fail silently. */
   play(name: string): void {
-    if (!this.enabled || !this.context) return;
+    if (!this.enabled || !this.context || this.level <= 0) return;
     const set = this.set;
     const key = `${FOLDER[set]}${fileFor(set, name)}`;
     const t = this.now();
@@ -159,7 +176,7 @@ export class SoundPlayer {
       if (set === 'Standard' && VARIED.has(name))
         source.playbackRate.value = Math.pow(2, ((this.random() * 2 - 1) * DETUNE_SEMITONES) / 12);
       const gain = ctx.createGain();
-      gain.gain.value = Math.pow(10, (GAIN_DB[set][name] ?? 0) / 20);
+      gain.gain.value = Math.pow(10, (GAIN_DB[set][name] ?? 0) / 20) * levelGain(this.level);
       source.connect(gain);
       gain.connect(ctx.destination);
       source.start();

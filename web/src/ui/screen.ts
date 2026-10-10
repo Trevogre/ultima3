@@ -25,7 +25,7 @@
 
 import { GraphicsSet, type ImageMap } from './graphics.ts';
 import { Keyboard } from './input.ts';
-import { SoundPlayer } from './sound.ts';
+import { LEVELS, levelLabel, SoundPlayer } from './sound.ts';
 import { MusicPlayer } from './music.ts';
 import { DungeonRenderer } from './dungeonView.ts';
 import { markerColour } from './display.ts';
@@ -754,7 +754,9 @@ export class Screen implements GameIO {
         { key: 'X', label: `Balanced XP: ${onOff(w.balancedXp)}` },
         { key: 'R', label: `Timer: ${w.timer[0].toUpperCase()}${w.timer.slice(1)}` },
         { key: 'S', label: `Sound FX: ${w.soundEnabled ? this.sounds.set : 'Off'}` },
+        { key: 'F', label: `FX level: ${levelLabel(this.sounds.level)}` },
         { key: 'M', label: `Music: ${onOff(this.musicPlayer.enabled)}` },
+        { key: 'U', label: `Music level: ${levelLabel(this.musicPlayer.level)}` },
         { key: 'H', label: 'Help' },
         ...quit,
         { key: 'B', label: 'Back' },
@@ -807,6 +809,22 @@ export class Screen implements GameIO {
         case 'M':
           this.musicPlayer.enabled = !this.musicPlayer.enabled; // the player stops or resumes the current track itself
           break;
+        case 'F':
+          // Each step is heard: a footstep at the new level, where sound effects are on.
+          await this.dialLevel('FX level', this.sounds.level, place, (n) => {
+            this.sounds.level = n;
+            this.sound(MENU_SOUNDS.move);
+          });
+          break;
+        case 'U':
+          // The music is heard while the dial turns, though the Pause menu holds it.
+          this.musicPlayer.hear(true);
+          try {
+            await this.dialLevel('Music level', this.musicPlayer.level, place, (n) => (this.musicPlayer.level = n));
+          } finally {
+            this.musicPlayer.hear(false);
+          }
+          break;
         case 'H':
           await this.showHelp();
           break;
@@ -814,6 +832,41 @@ export class Screen implements GameIO {
           return null;
       }
       this.onSettingsChange?.();
+    }
+  }
+
+  /**
+   * A level's dial (FX level, Music level): up or right a step louder, down or left a step quieter, each step taken
+   * up at once through `apply`, so it is heard as it turns. A or Enter keeps it; B or Escape puts back the level it
+   * started at.
+   */
+  private async dialLevel(title: string, start: number, place: MenuPlacement | undefined, apply: (n: number) => void): Promise<void> {
+    let value = start;
+    const label = () => `${levelLabel(value).padStart(4)}  up/down`;
+    const menu = layoutMenu(title, [label()]);
+    if (place) this.placeMenu(menu, { ...place, title });
+    menu.cursor = -1;
+    this.openMenu(menu);
+    try {
+      for (;;) {
+        const key = await this.readKey();
+        if (key === null) continue;
+        if (key === Key.A || key === Key.Enter) return;
+        if (key === Key.B || key === Key.Escape) {
+          if (value !== start) apply(start);
+          return;
+        }
+        let next = value;
+        if (key === Key.Up || key === Key.Right) next = Math.min(LEVELS, value + 1);
+        else if (key === Key.Down || key === Key.Left) next = Math.max(0, value - 1);
+        if (next === value) continue;
+        value = next;
+        apply(value);
+        menu.items[0] = label();
+        this.showMenuNow();
+      }
+    } finally {
+      this.closeMenu();
     }
   }
 

@@ -24,6 +24,8 @@
  * Durations are in the track's time scale (`mdhd`, 600 units per second).
  */
 
+import { LEVELS, levelGain } from './sound.ts';
+
 export interface MusicNote {
   /** Start time in seconds from the beginning of the tune. */
   time: number;
@@ -138,6 +140,8 @@ export const SONG_FILES: Record<number, string> = {
 /** How far ahead notes are scheduled, and how often the scheduler runs. */
 const LOOKAHEAD_S = 1.5;
 const SCHEDULER_MS = 250;
+/** The music's gain at the full Music level, as it played before the setting. */
+const FULL_VOLUME = 0.35;
 
 /**
  * Plays tunes on a simple polyphonic synthesizer: one triangle oscillator
@@ -167,8 +171,9 @@ export class MusicPlayer {
   private on = true;
   /** While the game is paused (window not focused) the clock stops, so the tune holds its place. */
   private paused = false;
-  /** 0..1 */
-  volume = 0.35;
+  /** Heard though the game is paused: the Music level's dial is turning (Screen), so the player hears each step. */
+  private hearing = false;
+  private levelValue = LEVELS;
 
   constructor(private readonly baseUrl = 'music/') {}
 
@@ -179,6 +184,25 @@ export class MusicPlayer {
   set enabled(on: boolean) {
     this.on = on;
     this.sync();
+  }
+
+  /** The Music level (0..LEVELS): the volume on a curve, LEVELS as before the setting; at 0 nothing plays. */
+  get level(): number {
+    return this.levelValue;
+  }
+  set level(n: number) {
+    this.levelValue = Math.max(0, Math.min(LEVELS, n));
+    if (this.master && this.context) {
+      const g = this.master.gain;
+      g.cancelScheduledValues(this.context.currentTime);
+      g.value = this.volume;
+    }
+    this.sync();
+  }
+
+  /** The gain the music plays at (and ducks from), 0..1. */
+  get volume(): number {
+    return FULL_VOLUME * levelGain(this.levelValue);
   }
 
   /**
@@ -209,25 +233,38 @@ export class MusicPlayer {
       this.master.gain.value = this.volume;
       this.master.connect(this.context.destination);
     }
-    if (this.context.state === 'suspended' && !this.paused) void this.context.resume();
+    this.runClock();
     this.sync();
   }
 
   /** The game paused: stop the audio clock, so the tune holds its place and resumes from it. */
   pause(): void {
     this.paused = true;
-    if (this.context?.state === 'running') void this.context.suspend();
+    this.runClock();
   }
 
   /** The game resumed: the tune goes on from where it stopped, if music is on. */
   resume(): void {
     this.paused = false;
-    if (this.context?.state === 'suspended') void this.context.resume();
+    this.runClock();
+  }
+
+  /** Hear the music though the game is paused (the Music level's dial turning), or hold it again. */
+  hear(on: boolean): void {
+    this.hearing = on;
+    this.runClock();
+  }
+
+  /** The audio clock runs unless the game is paused and the music is not being heard over it. */
+  private runClock(): void {
+    const run = !this.paused || this.hearing;
+    if (run && this.context?.state === 'suspended') void this.context.resume();
+    else if (!run && this.context?.state === 'running') void this.context.suspend();
   }
 
   /** Start or stop so that what sounds is the wanted track, if music is on and audio unlocked, else nothing. */
   private sync(): void {
-    const wanted = this.on && this.context ? this.current : 0;
+    const wanted = this.on && this.levelValue > 0 && this.context ? this.current : 0;
     if (wanted === this.activeTrack) return;
     this.stopScheduling();
     this.activeTrack = wanted;

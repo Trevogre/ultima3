@@ -31,7 +31,7 @@ import { AutoMap, MAP_MODES, type MapMode } from './game/automap.ts';
 import { mainMenu } from './game/menu.ts';
 import { GraphicsSet, loadImages } from './ui/graphics.ts';
 import { Keyboard } from './ui/input.ts';
-import { SoundPlayer, SOUND_SETS, type SoundSet } from './ui/sound.ts';
+import { LEVELS, SoundPlayer, SOUND_SETS, validLevel, type SoundSet } from './ui/sound.ts';
 import { TouchPad } from './ui/touch.ts';
 import { MusicPlayer } from './ui/music.ts';
 import { Screen } from './ui/screen.ts';
@@ -54,7 +54,11 @@ interface Prefs {
   timer: Timer;
   sound: boolean;
   soundSet: SoundSet;
+  /** The FX level, 0 to LEVELS; LEVELS is how loud the effects always were. */
+  effectsLevel: number;
   music: boolean;
+  /** The Music level, 0 to LEVELS; LEVELS is how loud the music always was. */
+  musicLevel: number;
   dungeonMap: MapMode;
   /** The virtual controller shown; on first visit, shown on a touch screen. */
   touchPad: boolean;
@@ -71,7 +75,9 @@ const DEFAULT_PREFS: Prefs = {
   timer: 'fast',
   sound: true,
   soundSet: 'Standard',
+  effectsLevel: LEVELS,
   music: true,
+  musicLevel: LEVELS,
   dungeonMap: 'off',
   touchPad: typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches,
 };
@@ -90,6 +96,8 @@ function loadPrefs(): Prefs {
     if (!STARVATION_MODES.includes(prefs.starvation)) prefs.starvation = 'mild';
     if (!TIMER_MODES.includes(prefs.timer)) prefs.timer = 'fast';
     if (!SOUND_SETS.includes(prefs.soundSet)) prefs.soundSet = 'Standard';
+    prefs.effectsLevel = validLevel(prefs.effectsLevel);
+    prefs.musicLevel = validLevel(prefs.musicLevel);
     return prefs;
   } catch {
     return { ...DEFAULT_PREFS };
@@ -210,7 +218,9 @@ async function start(): Promise<void> {
 
   const sounds = new SoundPlayer();
   sounds.set = prefs.soundSet;
+  sounds.level = prefs.effectsLevel;
   const music = new MusicPlayer();
+  music.level = prefs.musicLevel;
   sounds.onLong = (seconds) => music.duck(seconds); // long effects duck the music
   music.enabled = prefs.music;
   const keyboard = new Keyboard();
@@ -245,7 +255,9 @@ async function start(): Promise<void> {
       timer: world.timer,
       sound: world.soundEnabled,
       soundSet: sounds.set,
+      effectsLevel: sounds.level,
       music: music.enabled,
+      musicLevel: music.level,
       dungeonMap: world.mapMode,
       touchPad: prefs.touchPad,
     });

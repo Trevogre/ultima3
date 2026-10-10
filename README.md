@@ -230,8 +230,10 @@ away.
 
 The menu holds the settings: tile set, scanlines, auto combat, poison
 kills, starvation, balanced XP, the turn timer, Sound FX (Standard,
-Lairware or Off), music and Help, and Quit and save where the game allows
-it, on the surface and out of a fight. The title screen shows the same
+Lairware or Off) and the FX level, music and the Music level, and Help,
+and Quit and save where the game allows it, on the surface and out of a
+fight. A level is a dial, Off or 10% to 100%: each step is heard as it
+turns, the music playing under the paused game until the dial closes. The title screen shows the same
 settings under Settings. The input mode is there too, but only when the
 menu was opened with a key press: keyboard mode wants a keyboard, and
 choosing it with a thumb or a gamepad used to leave a player pressing
