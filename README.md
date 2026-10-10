@@ -673,7 +673,8 @@ The code is under the MIT License (see LICENSE), as LairWare released it.
 The game's name, maps, music and other assets are Origin Systems' and are
 included as Leon McNeill describes below. The desktop app's Steam artwork
 is made from the 1983 box painting by Denis Loubet for Origin Systems
-(`web/art/box/`), which remains its owners'.
+(`web/art/box/`), which remains its owners'; its years are set in IM FELL
+English by Igino Marini, under the SIL Open Font License (`web/art/fonts/`).
 
 ---
 

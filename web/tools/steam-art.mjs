@@ -1,37 +1,185 @@
 // The desktop app's Steam library artwork (desktop/steamArt.cjs puts it in place), made from the 1983 box painting by
-// Denis Loubet for Origin Systems: art/box/ultima3-box-c64.jpg, the Commodore 64 box's front. Every picture keeps the
-// painting at the scan's own resolution or close to it: smooth, a painting, as the box was.
-//   - capsule.png (600x900, the library's portrait capsule): the box, its title at the top, its border and the
+// Denis Loubet for Origin Systems: art/box/ultima3-box-c64.jpg, the Commodore 64 box's front. The painting is kept at
+// the scan's own resolution or close to it: smooth, a painting, as the box was.
+//   - capsule.png (600x900, the library's portrait capsule): the box, its own title at the top, its border and the
 //     "Commodore 64" label gone (the lava under the label is the left side's, mirrored), its foot fading to dark under
 //     "1983 ~ 2026";
 //   - wide.png (920x430, the wide capsule): the painting below the title to the left, fading into the dark; the title
-//     and the years to the right;
-//   - hero.png (3840x1240, across the game's page; no words, Steam lays the logo over it): the painting below the title,
-//     its foot on the bottom edge and the demon's eyes and glowing hands inside Steam's safe zone, the middle 860x380
-//     (x 1490-2350, y 430-810) sure to stay in view as the window is resized; the rest the painting's own colours,
-//     blurred and darkened, with nothing in the top-right corner the Steam Deck's status bar covers;
-//   - logo.png (1280 wide, transparent): the box's painted title, EXODUS and ULTIMA III, cut from the cavern behind it,
-//     its 3D block fading out below.
-// The years are cut into stone: the wing's veined red for the cut's floor, a darker copy of it as the wall in shadow
-// along the top and left of each stroke and a lighter copy as the lit wall along the bottom and right, a thin dark
-// outline around. Run `node tools/steam-art.mjs` in web/; it needs ImageMagick 7 (`magick`) and macOS's Arial Black.
+//     (tools/title-art.mjs, drawn afresh as vectors) and the years to the right;
+//   - hero.png (3840x1240, across the game's page; no words, Steam lays the logo over it): the demon cut from the
+//     cavern along his wings' outer edges, their finger bones with them, sharp-edged, on a glow of his own reds and
+//     yellows that dies to black at the edges; his eyes and his glowing hands inside Steam's safe zone, the middle
+//     860x380 (x 1490-2350, y 430-810) sure to stay in view as the window is resized, his wings running off the top
+//     and bottom edges; nothing in the top-right corner the Steam Deck's status bar covers;
+//   - logo.png (1280 wide, transparent): the title alone, drawn afresh (tools/title-art.mjs).
+// The years are U5's dateline (its tools/key-art.mjs) - IM FELL English's figures (art/fonts/), a wave between them -
+// cut into stone: the wing's veined red for the cut's floor, a darker copy of it as the wall in shadow along the top
+// and left of each stroke and a lighter copy as the lit wall along the bottom and right, a thin dark outline around.
+// Run `node tools/steam-art.mjs` in web/; it needs ImageMagick 7 (`magick`).
 import { execFileSync } from 'node:child_process';
-import { mkdtempSync, rmSync } from 'node:fs';
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Resvg } from '@resvg/resvg-js';
+import { titleSvg } from './title-art.mjs';
 
 const WEB = join(dirname(fileURLToPath(import.meta.url)), '..');
 const SCAN = join(WEB, 'art', 'box', 'ultima3-box-c64.jpg');
 const OUT = join(WEB, '..', 'desktop', 'build', 'steam');
-const FONT = '/System/Library/Fonts/Supplemental/Arial Black.ttf';
+const FONT = 'IM FELL English';
+const RESVG = { font: { fontFiles: [join(WEB, 'art', 'fonts', 'IMFeENrm28P.ttf')], loadSystemFonts: false, defaultFontFamily: FONT } };
 const tmp = mkdtempSync(join(tmpdir(), 'steam-art-'));
 const t = (name) => join(tmp, name);
 const magick = (...args) => execFileSync('magick', args.flat(Infinity), { stdio: 'inherit' });
 /** Written pictures carry no dates, so the same scan makes the same files. */
 const write = (name) => ['-strip', '-define', 'png:exclude-chunks=date,time', join(OUT, name)];
-/** An alpha that rises from 0 to 1 over `f` pixels in from the given edges. */
-const feather = (f, top = false) => `min(1, min(min(i/${f}, (w-1-i)/${f}), ${top ? `j/${f}` : '1'}))`;
+/** An SVG rendered to a PNG in the temporary folder. */
+const render = (svg, name) => writeFileSync(t(name), new Resvg(svg, RESVG).render().asPng());
+const uri = (name) => `data:image/png;base64,${readFileSync(t(name)).toString('base64')}`;
+const n = (v) => Number(v.toFixed(1));
+
+// The hero's cut, in the painting's pixels (the scan less its border). Each wing's outer edge is found row by row: near
+// a rough trace, where the dark of the cavern outside steps up most sharply to the wing's lit rim (the median of nine
+// rows taken, then a running mean, a pixel outward so the rim stays whole). Each finger bone is a thin white line,
+// followed upward from its glint row by row at its brightest. Over the wings' tops, glint to glint, then up the inner
+// bone to the title: what is between the wings, the dark over the demon's head, stays.
+const WING_LEFT = [
+  [422, 77],
+  [490, 67],
+  [540, 65],
+  [610, 67],
+  [670, 72],
+  [720, 82],
+  [770, 95],
+  [820, 112],
+  [860, 132],
+  [890, 145],
+];
+const WING_RIGHT = [
+  [410, 596],
+  [455, 609],
+  [540, 616],
+  [610, 616],
+  [670, 611],
+  [740, 599],
+  [800, 581],
+  [855, 559],
+  [890, 539],
+];
+const BONES = {
+  outerLeft: [
+    [416, 80],
+    [342, 121],
+    [305, 155],
+    [282, 174],
+  ],
+  middleLeft: [
+    [372, 138],
+    [324, 165],
+    [282, 189],
+  ],
+  innerLeft: [
+    [342, 183],
+    [282, 206],
+  ],
+  outerRight: [
+    [406, 593],
+    [282, 511],
+  ],
+  middleRight: [
+    [365, 536],
+    [282, 489],
+  ],
+  innerRight: [
+    [342, 490],
+    [282, 466],
+  ],
+};
+const GLINTS_LEFT = [
+  [183, 345],
+  [136, 375],
+  [80, 418],
+];
+const GLINTS_RIGHT = [
+  [595, 409],
+  [538, 367],
+  [492, 344],
+];
+// Where the painting shows on the hero: its row 302 at the top edge, 2.37 times its size (the eyes, row 486, at 436;
+// the glowing hands, row 614, at 739), its middle (column 341) on the hero's.
+const HERO = { top: 302, scale: 2.37, middle: 341, eyes: 486, hands: 614 };
+
+/** `pts` ([y, x] by y) read at row `y`, in a straight line between them. */
+function along(pts, y) {
+  for (let i = 1; i < pts.length; i++) {
+    const [[y0, x0], [y1, x1]] = [pts[i - 1], pts[i]];
+    if ((y - y0) * (y - y1) <= 0) return x0 + ((x1 - x0) * (y - y0)) / (y1 - y0);
+  }
+  return pts.at(-1)[1];
+}
+
+/** The hero's cut as an SVG path, its points in the painting's pixels mapped by `pt`. */
+function heroCut(gray, width, pt, bottom) {
+  const lum = (x, y) => gray[y * width + Math.round(x)];
+  const edge = (trace, dir) => {
+    const rows = [];
+    for (let y = trace[0][0]; y <= Math.min(bottom, trace.at(-1)[0]); y++) {
+      const guess = Math.round(along(trace, y));
+      let [best, at] = [-Infinity, guess];
+      for (let x = guess - 14; x <= guess + 14; x++) {
+        const step = lum(x + dir, y) + lum(x + 2 * dir, y) - lum(x - dir, y) - lum(x - 2 * dir, y);
+        if (step > best) [best, at] = [step, x];
+      }
+      rows.push([y, at]);
+    }
+    const median = rows.map(([y], i) => [
+      y,
+      rows
+        .slice(Math.max(0, i - 4), i + 5)
+        .map((r) => r[1])
+        .sort((a, b) => a - b)[4] ?? rows[i][1],
+    ]);
+    const smooth = median.map(([y], i) => {
+      const near = median.slice(Math.max(0, i - 5), i + 6);
+      return [y, near.reduce((s, r) => s + r[1], 0) / near.length];
+    });
+    return smooth.map(([y, x]) => [x - dir, y]);
+  };
+  const bone = (trace) => {
+    const line = [];
+    let x = trace[0][1];
+    for (let y = trace[0][0] - 4; y >= trace.at(-1)[0]; y--) {
+      const guess = Math.round(line.length ? x : along(trace, y));
+      let [best, at] = [-1, guess];
+      for (let c = guess - 5; c <= guess + 5; c++) if (lum(c, y) > best) [best, at] = [lum(c, y), c];
+      let [sum, weight] = [0, 0];
+      for (let c = at - 2; c <= at + 2; c++) {
+        const v = Math.max(0, lum(c, y) - 40);
+        [sum, weight] = [sum + v * c, weight + v];
+      }
+      x = weight ? sum / weight : at;
+      line.push([x, y]);
+    }
+    return line;
+  };
+  const left = edge(WING_LEFT, 1);
+  const right = edge(WING_RIGHT, -1).reverse();
+  const shift = (line, dx) => line.map(([x, y]) => [x + dx, y]);
+  const outline = [
+    ...shift(bone(BONES.innerLeft), -1.6).reverse(),
+    ...GLINTS_LEFT,
+    ...left,
+    [left.at(-1)[0], bottom + 20],
+    [right[0][0], bottom + 20],
+    ...right,
+    ...GLINTS_RIGHT,
+    ...shift(bone(BONES.innerRight), 1.6),
+  ];
+  const path = (pts) => pts.map((p, i) => `${i ? 'L' : 'M'}${pt(p)}`).join(' ');
+  const bones = [BONES.outerLeft, BONES.middleLeft, BONES.outerRight, BONES.middleRight].map((b) => path(bone(b)));
+  return { outline: `${path(outline)}Z`, bones };
+}
 
 try {
   // The painting: the scan with the label's corner covered by the left side's lava (mirrored, its edges feathered),
@@ -56,18 +204,29 @@ try {
   magick(t('painting.png'), '-crop', '669x662+0+310', '+repage', t('scene.png'));
   magick(t('painting.png'), '-crop', '56x250+72+435', '+repage', '-rotate', '90', '-modulate', '80,105', t('stone.png'));
 
-  /** "1983 ~ 2026" cut into the stone, `w` x `h` on transparency: the mask, the three stones through it, the outline. */
+  /**
+   * "1983 ~ 2026" cut into the stone, `w` x `h` on transparency: U5's dateline as large as fits (the wave a type size
+   * across at the figures' middle, a type size and a quarter of space each side of it, the years beyond), the three
+   * stones through it, the outline.
+   */
   const carve = (w, h, out) => {
-    const d = Math.floor(h / 18) + 1;
-    const x = (p) => Math.floor((w * p) / 100);
-    const y = (p) => Math.floor((h * p) / 100);
-    const wave = `path 'M ${x(41)},${y(50)} C ${x(45)},${y(18)} ${x(49)},${y(18)} ${x(50)},${y(50)} S ${x(55)},${y(82)} ${x(59)},${y(50)}'`;
-    magick(
-      ['-size', `${w}x${h}`, 'xc:black', '-fill', 'white', '-font', FONT, '-pointsize', String(y(70))],
-      ['-gravity', 'west', '-annotate', '+0+0', '1983', '-gravity', 'east', '-annotate', '+0+0', '2026'],
-      ['-gravity', 'northwest', '-fill', 'none', '-stroke', 'white', '-strokewidth', String(Math.floor(h / 9)), '-draw', wave],
-      ['-alpha', 'off', '-colorspace', 'gray', t('mask.png')],
+    // IM FELL's figures are old-style: they reach 0.59 of the type size above the baseline and 0.23 below.
+    const size = Math.min(w / 7.2, h / 0.86);
+    const [x, y] = [w / 2, h / 2 + size * 0.18];
+    const half = size * 0.5;
+    const gap = half + size * 1.25;
+    const [mid, rise] = [y - size * 0.24, size * 0.09];
+    const wave =
+      `M${n(x - half)} ${n(mid + rise * 0.4)} C${n(x - half * 0.6)} ${n(mid - rise * 1.6)} ${n(x - half * 0.2)} ${n(mid - rise)} ${n(x)} ${n(mid)} ` +
+      `S${n(x + half * 0.6)} ${n(mid + rise * 1.6)} ${n(x + half)} ${n(mid - rise * 0.4)}`;
+    render(
+      `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}"><rect width="${w}" height="${h}" fill="#000"/>
+      <g fill="#fff" font-family="${FONT}" font-size="${n(size)}"><text x="${n(x - gap)}" y="${n(y)}" text-anchor="end">1983</text><text x="${n(x + gap)}" y="${n(y)}">2026</text></g>
+      <path d="${wave}" fill="none" stroke="#fff" stroke-width="${n(size * 0.1)}" stroke-linecap="round"/></svg>`,
+      'mask-text.png',
     );
+    magick(t('mask-text.png'), '-alpha', 'off', '-colorspace', 'gray', t('mask.png'));
+    const d = Math.max(1, Math.round(size / 30));
     const stone = (brightness, name) =>
       magick(
         t('stone.png'),
@@ -92,7 +251,7 @@ try {
     through('floor.png', 'mask.png', 'l-floor.png');
     through('dark.png', 'shade.png', 'l-shade.png');
     through('light.png', 'lit.png', 'l-lit.png');
-    magick(t('mask.png'), '-morphology', 'Dilate', `Disk:${Math.floor(h / 22) + 1}`, t('grown.png'));
+    magick(t('mask.png'), '-morphology', 'Dilate', `Disk:${Math.max(1, Math.round(size / 26))}`, t('grown.png'));
     magick(
       '-size',
       `${w}x${h}`,
@@ -123,21 +282,9 @@ try {
     );
   };
 
-  // The title, cut from the cavern: the black around it flooded away from the edges, the cut's edge softened, the 3D
-  // block below fading out, and a red streak of the cavern at the bottom left cleared.
-  magick(
-    [t('painting.png'), '-crop', '669x262+0+0', '+repage', '-alpha', 'set', '-fuzz', '16%', '-fill', 'none'],
-    ['0,0', '668,0', '0,150', '668,150', '0,261', '668,261'].flatMap((p) => ['-draw', `color ${p} floodfill`]),
-    [t('title-cut.png')],
-  );
-  magick(
-    t('title-cut.png'),
-    ['(', '+clone', '-alpha', 'extract', '-blur', '0x0.7'],
-    ['(', '-size', '669x262', 'xc:white', '(', '-size', '669x22', 'gradient:white-black', ')', '-geometry', '+0+240', '-composite'],
-    ['-fill', 'black', '-draw', 'rectangle 0,215 40,262', ')', '-compose', 'Multiply', '-composite', ')'],
-    ['-alpha', 'off', '-compose', 'CopyOpacity', '-composite', '-trim', '+repage', t('title.png')],
-  );
-  magick(t('title.png'), '-filter', 'Lanczos', '-resize', '1280x', '-unsharp', '0x1.2+0.6+0', write('logo.png'));
+  // The logo: the title alone, on nothing.
+  render(titleSvg(1280).svg, 'logo.png');
+  magick(t('logo.png'), write('logo.png'));
 
   // The portrait capsule: the box, 2:3, its foot fading to dark under the years.
   carve(440, 64, t('years-capsule.png'));
@@ -147,47 +294,58 @@ try {
     [t('years-capsule.png'), '-geometry', '+80+816', '-composite', write('capsule.png')],
   );
 
-  // The wide capsule: the scene to the left fading into the dark, the title and the years to the right.
-  carve(300, 44, t('years-wide.png'));
+  // The wide capsule: the scene to the left fading into the dark, the title and the years to the right, together in
+  // the middle of the height.
+  const title = titleSvg(430);
+  render(title.svg, 'wide-title.png');
+  const [yearsW, yearsH, between] = [330, 48, 14];
+  const titleTop = Math.round((430 - title.height - between - yearsH) / 2);
+  carve(yearsW, yearsH, t('years-wide.png'));
   magick(t('scene.png'), '-resize', 'x430', '-alpha', 'set', '-channel', 'A', '-fx', 'min(1, (w-1-i)/90)', '+channel', t('wide-scene.png'));
-  magick(t('title.png'), '-filter', 'Lanczos', '-resize', '430x', t('wide-title.png'));
   magick(
     ['-size', '430x920', 'gradient:#2a0a06-#050101', '-rotate', '270'],
-    [t('wide-scene.png'), '-geometry', '+0+0', '-composite', t('wide-title.png'), '-geometry', '+460+78', '-composite'],
-    [t('years-wide.png'), '-geometry', '+525+290', '-composite', '-depth', '8', write('wide.png')],
+    [t('wide-scene.png'), '-geometry', '+0+0', '-composite', t('wide-title.png'), '-geometry', `+460+${titleTop}`, '-composite'],
+    [t('years-wide.png'), '-geometry', `+${460 + 215 - yearsW / 2}+${titleTop + title.height + between}`, '-composite'],
+    ['-depth', '8', write('wide.png')],
   );
 
-  // The hero: the scene at 1.48x, its foot on the bottom edge and the eyes at y 520, on its own colours blurred.
-  magick(
-    t('scene.png'),
-    '-resize',
-    '3840x1240^',
-    '-gravity',
-    'center',
-    '-extent',
-    '3840x1240',
-    '-blur',
-    '0x60',
-    '-modulate',
-    '32,60',
-    t('hero-ground.png'),
+  // The hero: the demon cut out, on his glow.
+  const gray = execFileSync('magick', [t('painting.png'), '-colorspace', 'gray', '-depth', '8', 'gray:-'], { maxBuffer: 1 << 24 });
+  const s = HERO.scale;
+  const left = 1920 - HERO.middle * s;
+  const bottom = HERO.top + 1240 / s;
+  const pt = ([x, y]) => `${n(x * s + left)} ${n((y - HERO.top) * s)}`;
+  const cut = heroCut(gray, 669, pt, Math.ceil(bottom) + 4);
+  const [w, h] = [Math.round(669 * s), Math.round(972 * s)];
+  magick(t('painting.png'), '-filter', 'Lanczos', '-resize', `${w}x${h}!`, '-unsharp', '0x1+0.5+0', t('hero-painting.png'));
+  // The glow: as U5's hero is lit (a broad light behind the picture, dying away to its edges), in the demon's colours.
+  const [cx, cy, rx, ry] = [1920, 760, 1700, 1100];
+  const stops = [
+    [0, '#f0a030'],
+    [0.22, '#a83010'],
+    [0.34, '#6a1006'],
+    [0.55, '#2a0504'],
+    [0.8, '#0c0202'],
+    [1, '#050101'],
+  ];
+  render(
+    `<svg xmlns="http://www.w3.org/2000/svg" width="3840" height="1240">
+    <defs>
+      <radialGradient id="glow" gradientUnits="userSpaceOnUse" cx="${cx}" cy="${cy}" r="${rx}" gradientTransform="translate(${cx} ${cy}) scale(1 ${n(ry / rx)}) translate(${-cx} ${-cy})">
+        ${stops.map(([o, c]) => `<stop offset="${o}" stop-color="${c}"/>`).join('')}
+      </radialGradient>
+      <mask id="cut" maskUnits="userSpaceOnUse" x="0" y="0" width="3840" height="1240">
+        <path d="${cut.outline}" fill="#fff"/>
+        <g fill="none" stroke="#fff" stroke-width="${n(2.6 * s)}" stroke-linecap="round" stroke-linejoin="round">${cut.bones.map((d) => `<path d="${d}"/>`).join('')}</g>
+      </mask>
+    </defs>
+    <rect width="3840" height="1240" fill="url(#glow)"/>
+    <image x="${n(left)}" y="${n(-HERO.top * s)}" width="${w}" height="${h}" href="${uri('hero-painting.png')}" mask="url(#cut)"/>
+    </svg>`,
+    'hero.png',
   );
-  magick(
-    t('scene.png'),
-    '-resize',
-    '989x978!',
-    '-unsharp',
-    '0x1+0.5+0',
-    '-alpha',
-    'set',
-    '-channel',
-    'A',
-    '-fx',
-    feather(90, true),
-    '+channel',
-    t('hero-scene.png'),
-  );
-  magick(t('hero-ground.png'), t('hero-scene.png'), '-gravity', 'northwest', '-geometry', '+1425+262', '-composite', write('hero.png'));
+  magick(t('hero.png'), write('hero.png'));
+  console.log(`hero: eyes at y ${Math.round((HERO.eyes - HERO.top) * s)}, hands at y ${Math.round((HERO.hands - HERO.top) * s)}`);
 } finally {
   rmSync(tmp, { recursive: true, force: true });
 }

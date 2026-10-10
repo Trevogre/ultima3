@@ -11,5 +11,8 @@ C64 scan carry text over the lower half. Its one blemish, the
 "Commodore 64 disc" label at the bottom right, the script covers with the
 lava of the left side.
 
+Where the title stands alone (the logo, the wide capsule) it is not this
+scan's but drawn afresh after it, by `tools/title-art.mjs`.
+
 The painting remains its owners'; it is altered only by that cover, the
-crops and the extensions the script makes.
+crops and the hero's cut (the demon and his wings cut from the cavern).
