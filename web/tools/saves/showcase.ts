@@ -29,7 +29,7 @@ const OUT = join(dirname(fileURLToPath(import.meta.url)), '..', '..', '..', 'sho
 /** A fixed export date, so a save made again from the same code is the same file. */
 const EXPORTED = '2026-10-10T00:00:00.000Z';
 
-const MARK = { kings: 0x80, snake: 0x40, force: 0x20, fire: 0x10 } as const;
+const MARK = { kings: 0x80, snake: 0x40, fire: 0x20, force: 0x10 } as const;
 const ALL_CARDS = 0x0f;
 
 /** How far a showcase's party has come. */

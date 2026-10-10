@@ -9,7 +9,7 @@
  *   offset  meaning
  *   ------  ------------------------------------------------------------
  *    0-15   name, NUL padded, high bit sometimes set (Apple II text)
- *    14     bit flags: marks and cards (0x10 Mark of Fire, 0x20 Mark of Force ...)
+ *    14     bit flags: marks and cards (0x10 Mark of Force, 0x20 Mark of Fire ...)
  *    15     torches
  *    16     0xFF while the character is in the party, 0 otherwise
  *    17     status letter: 'G' good, 'P' poisoned, 'D' dead, 'A' ashes
