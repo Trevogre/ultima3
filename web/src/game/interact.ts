@@ -537,6 +537,11 @@ export function safeExodus(world: World): void {
 /** Race-dependent caps on each attribute at the shrines. (`shMax`) */
 const SHRINE_MAX = [75, 75, 99, 75, 25, 75, 99, 75, 50, 99, 75, 50, 75, 99, 75, 75, 75, 50, 75, 99];
 
+/** A race's limit on a stat at the shrines: race 0..4 as `Races` lists them, stat 0 strength, 1 dexterity, 2 intelligence, 3 wisdom. */
+export function statLimit(race: number, stat: number): number {
+  return SHRINE_MAX[race + [0, 5, 15, 10][stat]];
+}
+
 /**
  * Mirrors `Shrine()`: pay hundreds of gold to raise strength, dexterity,
  * intelligence or wisdom (chosen by the shrine's X position & 3), up to
@@ -562,8 +567,7 @@ export async function enterShrine(world: World, io: GameIO): Promise<void> {
 
   const races = world.resources.strings.Races.map((r) => r[0]);
   const race = Math.max(0, races.indexOf(p.race));
-  const table = [0, 5, 15, 10][which];
-  const max = SHRINE_MAX[race + table];
+  const max = statLimit(race, which);
   const offset = [18, 19, 20, 21][which];
 
   io.printMessage(Msg.ShrineOffering);

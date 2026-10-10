@@ -13,6 +13,13 @@ The art briefs the new figures and dungeon sheets were drawn to are in
 [`web/docs/`](web/docs/). The original Macintosh sources and resources are
 at the root of the repository, unchanged.
 
+[`showcase/`](showcase/README.md) holds exported games at the game's
+sights, for trying it, screenshots and testing: `npm run saves` in `web/`
+makes them from a new game brought on by the test harness
+(`web/tools/saves/showcase.ts`), which runs under node through
+`web/tools/node-ts.mjs`, a loader that compiles the game's TypeScript
+(node strips types itself, but not the classes' parameter properties).
+
 The two sheets the README opens with are in [`promo/`](promo/): nine
 screenshots of the Standard experience, and each of the twelve tile sets
 at the opening, in one fight and in one dungeon corridor. The tile-set shots

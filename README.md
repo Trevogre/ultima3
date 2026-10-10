@@ -113,7 +113,10 @@ The game saves itself at every town, castle and dungeon door and at Quit,
 in the browser's local storage, and resumes on the next visit. The title
 menu's Export game copies the saved game as text to the clipboard or a
 file, and Import game reads it back, which is how a game moves between
-devices.
+devices. The [showcase saves](showcase/README.md) are games ready at some
+of Sosaria's sights, from the opening to the castle of Exodus, to import
+and try (importing one replaces the game in progress, so export yours
+first).
 
 **Back up your saved game.** Browsers can clear a site's storage on their
 own: Safari and every other iOS browser delete it after seven days without

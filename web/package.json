@@ -15,7 +15,8 @@
     "extract": "node tools/extract-resources.ts",
     "figures": "node tools/compose-figures.ts",
     "graphics-index": "node tools/graphics-index.ts",
-    "sfx": "node tools/chip-sfx.ts"
+    "sfx": "node tools/chip-sfx.ts",
+    "saves": "node --import ./tools/node-ts.mjs tools/saves/showcase.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

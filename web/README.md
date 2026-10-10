@@ -16,6 +16,7 @@ npm run dev       # http://localhost:5173
 npm test          # unit tests (Vitest, run in Node)
 npm run build     # typecheck + production build into dist/
 npm run figures   # writes art/figures/ into the Standard tile sheet
+npm run saves     # writes ../showcase/, the showcase saves (tools/saves/showcase.ts)
 ```
 
 The last Help page in the game shows `Build <hash>`, the short commit hash
