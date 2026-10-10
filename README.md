@@ -138,6 +138,10 @@ browser's; Export and Import move a game between them. Its title menu has
 a Quit, for a full screen or Steam's Game Mode where the window has no
 close button, and only one copy runs at a time: launching it again brings
 the open one forward, so two copies never write over each other's save.
+When a newer release is out, the title menu says so, "Update (x.y.z)", and
+choosing it opens the release's page to download it; the Flatpak is kept
+up to date by Discover or `flatpak update` instead, and nothing is offered
+under Steam's Game Mode, where a browser would open over the game.
 
 - **Windows**: an installer and a portable `.exe`. Both are unsigned, so
   SmartScreen asks once; choose More info, then Run anyway.
@@ -173,7 +177,9 @@ updated from the releases: tap the badge on the device, or add
 The app runs full screen in landscape, the Back button opens the Pause
 menu as Escape does, the title menu ends with Quit to close the app, and
 built-in controls that Android reports as a gamepad switch the game to
-controller mode on the first press. The APK is signed
+controller mode on the first press. When a newer release is out, the title
+menu offers "Update (x.y.z)", which opens its page (Obtainium, where it
+installed the app, finds it too). The APK is signed
 with a key kept in the repository, so a new build installs over the old
 one and keeps the saved game. iOS has no such build on purpose: install
 the web version from Safari's Share menu with Add to Home Screen instead.

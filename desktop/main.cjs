@@ -7,10 +7,11 @@
 // Steam's Game Mode compositor, GPU acceleration and the Chromium sandbox
 // are turned off: see below. Only one copy runs; a second launch brings the
 // first window forward.
-const { app, BrowserWindow, protocol, net, shell, session } = require('electron');
+const { app, BrowserWindow, protocol, net, shell, session, ipcMain } = require('electron');
 const { join, normalize } = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { readFileSync, writeFileSync, existsSync } = require('node:fs');
+const updates = require('./updates.cjs');
 
 // Game Mode runs the app under the gamescope compositor, where Chromium's GPU process has hung whole sessions and
 // its seccomp sandbox has killed apps Steam launched. The game is a 2D canvas that needs neither, so under gamescope
@@ -67,7 +68,7 @@ function createWindow() {
     fullscreen: wantsFullScreen(),
     title: 'Ultima III',
     icon: join(__dirname, 'build', 'icon.png'),
-    webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false },
+    webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, preload: join(__dirname, 'preload.cjs') },
   });
   win.setMenuBarVisibility(false);
   win.removeMenu();
@@ -104,6 +105,23 @@ app.on('second-instance', () => {
   if (win.isMinimized()) win.restore();
   win.show();
   win.focus();
+});
+
+// A newer release, asked for as the app starts, for the title menu's "Update (x.y.z)" (updates.cjs): the page asks for
+// it (preload.cjs) and, chosen, has its page opened in the system browser.
+const releaseOffer = updates.shouldCheck({
+  packaged: app.isPackaged,
+  env: process.env,
+  argv: process.argv,
+  version: app.getVersion(),
+  gamescope: inGamescope,
+})
+  ? updates.newerRelease(app.getVersion())
+  : Promise.resolve(null);
+ipcMain.handle('update-offer', () => releaseOffer);
+ipcMain.handle('open-release', async () => {
+  const offer = await releaseOffer;
+  if (offer) await shell.openExternal(offer.url);
 });
 
 app.whenReady().then(() => {

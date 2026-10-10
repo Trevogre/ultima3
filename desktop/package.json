@@ -32,6 +32,8 @@
     },
     "files": [
       "main.cjs",
+      "preload.cjs",
+      "updates.cjs",
       "app/**/*"
     ],
     "asar": true,

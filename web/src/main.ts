@@ -16,6 +16,7 @@ import { localSave, exportGame, parseExport, restore } from './game/save.ts';
 import { registerSW } from 'virtual:pwa-register';
 import type { Transfer, Update } from './game/menu.ts';
 import { appQuit, launchWarning, warningDue, type NativeQuit } from './ui/platform.ts';
+import { isRelease, newerRelease, within, type NativeUpdates, type ReleaseOffer } from './ui/updates.ts';
 
 const WARNED_KEY = 'ultima3.warned';
 /** When the storage warning was last shown, or null. */
@@ -200,6 +201,16 @@ async function start(): Promise<void> {
   if (peek) localSave.off = true;
   const tilesAsked = dev?.tileSetAsked(params.get('tiles'), TILE_SETS) ?? null;
   const tiles = tilesAsked ?? prefs.tiles;
+  // A newer release for the apps (updates.ts), asked for now so the answer is in by the title: the desktop app's main
+  // process asks GitHub; the Android app (its Quit plugin is how it is known) asks from here, its version built in.
+  const native = (window as { u3native?: NativeUpdates }).u3native;
+  const plugins = (window as { Capacitor?: { Plugins?: { Quit?: NativeQuit } } }).Capacitor?.Plugins;
+  const appVersion = import.meta.env.VITE_APP_VERSION as string | undefined;
+  const releaseOffer: Promise<ReleaseOffer | null> = native
+    ? native.updateOffer()
+    : plugins?.Quit && isRelease(appVersion)
+      ? newerRelease(appVersion)
+      : Promise.resolve(null);
 
   const [resources, gfx, images] = await Promise.all([loadResources(), GraphicsSet.load(tiles), loadImages()]);
 
@@ -343,8 +354,19 @@ async function start(): Promise<void> {
   };
   // The desktop app closes its window to quit (its last window closing quits it), and the Android app asks its
   // Quit plugin; a browser tab gets no Quit.
-  const plugins = (window as { Capacitor?: { Plugins?: { Quit?: NativeQuit } } }).Capacitor?.Plugins;
   const quit = appQuit(location.protocol, () => window.close(), plugins?.Quit);
+  // An app's newer release, waited for a moment at most: the title offers it, and choosing it opens its page (in the
+  // system browser, from the desktop app's main process or, on Android, by Capacitor for a page of another site).
+  const offer = await within(
+    releaseOffer.catch(() => null),
+    2000,
+    null,
+  );
+  const appUpdate: Update | null = offer && {
+    ready: () => true,
+    label: () => `Update (${offer.version})`,
+    apply: () => (native ? void native.openRelease() : location.assign(offer.url)),
+  };
   // ?play and ?at= (development): straight into the game, placed where asked, the start's first key played.
   if (dev && (params.has('play') || params.has('at'))) {
     const at = dev.parseAt(params.get('at'));
@@ -356,7 +378,7 @@ async function start(): Promise<void> {
       await game.run();
     }
   }
-  await mainMenu(world, screen, () => game.run(), { save: (w) => localSave.write(w), transfer, update, quit });
+  await mainMenu(world, screen, () => game.run(), { save: (w) => localSave.write(w), transfer, update: appUpdate ?? update, quit });
 }
 
 start().catch((err) => {

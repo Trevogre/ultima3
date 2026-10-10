@@ -3,6 +3,7 @@
 const { execSync } = require("node:child_process");
 const { cpSync, rmSync, existsSync, readdirSync } = require("node:fs");
 const { join } = require("node:path");
+const { buildVersion } = require("../desktop/version.cjs");
 const web = join(__dirname, "..", "web");
 let build = "dev";
 try {
@@ -19,6 +20,8 @@ execSync("npm run build", {
     ...process.env,
     VITE_BASE: "./",
     VITE_BUILD: process.env.VITE_BUILD || build,
+    // The APK's version, for the game's own update check (web/src/ui/updates.ts).
+    VITE_APP_VERSION: buildVersion(),
   },
 });
 const app = join(__dirname, "app");

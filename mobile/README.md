@@ -17,6 +17,11 @@ Add to Home Screen.
   an edge shows them for a moment.
 - Maps the system Back button (and a handheld's Back key) to Escape, which
   opens the game's Pause menu.
+- Offers a newer release on the title menu, "Update (x.y.z)": the game
+  asks GitHub for the newest release and compares it with the APK's
+  version, which `bundle.cjs` builds into the page (`VITE_APP_VERSION`).
+  Choosing it goes to the release's page, which Capacitor opens in the
+  system browser, as it does any page of another site.
 - Offers Quit on the game's title menu. A page cannot close the app that
   holds it, so `QuitPlugin.java`, a Capacitor plugin of the app's own
   registered in `MainActivity.java`, does it: the game finds it as

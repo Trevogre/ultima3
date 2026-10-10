@@ -43,6 +43,16 @@ Chromium keeps the lock's socket, at a directory the instances share. The
 game offers Quit on its title menu when it sees the `app:` scheme the
 window loads it from, and quits by closing that window.
 
+As it starts, the app asks GitHub for the newest release (`updates.cjs`);
+where that is newer than its own version, the page learns of it through
+`preload.cjs` (the one thing the page may ask of the app, with opening the
+release's page) and the title menu offers "Update (x.y.z)", which opens the
+page in the system browser. Nothing is downloaded or installed. It does not
+ask in the Flatpak (flatpak updates it from the site's repository), under
+gamescope (Steam's Game Mode, where a browser would cover the game), in a
+copy run unpackaged or built locally, or with `--no-update-check`.
+`ULTIMA3_RELEASES_API` points the question elsewhere, for testing.
+
 Linux gets an AppImage and a Flatpak bundle. The Flatpak is built only
 where `flatpak-builder` and the Freedesktop 25.08 runtime, SDK and
 Electron base app are installed, which the Linux job does (on a Linux

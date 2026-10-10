@@ -82,8 +82,10 @@ export interface Transfer {
 /** A new version of the app, downloaded and waiting (the installed app). */
 export interface Update {
   ready(): boolean;
-  /** Switch to it: the page reloads. */
+  /** The web version's switches to it (the page reloads); an app's opens the new release's page. */
   apply(): void;
+  /** The title menu's line for it: "Update: restart" unless said otherwise (an app's "Update (1.0.45)"). */
+  label?(): string;
 }
 
 export interface MenuOptions {
@@ -118,7 +120,7 @@ export async function mainMenu(world: World, io: GameIO, play: () => Promise<voi
       if (world.party.formed) entries.push({ key: 'E', label: 'Export game' });
       entries.push({ key: 'I', label: 'Import game' });
     }
-    if (options.update?.ready()) entries.push({ key: 'U', label: 'Update: restart' });
+    if (options.update?.ready()) entries.push({ key: 'U', label: options.update.label?.() ?? 'Update: restart' });
     entries.push({ key: 'S', label: 'Settings' });
     if (options.quit) entries.push({ key: 'Q', label: 'Quit' });
     // The window starts on row 15, or higher for a longer list (Quit in the app, an update waiting), so that its
