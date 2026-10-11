@@ -159,6 +159,9 @@ under Steam's Game Mode, where a browser would open over the game.
   If macOS later asks to let Ultima III use the microphone (it can when
   the sound plays through a USB microphone or a headset), choose Don't
   Allow: the game never uses it, and the sound plays on.
+
+  <img src="docs/macos-open-anyway.png" alt="System Settings, Privacy &amp; Security: under Security, &quot;Ultima III&quot; was blocked to protect your Mac, with the Open Anyway button beside it" width="600">
+
 - **Linux and SteamOS**: the Flatpak repository, installed as under
   Installation above, is the way on a Steam Deck and on any Linux with
   Flatpak: one click or one line, and updates arrive with every other
