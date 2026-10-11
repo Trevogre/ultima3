@@ -538,6 +538,20 @@ Every release, with the desktop and Android downloads, is on the
 web version is updated with each release, so it runs the same game as the
 apps.
 
+### v1.0.43, October 10, 2026
+
+- The weapon and armour shops weigh each ware for the member at the
+  counter. While the Buy list's bar is on one, the line under it says how
+  much more or less damage a hit a weapon does than the one readied, and
+  whether it shoots from afar, or how often foes would hit in a suit of
+  armour against what is worn: green where it is better, red where it is
+  worse, grey with the reason where the class cannot use it.
+- The desktop app runs on Electron 44 and checks its own files as it
+  loads: a copy with any of them altered refuses to start. The macOS app
+  now needs macOS 13 or later, and its first launch goes through Open
+  Anyway in System Settings (Privacy & Security); the README has the
+  steps.
+
 ### v1.0.41, October 10, 2026
 
 - Tips, in the Pause menu and the title's Settings: twelve short topics
