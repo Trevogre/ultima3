@@ -226,7 +226,8 @@ build is then launched as packaged (`smoke-built.cjs`, under `xvfb-run`
 on Linux), and a build whose game does not start fails the run. `desktop/version.cjs` decides the
 version for every build: major.minor from `desktop/package.json` plus the
 run number in Actions, a timestamped pre-release elsewhere. Builds are
-unsigned; macOS is Apple Silicon only.
+signed by no developer (macOS's ad-hoc, as Apple Silicon requires); macOS
+is Apple Silicon only, 13 or later (Electron 44's minimum).
 
 ## The Android app
 

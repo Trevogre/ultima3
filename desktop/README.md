@@ -24,8 +24,20 @@ version comes from `version.cjs`: the major.minor of `version` in
 timestamped pre-release (`1.0.0-dev.20260915.2214`) for a build made
 anywhere else; `BUILD_VERSION` overrides both. `npm run dist` passes it
 to electron-builder as metadata, so `package.json` is never edited.
-macOS builds are Apple Silicon only. A manual run with "publish" off
-keeps the builds as artifacts instead of making a release.
+macOS builds are Apple Silicon only, for macOS 13 or later (Electron 44's
+minimum), and signed ad-hoc (`identity: "-"`), which Apple Silicon needs
+once the fuses below have changed the Electron binary. A manual run with
+"publish" off keeps the builds as artifacts instead of making a release.
+
+The packaged app checks its own code as it loads. electron-builder sets
+Electron's fuses (`electronFuses` in `package.json`): the app is loaded
+only from its `app.asar`, whose hash the build records and Electron checks
+block by block as it reads (on macOS and Windows), and the binary cannot
+be run as plain Node, take `NODE_OPTIONS` or open an inspector, and gives
+`file:` pages no extra privileges. A copy with any file in the archive
+altered refuses to start. `npx @electron/fuses read --app <the app>`
+lists them; `npm run smoke:built` launches the app as packaged, fuses
+set.
 
 A release's notes come from the changelog in the root README:
 `release-notes.cjs` prints the section headed with the release's version

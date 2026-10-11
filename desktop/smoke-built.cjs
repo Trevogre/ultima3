@@ -1,6 +1,7 @@
 // Launches the app as electron-builder built it (unpacked, in dist/) with the smoke test's screenshot flag, as smoke.cjs
-// does the development copy: proof the packaged app starts and runs the game. Exits with its status, 0 when the game is
-// running. CI runs it after each build; on Linux inside xvfb-run, with ELECTRON_NO_SANDBOX=1 for the runner.
+// does the development copy: proof the packaged app starts and runs the game with its fuses set (its ASAR checked,
+// loaded from nothing else). Exits with its status, 0 when the game is running. CI runs it after each build; on Linux
+// inside xvfb-run, with ELECTRON_NO_SANDBOX=1 for the runner.
 const { spawnSync } = require('node:child_process');
 const { existsSync, readdirSync, rmSync } = require('node:fs');
 const { join } = require('node:path');

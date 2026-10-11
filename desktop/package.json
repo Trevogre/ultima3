@@ -19,8 +19,8 @@
     "version:show": "node version.cjs"
   },
   "devDependencies": {
-    "electron": "^33.2.1",
-    "electron-builder": "^25.1.8"
+    "electron": "^44.7.0",
+    "electron-builder": "^26.17.0"
   },
   "build": {
     "appId": "com.synthwavepixel.ultima3",
@@ -39,6 +39,14 @@
       "app/**/*"
     ],
     "asar": true,
+    "electronFuses": {
+      "runAsNode": false,
+      "enableNodeOptionsEnvironmentVariable": false,
+      "enableNodeCliInspectArguments": false,
+      "enableEmbeddedAsarIntegrityValidation": true,
+      "onlyLoadAppFromAsar": true,
+      "grantFileProtocolExtraPrivileges": false
+    },
     "mac": {
       "category": "public.app-category.role-playing-games",
       "target": [
@@ -49,7 +57,13 @@
           ]
         }
       ],
-      "identity": null
+      "identity": "-",
+      "hardenedRuntime": false,
+      "extendInfo": {
+        "NSMicrophoneUsageDescription": "Ultima III never uses the microphone. macOS can ask when the game's sound plays through a device that is also a microphone, such as a USB microphone or a headset. Choose Don't Allow: the game and its sound play on as before.",
+        "NSAudioCaptureUsageDescription": "Ultima III never records any sound. Choose Don't Allow: the game and its sound play on as before.",
+        "NSCameraUsageDescription": "Ultima III never uses the camera. Choose Don't Allow: the game plays on as before."
+      }
     },
     "win": {
       "target": [
@@ -86,8 +100,10 @@
         }
       ],
       "desktop": {
-        "Name": "Ultima III",
-        "Comment": "Ultima III: Exodus"
+        "entry": {
+          "Name": "Ultima III",
+          "Comment": "Ultima III: Exodus"
+        }
       }
     },
     "flatpak": {

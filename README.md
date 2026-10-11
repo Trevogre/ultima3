@@ -98,9 +98,9 @@ bottom of this page.
   password at all.
 - **Windows and macOS**: the installers on the
   [Releases page](https://github.com/synthwave-pixel/ultima3/releases/latest),
-  a Windows installer or portable `.exe` and an Apple Silicon `.dmg`.
-  They are unsigned; see the Desktop app section below for the one-time
-  step each system asks for.
+  a Windows installer or portable `.exe` and an Apple Silicon `.dmg`
+  (macOS 13 or later). They are unsigned; see the Desktop app section
+  below for the one-time step each system asks for.
 - **Android**: the APK on the Releases page, or
   [Obtainium](https://github.com/ImranR98/Obtainium) to keep it updated;
   see Android handhelds below.
@@ -150,9 +150,15 @@ under Steam's Game Mode, where a browser would open over the game.
 
 - **Windows**: an installer and a portable `.exe`. Both are unsigned, so
   SmartScreen asks once; choose More info, then Run anyway.
-- **macOS**: an Apple Silicon `.dmg` (Intel Macs: use the web version).
-  Unsigned as well, so the first launch is refused; right-click the app
-  and choose Open, or run `xattr -cr "/Applications/Ultima III.app"` once.
+- **macOS**: an Apple Silicon `.dmg`, for macOS 13 (Ventura) or later
+  (Intel Macs: use the web version). Signed by no Apple developer, so the
+  first launch is refused. Try to open the app once, then open System
+  Settings, choose Privacy & Security, scroll down to Security and click
+  Open Anyway beside Ultima III; it opens normally from then on. Or, in
+  Terminal, once: `xattr -dr com.apple.quarantine "/Applications/Ultima III.app"`.
+  If macOS later asks to let Ultima III use the microphone (it can when
+  the sound plays through a USB microphone or a headset), choose Don't
+  Allow: the game never uses it, and the sound plays on.
 - **Linux and SteamOS**: the Flatpak repository, installed as under
   Installation above, is the way on a Steam Deck and on any Linux with
   Flatpak: one click or one line, and updates arrive with every other
