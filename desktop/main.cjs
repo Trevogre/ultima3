@@ -9,11 +9,11 @@
 // Steam's Game Mode compositor, GPU acceleration and the Chromium sandbox
 // are turned off: see below. Only one copy runs; a second launch brings the
 // first window forward.
-const { app, BrowserWindow, protocol, net, shell, session, ipcMain } = require('electron');
+const { app, BrowserWindow, protocol, net, shell, session, ipcMain, screen } = require('electron');
 const { join, normalize } = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { writeFileSync, existsSync } = require('node:fs');
-const { readState, startsFullScreen, writeState } = require('./windowState.cjs');
+const { placeOnScreen, readState, startsFullScreen, writeState } = require('./windowState.cjs');
 const updates = require('./updates.cjs');
 const { installSteamArt } = require('./steamArt.cjs');
 const { homedir } = require('node:os');
@@ -44,11 +44,17 @@ function saveBounds(win) {
 
 function createWindow() {
   const saved = readState(stateFile());
+  // The place kept, fitted to the screens there are now (a monitor unplugged since, a smaller screen): see windowState.cjs.
+  const place = placeOnScreen(
+    { width: 1280, height: 800, ...saved },
+    screen.getAllDisplays().map((d) => d.workArea),
+    screen.getPrimaryDisplay().workArea,
+  );
   const win = new BrowserWindow({
-    width: saved?.width ?? 1280,
-    height: saved?.height ?? 800,
-    x: saved?.x,
-    y: saved?.y,
+    width: place.width,
+    height: place.height,
+    x: place.x,
+    y: place.y,
     minWidth: 640,
     minHeight: 400,
     backgroundColor: '#000000',

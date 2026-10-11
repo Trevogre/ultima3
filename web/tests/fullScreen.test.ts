@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { readState, startsFullScreen, writeState } from '../../desktop/windowState.cjs';
+import { placeOnScreen, readState, startsFullScreen, writeState } from '../../desktop/windowState.cjs';
 import { type FullScreenDocument, fullScreenOf, type NativeFullScreen } from '../src/ui/fullScreen.ts';
 import { fullScreenMarks } from '../src/ui/touch.ts';
 
@@ -121,5 +121,45 @@ describe('the desktop window at the start (desktop/windowState.cjs)', () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe("the desktop window's place, fitted to the screens there are (desktop/windowState.cjs)", () => {
+  const main = { x: 0, y: 25, width: 1728, height: 1092 }; // a laptop's, under its menu bar
+  const second = { x: 1728, y: 0, width: 2560, height: 1415 };
+
+  it('keeps a place on a screen there is, and the size that fits it', () => {
+    expect(placeOnScreen({ x: 8, y: 37, width: 1712, height: 1075 }, [main], main)).toEqual({ x: 8, y: 37, width: 1712, height: 1075 });
+    expect(placeOnScreen({ x: 2000, y: 100, width: 1600, height: 1000 }, [main, second], main)).toEqual({
+      x: 2000,
+      y: 100,
+      width: 1600,
+      height: 1000,
+    });
+  });
+
+  it('lets the system place a window last left on a monitor unplugged since, or above the screen', () => {
+    expect(placeOnScreen({ x: 2000, y: 100, width: 1600, height: 1000 }, [main], main)).toEqual({ width: 1600, height: 1000 });
+    expect(placeOnScreen({ x: 100, y: -500, width: 1280, height: 800 }, [main], main)).toEqual({ width: 1280, height: 800 });
+    // Only a sliver of the top strip on the screen (its last few pixels) is not enough to grab it by.
+    expect(placeOnScreen({ x: 1700, y: 100, width: 1280, height: 800 }, [main], main)).toEqual({ width: 1280, height: 800 });
+  });
+
+  it('brings a size larger than the screen within it', () => {
+    expect(placeOnScreen({ x: 10, y: 30, width: 3000, height: 2000 }, [main], main)).toEqual({ x: 10, y: 30, width: 1728, height: 1092 });
+    expect(
+      placeOnScreen({ width: 1280, height: 800 }, [{ x: 0, y: 0, width: 1280, height: 752 }], { x: 0, y: 0, width: 1280, height: 752 }),
+    ).toEqual({
+      width: 1280,
+      height: 752,
+    });
+  });
+
+  it('takes nothing kept, or a damaged file, as no place', () => {
+    expect(placeOnScreen({}, [main], main)).toEqual({});
+    expect(placeOnScreen({ x: 'a' as unknown as number, y: 5, width: 800, height: 600 }, [main], main)).toEqual({
+      width: 800,
+      height: 600,
+    });
   });
 });
