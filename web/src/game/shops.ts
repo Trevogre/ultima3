@@ -241,7 +241,8 @@ export function hitChance(armour: number): number {
  * A ware weighed for the member at the counter, as the Buy list's hint under the menu while it is highlighted: a
  * weapon's damage a hit against what they have readied (each step up the list is 3 more, combat.ts) and whether it
  * shoots, or how often foes would hit them in armour against what they wear; green where it is better for them, red
- * where it is worse, white for a trade or the same, grey where their class cannot use it.
+ * where it is worse, white for a trade or the same, grey where their class cannot use it. Each fits the hint's two
+ * rows of 38 whole, whatever the member's name (up to 13 letters) and the wares.
  */
 export function wareHint(world: World, p: PlayerRecord, isWeapon: boolean, index: number): { hint: string; colour?: string } {
   const names = world.resources.strings.WeaponsArmour;
@@ -257,8 +258,8 @@ export function wareHint(world: World, p: PlayerRecord, isWeapon: boolean, index
     const had = readied === 0 ? 'bare hands' : `${p.name}'s ${names[readied]}`;
     let hint = `${Math.abs(more)} ${more > 0 ? 'more' : 'less'} damage a hit than ${had}`;
     const [shoots, shot] = [SHOOTS.includes(index), SHOOTS.includes(readied)];
-    if (shoots && !shot) hint += `, ${more > 0 ? 'and' : 'but'} shoots from afar`;
-    if (shot && !shoots) hint += `, ${more > 0 ? 'but' : 'and'} only close up`;
+    if (shoots && !shot) hint += '; shoots afar';
+    if (shot && !shoots) hint += '; close up only';
     const colour = more > 0 && !(shot && !shoots) ? BETTER : more < 0 && !(shoots && !shot) ? WORSE : undefined;
     return { hint, colour };
   }
@@ -310,20 +311,24 @@ async function equipmentShop(world: World, io: GameIO, p: PlayerRecord, isWeapon
   const last = isWeapon ? (fullStock ? 15 : 8) : fullStock ? 7 : 5; // exclusive letter index
 
   // Menu of what the shop stocks (letters B..), with prices; what this member cannot use is greyed but still for sale.
-  // Each is weighed against what they have, in the hint under the menu.
-  const stock: MenuOption[] = [];
-  for (let i = 1; i < last; i++) {
-    const letter = String.fromCharCode(65 + i);
-    const { hint, colour } = wareHint(world, p, isWeapon, i);
-    stock.push({
-      key: letter,
-      label: `${letter} ${names[nameBase + i]} ${names[priceBase + i]}gp`,
-      colour: world.canUse(p, isWeapon, i) ? undefined : UNUSABLE,
-      hint,
-      hintColour: colour,
-    });
-  }
-  const owned = (): MenuOption[] => stock.filter((o) => world.party.gear(isWeapon, o.key.charCodeAt(0) - 65) > 0);
+  // To buy, each is weighed against what they have, in the hint under the menu: made afresh each time the list is
+  // shown, so a ware readied or worn on the spot is weighed as theirs from then on. The Sell list has no such hint.
+  const wares = (weighed: boolean): MenuOption[] => {
+    const list: MenuOption[] = [];
+    for (let i = 1; i < last; i++) {
+      const letter = String.fromCharCode(65 + i);
+      const { hint, colour } = weighed ? wareHint(world, p, isWeapon, i) : { hint: undefined, colour: undefined };
+      list.push({
+        key: letter,
+        label: `${letter} ${names[nameBase + i]} ${names[priceBase + i]}gp`,
+        colour: world.canUse(p, isWeapon, i) ? undefined : UNUSABLE,
+        hint,
+        hintColour: colour,
+      });
+    }
+    return list;
+  };
+  const owned = (): MenuOption[] => wares(false).filter((o) => world.party.gear(isWeapon, o.key.charCodeAt(0) - 65) > 0);
   const nothing: MenuOption = { key: ' ', label: 'Nothing' };
 
   io.printMessage(isWeapon ? Msg.WeaponsShop : Msg.ArmourShop);
@@ -351,7 +356,7 @@ async function equipmentShop(world: World, io: GameIO, p: PlayerRecord, isWeapon
   for (;;) {
     if (mode === 'B') {
       io.printMessage(Msg.YourInterest);
-      const k = await io.chooseOption([...stock, nothing], 'none');
+      const k = await io.chooseOption([...wares(true), nothing], 'none');
       const index = k.charCodeAt(0) - 'A'.charCodeAt(0);
       if (!k || k < 'B' || index >= last) break;
       io.print(k);
