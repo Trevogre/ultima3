@@ -34,6 +34,7 @@ import { GraphicsSet, loadImages } from './ui/graphics.ts';
 import { Keyboard } from './ui/input.ts';
 import { LEVELS, SoundPlayer, SOUND_SETS, validLevel, type SoundSet } from './ui/sound.ts';
 import { TouchPad } from './ui/touch.ts';
+import { fullScreen } from './ui/fullScreen.ts';
 import { MusicPlayer } from './ui/music.ts';
 import { Screen } from './ui/screen.ts';
 import { TILE_SETS } from './ui/help.ts';
@@ -302,6 +303,7 @@ async function start(): Promise<void> {
   const pad = new TouchPad({
     keyboard,
     shown: prefs.touchPad,
+    fullScreen: fullScreen(),
     onPress: () => screen.useController(),
     onToggle: (shown) => {
       prefs.touchPad = shown;

@@ -1,16 +1,19 @@
 // The desktop app: one window showing the built game from app/, served over a
 // private app:// scheme so it behaves as a secure origin (storage, gamepads,
 // clipboard) without a web server. No menu bar, so every key reaches the
-// game; F11 or Alt+Enter toggles full screen, and the window starts full
-// screen when asked (--fullscreen) or when Steam launched it (the SteamDeck
-// or SteamOS environment variables, set in Game Mode). Under gamescope,
+// game; F11 or Alt+Enter toggles full screen, as do the system's own
+// controls (the green button on macOS) and the touch pad's full-screen
+// button (preload.cjs). The window starts full screen unless the player last
+// left it a window, and always when Steam's Game Mode launched it
+// (windowState.cjs). Under gamescope,
 // Steam's Game Mode compositor, GPU acceleration and the Chromium sandbox
 // are turned off: see below. Only one copy runs; a second launch brings the
 // first window forward.
 const { app, BrowserWindow, protocol, net, shell, session, ipcMain } = require('electron');
 const { join, normalize } = require('node:path');
 const { pathToFileURL } = require('node:url');
-const { readFileSync, writeFileSync, existsSync } = require('node:fs');
+const { writeFileSync, existsSync } = require('node:fs');
+const { readState, startsFullScreen, writeState } = require('./windowState.cjs');
 const updates = require('./updates.cjs');
 const { installSteamArt } = require('./steamArt.cjs');
 const { homedir } = require('node:os');
@@ -33,31 +36,14 @@ protocol.registerSchemesAsPrivileged([
   { scheme: SCHEME, privileges: { standard: true, secure: true, supportFetchAPI: true, corsEnabled: true, stream: true } },
 ]);
 
-/** Where the window was last, so it comes back the same size. */
-const boundsFile = () => join(app.getPath('userData'), 'window.json');
-function loadBounds() {
-  try {
-    return JSON.parse(readFileSync(boundsFile(), 'utf8'));
-  } catch {
-    return null;
-  }
-}
+/** Where the window was last as a window, and whether it was last full screen (windowState.cjs). */
+const stateFile = () => join(app.getPath('userData'), 'window.json');
 function saveBounds(win) {
-  try {
-    if (!win.isFullScreen() && !win.isMaximized()) writeFileSync(boundsFile(), JSON.stringify(win.getBounds()));
-  } catch {
-    /* not fatal */
-  }
-}
-
-function wantsFullScreen() {
-  if (process.argv.includes('--windowed')) return false;
-  if (process.argv.includes('--fullscreen')) return true;
-  return process.env.SteamDeck === '1' || process.env.SteamOS === '1';
+  if (!win.isFullScreen() && !win.isMaximized()) writeState(stateFile(), win.getBounds());
 }
 
 function createWindow() {
-  const saved = loadBounds();
+  const saved = readState(stateFile());
   const win = new BrowserWindow({
     width: saved?.width ?? 1280,
     height: saved?.height ?? 800,
@@ -67,7 +53,10 @@ function createWindow() {
     minHeight: 400,
     backgroundColor: '#000000',
     autoHideMenuBar: true,
-    fullscreen: wantsFullScreen(),
+    // Full screen at the start only when wanted. `fullscreen: false` said outright would also take full screen away on
+    // macOS altogether (the green button, Window > Enter Full Screen, F11), so it is left unsaid otherwise.
+    fullscreenable: true,
+    ...(startsFullScreen(process.argv, process.env, saved) ? { fullscreen: true } : {}),
     title: 'Ultima III',
     icon: join(__dirname, 'build', 'icon.png'),
     webPreferences: { contextIsolation: true, sandbox: true, nodeIntegration: false, preload: join(__dirname, 'preload.cjs') },
@@ -76,6 +65,16 @@ function createWindow() {
   win.removeMenu();
   win.on('resize', () => saveBounds(win));
   win.on('move', () => saveBounds(win));
+  // However full screen came or went (F11, the system's controls, the touch pad's button), it is remembered for the
+  // next start and told to the page, whose button shows it.
+  for (const [event, on] of [
+    ['enter-full-screen', true],
+    ['leave-full-screen', false],
+  ])
+    win.on(event, () => {
+      writeState(stateFile(), { fullScreen: on });
+      if (!win.webContents.isDestroyed()) win.webContents.send('full-screen-changed', on);
+    });
   // F11 and Alt+Enter toggle full screen; nothing else is intercepted, so Escape and the letters reach the game.
   win.webContents.on('before-input-event', (event, input) => {
     if (input.type !== 'keyDown') return;
@@ -121,6 +120,14 @@ const releaseOffer = updates.shouldCheck({
   ? updates.newerRelease(app.getVersion())
   : Promise.resolve(null);
 ipcMain.handle('update-offer', () => releaseOffer);
+// The touch pad's full-screen button (preload.cjs): whether the window is full screen, set first if `on` is given.
+// Only the game's own page may ask.
+ipcMain.handle('full-screen', (event, on) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  if (!win || !String(event.senderFrame?.url ?? '').startsWith(`${SCHEME}://`)) return false;
+  if (typeof on === 'boolean' && on !== win.isFullScreen()) win.setFullScreen(on);
+  return win.isFullScreen();
+});
 ipcMain.handle('open-release', async () => {
   const offer = await releaseOffer;
   if (offer) await shell.openExternal(offer.url);

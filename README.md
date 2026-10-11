@@ -139,7 +139,9 @@ want a plain window, an icon in the dock, or a Steam shortcut. Builds for
 Windows, macOS and Linux are on the
 [Releases page](https://github.com/synthwave-pixel/ultima3/releases). The
 desktop app keeps its saved game in its own storage, separate from the
-browser's; Export and Import move a game between them. Its title menu has
+browser's; Export and Import move a game between them. It opens full
+screen unless you last left it a window; F11 or Alt+Enter (or macOS's
+green button) switches. Its title menu has
 a Quit, for a full screen or Steam's Game Mode where the window has no
 close button, and only one copy runs at a time: launching it again brings
 the open one forward, so two copies never write over each other's save.

@@ -42,6 +42,13 @@ the debug hook `window.u3` in a development build: each scene is set up
 once and redrawn in every set, so a row compares the same moment. The
 sheets are laid out on a browser canvas and saved as JPEG.
 
-Inside the app, F11 or Alt+Enter toggles full screen, `--fullscreen` and
-`--windowed` on the command line force one or the other, and `--new` and
-`--controller` do what the web version's `?new` and `?controller` flags do.
+Inside the app, F11 or Alt+Enter toggles full screen, as do the system's
+own controls (macOS's green button) and the touch pad's full-screen switch
+(through `preload.cjs`; `web/src/ui/fullScreen.ts`). The window starts full
+screen unless it was last left a window, which `window.json` in the app's
+data remembers with its place and size (`desktop/windowState.cjs`), and
+always under Steam's Game Mode; `--fullscreen` and `--windowed` on the
+command line force one or the other, and `--new` and `--controller` do what
+the web version's `?new` and `?controller` flags do. The window must never
+be made with `fullscreen: false` said outright: on macOS that takes full
+screen away altogether, the green button and F11 with it.

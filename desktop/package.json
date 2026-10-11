@@ -35,6 +35,7 @@
       "preload.cjs",
       "updates.cjs",
       "steamArt.cjs",
+      "windowState.cjs",
       "build/steam/*.png",
       "app/**/*"
     ],

@@ -6,7 +6,8 @@
  * B up and to its right) with Y above B (Y opens the cheats from the help
  * pages, and is Look, Attack or Ignite in play), a close button at the
  * upper left, a pause button at the top centre, and at the upper right a
- * full-screen button where the browser allows it. Everything is drawn as one-pixel lines at
+ * full-screen switch where full screen can be had (fullScreen.ts: the
+ * desktop app's window, or the browser's). Everything is drawn as one-pixel lines at
  * three-quarter white, each with a one-pixel rim of half black on either
  * side so it reads over any ground, and nothing inside, so the game shows
  * through. Sizes are in millimetres, which CSS scales by the device's
@@ -22,6 +23,7 @@
 
 import { Key } from '../game/io.ts';
 import type { Keyboard } from './input.ts';
+import type { FullScreen } from './fullScreen.ts';
 
 /** Sizes in millimetres: the NES d-pad is about 24 across and its buttons about 10; thumbs on glass want more, the d-pad most. */
 const DPAD_MM = 42;
@@ -45,12 +47,13 @@ export interface TouchPadOptions {
   /** Called when the pad is shown or hidden, to remember it. */
   onToggle: (shown: boolean) => void;
   shown: boolean;
+  /** Full screen where it can be had (fullScreen.ts), for the switch at the upper right; null for none. */
+  fullScreen: FullScreen | null;
 }
 
 export class TouchPad {
   private readonly root: HTMLDivElement;
   private repeat: ReturnType<typeof setTimeout> | null = null;
-  private fullscreenButton: SVGSVGElement | null = null;
   private _shown = false;
 
   constructor(private readonly options: TouchPadOptions) {
@@ -68,12 +71,7 @@ export class TouchPad {
     this.root.appendChild(this.button('Y', Key.Y, `right:${MARGIN_MM}mm;bottom:${(MARGIN_MM + 2 * BUTTON_MM + 1 + gap).toFixed(1)}mm`));
     this.root.appendChild(this.closeButton());
     this.root.appendChild(this.pauseButton());
-    if (document.fullscreenEnabled) {
-      this.fullscreenButton = this.fullscreenToggle();
-      this.root.appendChild(this.fullscreenButton);
-      document.addEventListener('fullscreenchange', () => this.showFullscreenButton());
-      this.showFullscreenButton();
-    }
+    if (options.fullScreen) this.root.appendChild(this.fullScreenSwitch(options.fullScreen));
 
     // A tap or click anywhere shows the pad; a physical key hides it.
     window.addEventListener('pointerdown', () => {
@@ -104,10 +102,6 @@ export class TouchPad {
     this.root.style.display = on ? 'block' : 'none';
     if (!on) this.release();
     if (!quiet) this.options.onToggle(on);
-  }
-
-  private showFullscreenButton(): void {
-    if (this.fullscreenButton) this.fullscreenButton.style.display = document.fullscreenElement ? 'none' : 'block';
   }
 
   /** An SVG of `mm` millimetres square placed with the given CSS position, with a safe-area inset added. */
@@ -284,24 +278,39 @@ export class TouchPad {
     return svg;
   }
 
-  /** Upper right: a square with corner marks that asks for full screen; hidden while in it. */
-  private fullscreenToggle(): SVGSVGElement {
+  /**
+   * Upper right: a square with corner marks, the switch for full screen - the marks pointing out while windowed (to go
+   * full screen), in while full screen (to leave it), whichever way full screen last came or went.
+   */
+  private fullScreenSwitch(full: FullScreen): SVGSVGElement {
     const svg = this.svg(SMALL_MM, `right:${MARGIN_MM}mm;top:${MARGIN_MM}mm`);
     const s = SMALL_MM;
     const box = this.shape(svg, 'rect', { x: '0.5', y: '0.5', width: `${s - 1}`, height: `${s - 1}`, rx: '1' });
-    const corners = this.shape(svg, 'path', {
-      d: `M2.5 4.5 V2.5 H4.5 M${s - 4.5} 2.5 H${s - 2.5} V4.5 M${s - 2.5} ${s - 4.5} V${s - 2.5} H${s - 4.5} M4.5 ${s - 2.5} H2.5 V${s - 4.5}`,
-    });
+    const corners = this.shape(svg, 'path', { d: fullScreenMarks(s, full.on) });
     corners.style.pointerEvents = 'none';
+    // The marks' rim (shape) is drawn under them as an element of its own, and turns with them.
+    const marks = [corners.previousElementSibling, corners].filter((m): m is Element => m !== null);
+    full.onChange((on) => {
+      for (const m of marks) m.setAttribute('d', fullScreenMarks(s, on));
+    });
     box.style.pointerEvents = 'all';
     box.style.cursor = 'pointer';
     box.addEventListener('pointerdown', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      void document.documentElement.requestFullscreen().catch(() => {
-        /* refused: nothing to do */
-      });
+      full.toggle();
     });
     return svg;
   }
+}
+
+/**
+ * The full-screen switch's four corner marks in a square `s` across: each an L in its corner, pointing out (to go full
+ * screen) or, `on` full screen, turned to point in (to leave it).
+ */
+export function fullScreenMarks(s: number, on: boolean): string {
+  const [a, b, c, d] = [2.5, 4.5, s - 4.5, s - 2.5];
+  return on
+    ? `M${b} ${a} V${b} H${a} M${c} ${a} V${b} H${d} M${d} ${c} H${c} V${d} M${a} ${c} H${b} V${d}`
+    : `M${a} ${b} V${a} H${b} M${c} ${a} H${d} V${b} M${d} ${c} V${d} H${c} M${b} ${d} H${a} V${c}`;
 }
