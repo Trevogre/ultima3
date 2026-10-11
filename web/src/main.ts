@@ -264,7 +264,6 @@ async function start(): Promise<void> {
   window.addEventListener('pointerdown', unlockAudio);
 
   const screen = new Screen(canvas, gfx, images, keyboard, sounds, music, world);
-  bootDone();
   // ?controller starts in controller mode whatever was remembered (a Steam shortcut, a kiosk).
   screen.inputMode = params.has('controller') ? 'controller' : prefs.inputMode;
   screen.tileSetName = tiles;
@@ -375,6 +374,9 @@ async function start(): Promise<void> {
     label: () => `Update (${offer.version})`,
     apply: () => (native ? void native.openRelease() : location.assign(offer.url)),
   };
+  // The title (or the game) comes next: the boot screen, kept up while the release was waited for (a black canvas
+  // otherwise, for as long as GitHub takes to answer the apps), gives way to it.
+  bootDone();
   // ?play and ?at= (development): straight into the game, placed where asked, the start's first key played.
   if (dev && (params.has('play') || params.has('at'))) {
     const at = dev.parseAt(params.get('at'));
