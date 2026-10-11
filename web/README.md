@@ -373,8 +373,10 @@ Chromium (Playwright is preinstalled in the development environment) by
 driving the keyboard and taking screenshots. `npm run format` applies
 Prettier (single quotes, 140 columns; see `.prettierrc.json`) and
 `npm run lint` runs ESLint (typescript-eslint's type-checked rules, with
-unawaited promises as errors; see `eslint.config.js`). The CI workflow
-runs the format check, the lint, the tests and the build, in that order.
+unawaited promises as errors; see `eslint.config.js`). CI runs the format
+check, the lint and the tests on every push (the desktop workflow's checks
+job, which a release waits for) and again in the Pages deploy, before its
+build.
 
 The tile sets are checked by eye on `tiles.html`
 (<http://localhost:5173/tiles.html> under `npm run dev`, and `tiles.html`

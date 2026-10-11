@@ -16,7 +16,9 @@
 # provide a release key. Linux gets a Flatpak bundle as well as an
 # AppImage; the Linux job installs (and caches) the runtimes it needs. A
 # manual run with "publish" off keeps every build as an artifact instead
-# of making a release, to try a change first.
+# of making a release, to try a change first. Every run also runs the
+# game's checks (the format, the lint and the tests), and a release is
+# published only once they pass.
 name: Desktop and Android builds
 
 on:
@@ -35,6 +37,25 @@ permissions:
   actions: write # to start the Pages deploy after a release
 
 jobs:
+  # The game's checks on every push and run, as the Pages deploy runs them on the commit it builds: a release waits for
+  # them, so one that fails them is never published (and the site and the Flatpak repository never left behind it).
+  checks:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run format:check
+      - run: npm run lint
+      - run: npm test
+
   build:
     strategy:
       fail-fast: false
@@ -146,10 +167,10 @@ jobs:
           if-no-files-found: error
 
   # A manual run (unless told not to publish), or a push to the release branch, publishes one release with every file
-  # once all four builds exist; the tag lands on this commit.
+  # once all four builds exist and the checks have passed; the tag lands on this commit.
   release:
     if: ${{ (github.event_name == 'workflow_dispatch' && inputs.publish) || github.ref == 'refs/heads/release' }}
-    needs: [build, android]
+    needs: [checks, build, android]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
