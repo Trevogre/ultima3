@@ -316,7 +316,10 @@ These apply whatever tile set and sound set are chosen.
   border. Members eat from the pool and go hungry together.
 - Weapons and armor are pooled in one bag; a member's record keeps only
   what is readied and worn. Ready and Wear draw from the bag, so one sword
-  cannot arm two members. Shops gray what the buyer's class cannot use and
+  cannot arm two members. Shops gray what the buyer's class cannot use,
+  weigh each ware against what the buyer has under the Buy list (a
+  weapon's damage a hit and whether it shoots, or how often foes would hit
+  in the armor; green where it is better, red where it is worse), and
   offer to ready or wear a purchase on the spot. Forming a party pools the
   bags; dispersing deals them out. The Hand command is gone.
 - Gems, keys, powders and torches are the party's too, so Peer, Unlock,

@@ -51,6 +51,8 @@ export interface MenuOption {
   hidden?: boolean;
   /** One line shown under the menu while this item is highlighted. */
   hint?: string;
+  /** Draw the hint in this colour (a CSS colour); e.g. a shop's verdict, green for better and red for worse. */
+  hintColour?: string;
   /** Shown greyed and not selectable (possible in principle, but e.g. nothing to use it with). */
   disabled?: boolean;
   /** Draw the label in this colour (a CSS colour); e.g. a member's state. */

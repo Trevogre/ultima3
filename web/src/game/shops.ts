@@ -226,6 +226,49 @@ async function healer(world: World, io: GameIO, p: PlayerRecord): Promise<void> 
 
 /** Grey for stock the member at the counter cannot use (still for sale, for someone else). */
 const UNUSABLE = '#808080';
+/** A ware's verdict for the member at the counter: better than what they have, or worse (the party panel's colours). */
+const BETTER = '#40ff40';
+const WORSE = '#ff4040';
+/** The weapons that shoot: sling, bow, +2 bow, +4 bow (combat.ts). */
+const SHOOTS = [3, 5, 9, 13];
+
+/** In 100, how often a foe's blow lands on a member wearing armour `armour` (combat.ts: a roll of 0 to armour + 16 under 8). */
+export function hitChance(armour: number): number {
+  return Math.round(800 / (armour + 17));
+}
+
+/**
+ * A ware weighed for the member at the counter, as the Buy list's hint under the menu while it is highlighted: a
+ * weapon's damage a hit against what they have readied (each step up the list is 3 more, combat.ts) and whether it
+ * shoots, or how often foes would hit them in armour against what they wear; green where it is better for them, red
+ * where it is worse, white for a trade or the same, grey where their class cannot use it.
+ */
+export function wareHint(world: World, p: PlayerRecord, isWeapon: boolean, index: number): { hint: string; colour?: string } {
+  const names = world.resources.strings.WeaponsArmour;
+  if (!world.canUse(p, isWeapon, index)) {
+    const careers = String.fromCharCode(...world.resources.misc.careerTable);
+    const career = world.resources.strings.Classes[careers.indexOf(p.classLetter)] ?? 'member';
+    return { hint: `${/^[AEIOU]/.test(career) ? 'An' : 'A'} ${career} cannot ${isWeapon ? 'ready' : 'wear'} it`, colour: UNUSABLE };
+  }
+  if (isWeapon) {
+    const readied = p.bytes[48];
+    if (index === readied) return { hint: `${p.name} has one readied` };
+    const more = (index - readied) * 3;
+    const had = readied === 0 ? 'bare hands' : `${p.name}'s ${names[readied]}`;
+    let hint = `${Math.abs(more)} ${more > 0 ? 'more' : 'less'} damage a hit than ${had}`;
+    const [shoots, shot] = [SHOOTS.includes(index), SHOOTS.includes(readied)];
+    if (shoots && !shot) hint += `, ${more > 0 ? 'and' : 'but'} shoots from afar`;
+    if (shot && !shoots) hint += `, ${more > 0 ? 'but' : 'and'} only close up`;
+    const colour = more > 0 && !(shot && !shoots) ? BETTER : more < 0 && !(shoots && !shot) ? WORSE : undefined;
+    return { hint, colour };
+  }
+  const worn = p.bytes[40];
+  if (index === worn) return { hint: `${p.name} wears one already` };
+  return {
+    hint: `Foes would hit ${p.name} ${hitChance(index)}% of the time (now ${hitChance(worn)}%)`,
+    colour: index > worn ? BETTER : WORSE,
+  };
+}
 
 /** Print the weapons or armour price list a few lines at a time. (`WeaponList`, `ArmourList`) */
 async function priceList(world: World, io: GameIO, isWeapon: boolean, last: number): Promise<void> {
@@ -251,8 +294,10 @@ async function priceList(world: World, io: GameIO, isWeapon: boolean, last: numb
  * Gear belongs to the party (this port), so purchases go into the bag and
  * sales come out of it; the member at the counter matters for what their
  * class can use: those items are greyed in the list, the item they have
- * readied or worn is announced first, and after buying something better
- * suited the shop offers to ready or wear it on the spot.
+ * readied or worn is announced first, each item in the Buy list is weighed
+ * against it under the menu while it is highlighted (`wareHint`), and after
+ * buying something better suited the shop offers to ready or wear it on the
+ * spot.
  */
 async function equipmentShop(world: World, io: GameIO, p: PlayerRecord, isWeapon: boolean): Promise<void> {
   const names = world.resources.strings.WeaponsArmour;
@@ -265,13 +310,17 @@ async function equipmentShop(world: World, io: GameIO, p: PlayerRecord, isWeapon
   const last = isWeapon ? (fullStock ? 15 : 8) : fullStock ? 7 : 5; // exclusive letter index
 
   // Menu of what the shop stocks (letters B..), with prices; what this member cannot use is greyed but still for sale.
+  // Each is weighed against what they have, in the hint under the menu.
   const stock: MenuOption[] = [];
   for (let i = 1; i < last; i++) {
     const letter = String.fromCharCode(65 + i);
+    const { hint, colour } = wareHint(world, p, isWeapon, i);
     stock.push({
       key: letter,
       label: `${letter} ${names[nameBase + i]} ${names[priceBase + i]}gp`,
       colour: world.canUse(p, isWeapon, i) ? undefined : UNUSABLE,
+      hint,
+      hintColour: colour,
     });
   }
   const owned = (): MenuOption[] => stock.filter((o) => world.party.gear(isWeapon, o.key.charCodeAt(0) - 65) > 0);

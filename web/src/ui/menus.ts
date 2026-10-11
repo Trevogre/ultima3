@@ -141,6 +141,8 @@ export interface MenuWindow {
   columns: number;
   /** Optional one-line hint per item, drawn centred under the window. */
   hints?: (string | undefined)[];
+  /** Optional colour per item's hint. */
+  hintColours?: (string | undefined)[];
   /** Items drawn grey and refused when chosen. */
   disabled?: boolean[];
   /** Optional colour per item. */
@@ -256,7 +258,18 @@ export function drawMenu(ctx: CanvasRenderingContext2D, gfx: GraphicsSet, cell: 
     ctx.fillStyle = '#000';
     ctx.fillRect(cell, (y + height) * cell, 38 * cell, HINT_ROWS * cell);
     if (hint) {
-      wrapText(hint, 38, HINT_ROWS).forEach((line, i) => text(line, Math.max(1, 20 - Math.floor(line.length / 2)), y + height + i));
+      const tint = menu.hintColours?.[menu.cursor];
+      wrapText(hint, 38, HINT_ROWS).forEach((line, i) => {
+        const lx = Math.max(1, 20 - Math.floor(line.length / 2));
+        text(line, lx, y + height + i);
+        if (!tint) return;
+        // As an item's colour: white glyphs take it, black stays black.
+        ctx.save();
+        ctx.globalCompositeOperation = 'multiply';
+        ctx.fillStyle = tint;
+        ctx.fillRect(lx * cell, (y + height + i) * cell, line.length * cell, cell);
+        ctx.restore();
+      });
     }
   }
 }

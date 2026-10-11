@@ -623,6 +623,7 @@ export class Screen implements GameIO {
       columns,
     );
     if (visible.some((o) => o.hint)) menu.hints = visible.map((o) => o.hint);
+    if (visible.some((o) => o.hintColour)) menu.hintColours = visible.map((o) => o.hintColour);
     if (visible.some((o) => o.disabled)) menu.disabled = visible.map((o) => !!o.disabled);
     if (visible.some((o) => o.colour)) menu.colours = visible.map((o) => o.colour);
     if (place) this.placeMenu(menu, place);
