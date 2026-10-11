@@ -543,6 +543,16 @@ Every release, with the desktop and Android downloads, is on the
 web version is updated with each release, so it runs the same game as the
 apps.
 
+### v1.0.46, October 10, 2026
+
+- Fixed: the macOS app could not go full screen. The green button, F11
+  and Alt+Enter all work now.
+- The desktop app opens full screen unless you last left it a window, and
+  remembers which. After this update it opens full screen once.
+- The touch pad's full-screen button switches both ways: its corners
+  point out to go full screen and in to leave it, where before it hid
+  once full screen. In the desktop app it switches the window itself.
+
 ### v1.0.43, October 10, 2026
 
 - The weapon and armour shops weigh each ware for the member at the
