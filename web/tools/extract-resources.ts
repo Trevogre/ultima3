@@ -184,12 +184,12 @@ function main(): void {
     }
   }
 
-  // Pictures used in play: the dungeon wall sheet and its mask, the title
-  // picture and the cloth map of Sosaria (View map). LairWare's scene
+  // Pictures used in play: the dungeon wall sheet and its mask, and the
+  // title picture (the cloth map is not: the map is drawn, worldMap.ts). LairWare's scene
   // renders (fountain, rod, shrine, Time Lord) go to the Lairware tile set
   // as its own scene pictures; the other sets have theirs drawn for them
   // (see docs/scene-images.md).
-  const images = ['DungeonShapes.jpg', 'DungeonMasks.png', 'Exodus.png', 'SosariaMap.jpg'];
+  const images = ['DungeonShapes.jpg', 'DungeonMasks.png', 'Exodus.png'];
   mkdirSync(join(OUT, 'images'), { recursive: true });
   for (const file of images) copyFileSync(join(REPO_ROOT, 'Images', file), join(OUT, 'images', file));
   for (const scene of ['Fountain', 'Rod', 'Shrine', 'TimeLord']) {

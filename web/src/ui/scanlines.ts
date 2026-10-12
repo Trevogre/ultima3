@@ -2,7 +2,7 @@
  * scanlines.ts
  *
  * The Scanlines setting: the look of a CRT over the whole game, the map,
- * text, menus, the dungeon and the cloth map alike, whatever tile set is
+ * text, menus, the dungeon and the map alike, whatever tile set is
  * shown. One dark band for each of the Apple II's 192 screen lines. The
  * bands are drawn in the screen's own pixels, on a canvas laid over the
  * game's, not into the game's canvas: that one is scaled to the window,

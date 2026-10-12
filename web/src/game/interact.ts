@@ -560,6 +560,7 @@ export async function enterShrine(world: World, io: GameIO): Promise<void> {
   const previousMusic = world.music;
   io.music(Music.Shrine);
   io.showImage('Shrine');
+  world.autoMap.visit(`shrine:${world.x},${world.y}`); // the map names it from now (worldMap.ts)
   const which = world.x & 0x03;
   const attribute = world.resources.strings.Messages[173 + which];
   io.printMessage(Msg.ShrineWelcome);

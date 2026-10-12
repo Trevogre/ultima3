@@ -47,7 +47,7 @@ combat and exploration more fun - it's still grindy, but now the grind is
 *fun*. Everything is designed to look like it could have been in the
 original, while still bringing a more modern UX design to the table.
 
-The cloth map that came in the box can be viewed in the game, and a quest
+A map fills in as the party explores, and a quest
 journal gives just enough in-game hints that most players should be able
 to finish the game without an external guide. There are options that ease
 the difficulty a little. The party shares one inventory for unequipped
@@ -226,7 +226,7 @@ key press. The Apple II commands, one letter each:
 
     Arrows       walk; move in combat      Space   pass a turn
     Escape       pause menu                J       journal
-    #            view the cloth map
+    #            the map
 
     A attack     B board      C cast      E enter     F fire
     G get chest  I ignite     L look      M modify    N negate
@@ -308,9 +308,19 @@ These apply whatever tile set and sound set are chosen.
   *redacted* spoke it, with the town's name. Up and Down move between
   entries, and H (Y on a controller) prints a hint written for this port.
   "Journal updated" prints when something real changes.
-- View map shows the cloth map of Sosaria from the box, through a CRT
-  effect. Every moongate the party has come out of is marked on it with the
-  moon that opens it, so the gate table writes itself one trip at a time.
+- View map (# on a keyboard, or the command menu) shows what the party has
+  seen, filled in square by square as it goes, after the Ultima V port's
+  map: Sosaria, Ambrosia and each town and castle whole on the screen in
+  the tile set's own tiles, and in a dungeon its level's auto-map.
+  Sosaria's unexplored land and sea are a chart of its coasts in ink on
+  paper; elsewhere the unexplored is dark. Places are marked once seen and
+  named once the party has been inside ("Towne?" till then), the d-pad
+  steps between them, A opens the map of a town or castle the party has
+  been in, Y comes back to the party and X turns to the next map. Every
+  moongate the party has come out of is marked with the moon that opens
+  it, so the gate table writes itself one trip at a time, and a gem puts
+  the whole map of where it was peered at on it. It replaces the cloth map
+  from the box.
 - A dungeon auto-map, the graph paper of old: cells seen by torchlight are
   recorded, shown as a small overlay or as the whole level in place of the
   first-person view, which turns the dungeon into a top-down crawl.

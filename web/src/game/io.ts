@@ -142,7 +142,7 @@ export interface GameIO {
   showPause(): Promise<string | null>;
   /** The quest journal (J): a page over the map. No turn passes. */
   showJournal(): Promise<void>;
-  /** The cloth map of Sosaria over the whole screen, until a key. No turn passes. */
+  /** The map of what the party has seen (worldMap.ts), over the whole screen until closed. No turn passes. */
   showMap(): Promise<void>;
   /**
    * Pick from a list shown as a menu in every input mode (the title and

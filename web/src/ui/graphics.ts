@@ -87,9 +87,9 @@ export const SCENE_NAMES = ['Fountain', 'Rod', 'Shrine', 'TimeLord', 'Exodus'];
 /** The pictures in public/images, by file name without extension. */
 export type ImageMap = Map<string, HTMLImageElement>;
 
-/** Load the pictures shared by every tile set: the title logo and the cloth map. */
+/** Load the pictures shared by every tile set: the title logo. */
 export async function loadImages(baseUrl = 'images/'): Promise<ImageMap> {
-  const files = ['Exodus.png', 'SosariaMap.jpg'];
+  const files = ['Exodus.png'];
   const images: ImageMap = new Map();
   await Promise.all(
     files.map(async (file) => {

@@ -11,6 +11,7 @@
 import { World, DungeonCell } from './world.ts';
 import { Location, GOLD_MAX } from './party.ts';
 import { MapValue } from './tiles.ts';
+import { MAP_SIDE } from './automap.ts';
 import { type GameIO, Key, Sound, deathSound, type MenuOption } from './io.ts';
 import { PlayerRecord } from './player.ts';
 import { cancelled } from './commands.ts';
@@ -310,8 +311,14 @@ export async function peerGem(world: World, io: GameIO): Promise<void> {
   io.print('Peer at gem!\n'); // the original's message went on to ask whose gem
   if (world.party.gems < 1) return io.printMessage(Msg.NoneLeft);
   world.party.gems--;
-  if (world.party.location === Location.Dungeon) await io.showMiniDungeon();
-  else await io.showMiniMap();
+  // What the gem shows is on the map from then on: the whole level, or the whole map where the party stands.
+  if (world.party.location === Location.Dungeon) {
+    world.autoMap.markLevel(world.current.id, world.dungeon.level);
+    await io.showMiniDungeon();
+  } else {
+    if (world.current.size === MAP_SIDE) world.autoMap.markWholeMap(world.current.id);
+    await io.showMiniMap();
+  }
 }
 
 // ---------------------------------------------------------------------------

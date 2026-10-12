@@ -41,7 +41,10 @@ import { CHEATS } from '../game/cheats.ts';
 import { Location } from '../game/party.ts';
 import { buildViewport, VIEW_SIZE, VIEW_CENTRE, type Viewport } from '../game/viewport.ts';
 import { buildDungeonView, secretMessage } from '../game/dungeon.ts';
-import { cellVisible } from '../game/automap.ts';
+import { cellVisible, recordView, MAP_SIDE } from '../game/automap.ts';
+import { mapPages, marksOn, stepMark, pageTitle, isLandValue, type MapPage, type MapMark, type Direction } from '../game/worldMap.ts';
+import { drawChart } from './chart.ts';
+import { MapId } from '../data/resources.ts';
 import { Key, Sound, type GameIO, type MenuOption, type CommandScope, type MenuPlacement, type SpellFlash } from '../game/io.ts';
 import {
   controllerKeyFor,
@@ -85,13 +88,6 @@ const Piece = {
 /** The message area. */
 /** Character boxes: two rows each, three rows apart, separators below each. */
 const BOX_ROWS = 2;
-
-/**
- * Where the 64x64 tile grid sits on SosariaMap.jpg (its pixels): the land
- * fills the picture below the title band. Found by laying the water tiles
- * over the drawing; the coasts agree to about a square.
- */
-const MAP_GRID = { image: 704, x: 0, y: 70, sx: 11, sy: 9.9 };
 
 /** Pages over the map (Help, the Journal): text column, width and rows. */
 const PAGE_LEFT = 2;
@@ -1056,90 +1052,219 @@ export class Screen implements GameIO {
   }
 
   /**
-   * The cloth map of Sosaria from the box, over the whole screen and
-   * through a CRT effect (a ghost image, a rolling band, a flicker and
-   * dark corners), animated until a key is pressed; the Scanlines setting
-   * lays its lines over it as over everything. The Mac showed the map
-   * from a menu item; the Apple II box had it on cloth.
+   * The map (worldMap.ts), over the whole screen until closed; no turn passes. The page fills the map's box - a map of
+   * 64 squares at 11 pixels in the tile set's own tiles, Sosaria's unseen parts its chart (chart.ts), or a dungeon's
+   * level as its auto-map - and the boxes beside it are its legend: the page's name, the mark the cursor is on, how
+   * much of the map has been seen, and the keys. The d-pad (arrows) moves between the marks, A (Enter) opens the map
+   * of a town or castle the party has been in and B (Backspace) comes back from it, Y (Space) comes back to the party,
+   * X turns to the next map, and B on the first page, Escape or # closes.
    */
   async showMap(): Promise<void> {
-    const map = this.images.get('SosariaMap');
-    if (!map) return;
-    const wasCovered = this.viewCovered;
-    this.viewCovered = true;
-    this.overlay = (time) => this.paintMap(map, time);
+    const { world } = this;
+    const controller = this.inputMode === 'controller';
+    const wasCovered = this.openPage();
+    const pages = mapPages(world);
+    const back: MapPage[] = [];
+    let turned = 0;
+    let page = pages[0];
+    let marks: MapMark[] = [];
+    let selected = 0;
+    let art: HTMLCanvasElement | null = null;
+    const show = (next: MapPage) => {
+      page = next;
+      marks = marksOn(world, page);
+      selected = 0;
+      art = page.kind === 'map' ? this.mapArt(page.id) : null;
+    };
+    show(page);
+    this.overlay = (time) =>
+      this.paintWorldMap(page, art, marks, selected, { back: back.length > 0, more: pages.length > 1, controller }, time);
     try {
-      await this.readKey();
+      for (;;) {
+        const key = await this.readKey();
+        if (key === null) continue;
+        const letter = key.length === 1 ? key.toLowerCase() : '';
+        if (key === Key.Escape || key === Key.Pause || key === '#') break;
+        if (key === Key.B || key === Key.Backspace) {
+          if (back.length === 0) {
+            if (key === Key.B) break;
+            continue;
+          }
+          show(back.pop()!);
+        } else if (key === Key.Up || key === Key.Down || key === Key.Left || key === Key.Right) {
+          const dir: Direction = key === Key.Up ? 'up' : key === Key.Down ? 'down' : key === Key.Left ? 'left' : 'right';
+          const wraps = page.kind === 'map' && (page.id === MapId.Sosaria || page.id === MapId.Ambrosia);
+          selected = stepMark(marks, selected, dir, page.kind === 'map' ? MAP_SIDE : 16, wraps);
+        } else if (key === Key.Y || key === Key.Space || letter === 'y') {
+          selected = Math.max(
+            0,
+            marks.findIndex((m) => m.kind === 'party' || m.party),
+          );
+        } else if (key === Key.X || letter === 'x') {
+          back.length = 0;
+          turned = (turned + 1) % pages.length;
+          show(pages[turned]);
+        } else if (key === Key.A || key === Key.Enter) {
+          const opens = marks[selected]?.opens;
+          if (opens !== undefined) {
+            back.push(page);
+            show({ kind: 'map', id: opens });
+          }
+        }
+      }
     } finally {
       this.overlay = null;
-      this.viewCovered = wasCovered;
-      this.redrawAll();
+      this.closePage(wasCovered);
     }
   }
 
   /**
-   * The moongates the party has come out of, on the cloth map: each drawn
-   * as the Trammel moon that opens it, in a round frame. The map is a
-   * drawing, not a plot, but its coasts follow the tile grid closely
-   * enough: the land fills the picture below its title band, at
-   * MAP_GRID's scale, so a gate lands within a square of its place.
+   * A map page's picture, drawn once as the page opens: what the party has seen of the map, square by square in the
+   * tile set's tiles (the ground under anyone standing on it), over Sosaria's chart or, elsewhere, the dark.
    */
-  private markGates(left: number, size: number): void {
-    const { ctx, cell, world } = this;
-    const { moonX, moonY } = world.resources.misc;
-    const scale = size / MAP_GRID.image;
-    const radius = cell * 0.65;
-    for (const gate of world.gatesKnown) {
-      const x = left + (MAP_GRID.x + (moonX[gate] + 0.5) * MAP_GRID.sx) * scale;
-      const y = (MAP_GRID.y + (moonY[gate] + 0.5) * MAP_GRID.sy) * scale;
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, Math.PI * 2);
-      ctx.clip();
-      this.gfx.drawMoon(ctx, 0, gate, x - radius, y - radius, radius * 2);
-      ctx.restore();
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, Math.PI * 2);
-      ctx.lineWidth = Math.max(2, cell / 12);
-      ctx.strokeStyle = '#f0e0a0';
-      ctx.stroke();
+  private mapArt(id: number): HTMLCanvasElement {
+    const { world } = this;
+    const sq = (22 * this.cell) / MAP_SIDE;
+    const art = document.createElement('canvas');
+    art.width = art.height = Math.round(sq * MAP_SIDE);
+    const c = art.getContext('2d')!;
+    const state = id === MapId.Sosaria ? world.surface : id === world.current.id ? world.current : world.loadMapState(id);
+    if (id === MapId.Sosaria) {
+      const raw = world.resources.maps.get(id);
+      drawChart(c, sq, (x, y) => !!raw && isLandValue(raw[1 + y * MAP_SIDE + x]));
+    } else {
+      c.fillStyle = '#000';
+      c.fillRect(0, 0, art.width, art.height);
     }
+    for (let y = 0; y < MAP_SIDE; y++) {
+      for (let x = 0; x < MAP_SIDE; x++) {
+        if (!world.autoMap.squareSeen(id, x, y)) continue;
+        const someone = state.monsters.at(x, y);
+        const value = someone >= 0 ? state.monsters.tileUnder(someone) : state.tiles[y * MAP_SIDE + x];
+        this.gfx.drawShape(c, (value >> 2) * 2, x * sq, y * sq, sq);
+      }
+    }
+    return art;
   }
 
-  private paintMap(map: HTMLImageElement, time: number): void {
+  /** One frame of the map: the page, its marks and the cursor, and the legend beside it. */
+  private paintWorldMap(
+    page: MapPage,
+    art: HTMLCanvasElement | null,
+    marks: MapMark[],
+    selected: number,
+    can: { back: boolean; more: boolean; controller: boolean },
+    time: number,
+  ): void {
+    const { ctx, cell, world } = this;
+    this.black(1, 1, 22, 22);
+    // Where a mark's square is, and how big a square is, on this page.
+    const dungeon = page.kind === 'dungeon';
+    const sq = dungeon ? cell : (22 * cell) / MAP_SIDE;
+    const origin = dungeon ? 4 * cell : cell;
+    if (dungeon) this.paintAutoMap(0, 0, 16, 16, 4, 4);
+    else if (art) ctx.drawImage(art, cell, cell, 22 * cell, 22 * cell);
+    const corner = (m: MapMark) => [origin + m.x * sq, origin + m.y * sq];
+    // The moongates the party has come out of, each as the moon that opens it.
+    for (const m of marks) {
+      if (m.kind !== 'moongate' || m.phase === undefined) continue;
+      const [x, y] = corner(m);
+      this.drawMoonMark(x + sq / 2, y + sq / 2, sq * 0.9, m.phase);
+    }
+    // The party, blinking.
+    const party = marks.find((m) => m.kind === 'party' || m.party);
+    if (party && Math.floor(time / 350) % 2 === 0) {
+      const [x, y] = corner(party);
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = Math.max(2, sq / 5);
+      ctx.strokeRect(x - 1, y - 1, sq + 2, sq + 2);
+    }
+    // The cursor: brackets round the mark it is on, three squares across.
+    const chosen = marks[selected];
+    if (chosen) {
+      const [x, y] = corner(chosen);
+      const r = sq * 1.5;
+      const [cx, cy] = [x + sq / 2, y + sq / 2];
+      const arm = r * 0.6;
+      ctx.strokeStyle = '#ffe040';
+      ctx.lineWidth = Math.max(2, sq / 5);
+      ctx.beginPath();
+      for (const [sx, sy] of [
+        [-1, -1],
+        [1, -1],
+        [1, 1],
+        [-1, 1],
+      ]) {
+        ctx.moveTo(cx + sx * r, cy + sy * (r - arm));
+        ctx.lineTo(cx + sx * r, cy + sy * r);
+        ctx.lineTo(cx + sx * (r - arm), cy + sy * r);
+      }
+      ctx.stroke();
+    }
+    // The legend, in one box beside the map's where the party's boxes and the messages are (closing the map draws
+    // the frame again as it was).
+    const LEFT = 24;
+    const WIDTH = 15;
+    this.black(LEFT, 1, WIDTH + 1, 23);
+    for (let x = LEFT; x < 39; x++) {
+      this.piece(Piece.Horizontal, x, 0);
+      this.piece(Piece.Horizontal, x, 23);
+    }
+    for (let y = 1; y < 23; y++) {
+      this.piece(Piece.Vertical, 23, y);
+      this.piece(Piece.Vertical, 39, y);
+    }
+    this.piece(Piece.TopTee, 23, 0);
+    this.piece(Piece.BottomTee, 23, 23);
+    this.piece(Piece.TopRight, 39, 0);
+    this.piece(Piece.BottomRight, 39, 23);
+    const centred = (text: string, row: number, colour?: string) =>
+      this.drawText(text, LEFT + Math.floor((WIDTH - text.length) / 2), row, colour);
+    const grey = '#b0b0b0';
+    wrapText(pageTitle(world, page), WIDTH, 2).forEach((line, i) => centred(line, 1 + i));
+    let row = 4;
+    if (chosen) {
+      for (const line of wrapText(chosen.label, WIDTH, 3)) this.drawText(line, LEFT, row++);
+      for (const line of wrapText(chosen.detail, WIDTH, 2)) this.drawText(line, LEFT, row++, grey);
+      if (chosen.kind === 'moongate' && chosen.phase !== undefined) {
+        this.drawMoonMark((LEFT + 1) * cell, (row + 0.6) * cell, cell * 0.55, chosen.phase);
+        row += 2;
+      }
+    }
+    const seen = dungeon ? world.autoMap.seenCount(page.id, page.level) / 256 : world.autoMap.mapSeenCount(page.id) / (MAP_SIDE * MAP_SIDE);
+    this.drawText(`${Math.round(seen * 100)}% seen`, LEFT, Math.max(row + 1, 11), grey);
+    const keys = can.controller
+      ? [
+          'D-pad: places',
+          chosen?.opens !== undefined ? 'A: its map' : '',
+          'Y: the party',
+          can.more ? 'X: next map' : '',
+          can.back ? 'B: back' : 'B: close',
+        ]
+      : [
+          'Arrows: places',
+          chosen?.opens !== undefined ? 'Enter: its map' : '',
+          'Space: party',
+          can.more ? 'X: next map' : '',
+          can.back ? 'Bksp: back' : 'Esc: close',
+        ];
+    keys.filter(Boolean).forEach((line, i, all) => this.drawText(line, LEFT, 23 - all.length + i, grey));
+  }
+
+  /** A moon mark: the moon (Trammel's `phase`) that opens a gate, in a round frame, centred on (x, y). */
+  private drawMoonMark(x: number, y: number, radius: number, phase: number): void {
     const { ctx, cell } = this;
-    const width = COLUMNS * cell;
-    const height = ROWS * cell;
     ctx.save();
-    ctx.fillStyle = '#000';
-    ctx.fillRect(0, 0, width, height);
-    // The map is square: as tall as the screen, centred.
-    const size = height;
-    const left = (width - size) / 2;
-    ctx.drawImage(map, left, 0, size, size);
-    // A ghost of the picture a little to the right, the way a tube's edges doubled.
-    ctx.globalAlpha = 0.35;
-    ctx.drawImage(map, left + 4, 1, size, size);
-    ctx.globalAlpha = 1;
-    // A pale band rolling down the screen every four seconds.
-    const bandTop = ((time / 4000) % 1) * (height + size / 4) - size / 4;
-    const band = ctx.createLinearGradient(0, bandTop, 0, bandTop + size / 4);
-    band.addColorStop(0, 'rgba(255,255,255,0)');
-    band.addColorStop(0.5, 'rgba(255,255,255,0.18)');
-    band.addColorStop(1, 'rgba(255,255,255,0)');
-    ctx.fillStyle = band;
-    ctx.fillRect(left, 0, size, size);
-    // A flicker, and corners darkened as a curved tube's were.
-    const flicker = 0.04 + 0.08 * Math.abs(Math.sin(time / 90) * Math.sin(time / 1300));
-    ctx.fillStyle = `rgba(0,0,0,${flicker.toFixed(3)})`;
-    ctx.fillRect(left, 0, size, size);
-    const vignette = ctx.createRadialGradient(width / 2, height / 2, size * 0.3, width / 2, height / 2, size * 0.75);
-    vignette.addColorStop(0, 'rgba(0,0,0,0)');
-    vignette.addColorStop(1, 'rgba(0,0,0,0.55)');
-    ctx.fillStyle = vignette;
-    ctx.fillRect(left, 0, size, size);
-    this.markGates(left, size); // over the tube effects, so the moons read clearly
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.clip();
+    this.gfx.drawMoon(ctx, 0, phase, x - radius, y - radius, radius * 2);
     ctx.restore();
+    ctx.beginPath();
+    ctx.arc(x, y, radius, 0, Math.PI * 2);
+    ctx.lineWidth = Math.max(2, cell / 12);
+    ctx.strokeStyle = '#f0e0a0';
+    ctx.stroke();
   }
 
   /** The cheat menu over the help page. Returns a confirmation line for the message area, or '' when nothing was done. */
@@ -1560,6 +1685,7 @@ export class Screen implements GameIO {
   redrawMap(): void {
     this.viewCovered = false;
     this.view = buildViewport(this.world);
+    recordView(this.world, this.view); // what the view shows is on the map from now (worldMap.ts)
     this.viewDirty = true;
   }
 

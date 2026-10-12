@@ -109,6 +109,7 @@ export const COMMAND_MENUS: Record<CommandScope, MenuOption[]> = {
     { key: 'N', label: 'Negate time' },
     { key: 'O', label: 'Other command' },
     { key: 'J', label: 'Journal' },
+    { key: VIEW_MAP_KEY, label: 'View map' },
   ],
 };
 

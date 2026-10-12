@@ -213,11 +213,12 @@ describe('the combat menu for a non-caster', () => {
 });
 
 describe('View map', () => {
-  it('is in the field menu except in Ambrosia, where the map does not apply', () => {
+  it('is in the field menu wherever the party is, Ambrosia too, and in the dungeon menu', () => {
     const world = newWorld();
     const labels = () => commandMenu(world, 'field', COMMAND_MENUS.field).map((o) => o.label);
     expect(labels()).toContain('View map');
     world.party.location = Location.Ambrosia;
-    expect(labels()).not.toContain('View map');
+    expect(labels()).toContain('View map');
+    expect(COMMAND_MENUS.dungeon.map((o) => o.label)).toContain('View map');
   });
 });

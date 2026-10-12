@@ -1,9 +1,15 @@
 /**
  * automap.ts
  *
- * The dungeon auto-map: which cells of each dungeon level the party has
- * stood next to with a lit torch. None of this existed in the original,
- * where players kept graph paper; here the map fills in as they explore.
+ * What the party has seen, for the maps (this port; none of this existed in
+ * the original, where players kept graph paper):
+ *
+ * - the dungeon auto-map: which cells of each dungeon level the party has
+ *   stood next to with a lit torch;
+ * - the maps of Sosaria, Ambrosia and each town and castle (worldMap.ts):
+ *   every square the viewport has shown, past the line of sight
+ *   (`recordView`), and the whole map where a gem was peered at;
+ * - the shrines the party has been in, so the map can name them.
  *
  * What is "seen" is only a mask. The map itself is drawn from the live
  * level data under that mask, so an opened chest or a new one shows as it
@@ -16,6 +22,9 @@
  */
 
 import type { World } from './world.ts';
+import type { Viewport } from './viewport.ts';
+import { Location } from './party.ts';
+import { Shape } from './tiles.ts';
 
 /** A pluggable store: the browser's localStorage in the game, memory in tests. */
 export interface AutoMapStore {
@@ -28,10 +37,42 @@ export type MapMode = 'off' | 'small' | 'full';
 export const MAP_MODES: MapMode[] = ['off', 'small', 'full'];
 
 const LEVEL_CELLS = 256;
+/** Sosaria, Ambrosia, the towns and the castles are all 64 squares a side. */
+export const MAP_SIDE = 64;
+const MAP_CELLS = MAP_SIDE * MAP_SIDE;
+const MAP_PREFIX = 'map:';
+const VISITS_KEY = 'visits';
+
+/** A map's flags packed eight to a byte, as base64; and back. */
+function packFlags(flags: Uint8Array): string {
+  const bytes = new Uint8Array(flags.length / 8);
+  flags.forEach((v, i) => {
+    if (v) bytes[i >> 3] |= 1 << (i & 7);
+  });
+  let text = '';
+  for (const b of bytes) text += String.fromCharCode(b);
+  return btoa(text);
+}
+function unpackFlags(text: string, cells: number): Uint8Array | null {
+  let raw: string;
+  try {
+    raw = atob(text);
+  } catch {
+    return null;
+  }
+  if (raw.length * 8 !== cells) return null;
+  const flags = new Uint8Array(cells);
+  for (let i = 0; i < cells; i++) flags[i] = (raw.charCodeAt(i >> 3) >> (i & 7)) & 1;
+  return flags;
+}
 
 export class AutoMap {
   /** "dungeonId:level" -> 256 flags, one per cell, row-major. */
   private seen = new Map<string, Uint8Array>();
+  /** A surface map's, town's or castle's id -> 4096 flags, one per square, row-major. */
+  private squares = new Map<number, Uint8Array>();
+  /** What else the party has been in (a shrine: "shrine:x,y"). */
+  private visits = new Set<string>();
 
   constructor(private readonly store: AutoMapStore | null = null) {
     this.load();
@@ -76,13 +117,88 @@ export class AutoMap {
     return mask ? mask.reduce((n, v) => n + v, 0) : 0;
   }
 
-  /** Forget everything: a new game starts with blank maps. */
-  clear(): void {
-    this.seen.clear();
+  /** Record a whole dungeon level as seen (a gem peered at in it). */
+  markLevel(dungeon: number, level: number): void {
+    const mask = this.levelMask(dungeon, level, true)!;
+    if (mask.every((v) => v === 1)) return;
+    mask.fill(1);
     this.save();
   }
 
-  /** The store holds JSON: each level's flags as a string of 256 '0'/'1' characters. */
+  /** Whether any level of a dungeon has been seen: the party has been in it. */
+  hasDungeon(dungeon: number): boolean {
+    for (const [key, mask] of this.seen) if (key.startsWith(`${dungeon}:`) && mask.some((v) => v === 1)) return true;
+    return false;
+  }
+
+  private mapFlags(mapId: number, create: boolean): Uint8Array | undefined {
+    let flags = this.squares.get(mapId);
+    if (!flags && create) {
+      flags = new Uint8Array(MAP_CELLS);
+      this.squares.set(mapId, flags);
+    }
+    return flags;
+  }
+
+  /** Record squares of a surface map, town or castle as seen. */
+  markSquares(mapId: number, squares: Iterable<[number, number]>): void {
+    const flags = this.mapFlags(mapId, true)!;
+    let changed = false;
+    for (const [x, y] of squares) {
+      const i = (y & (MAP_SIDE - 1)) * MAP_SIDE + (x & (MAP_SIDE - 1));
+      if (!flags[i]) changed = true;
+      flags[i] = 1;
+    }
+    if (changed) this.save();
+  }
+
+  /** Record a whole map as seen (a gem peered at on it). */
+  markWholeMap(mapId: number): void {
+    const flags = this.mapFlags(mapId, true)!;
+    if (flags.every((v) => v === 1)) return;
+    flags.fill(1);
+    this.save();
+  }
+
+  squareSeen(mapId: number, x: number, y: number): boolean {
+    const flags = this.mapFlags(mapId, false);
+    return !!flags && flags[(y & (MAP_SIDE - 1)) * MAP_SIDE + (x & (MAP_SIDE - 1))] === 1;
+  }
+
+  /** How many squares of a map have been seen. */
+  mapSeenCount(mapId: number): number {
+    const flags = this.mapFlags(mapId, false);
+    return flags ? flags.reduce((n, v) => n + v, 0) : 0;
+  }
+
+  /** Whether any square of a map has been seen: for a town or castle, the party has been inside. */
+  hasMap(mapId: number): boolean {
+    return this.mapSeenCount(mapId) > 0;
+  }
+
+  visit(key: string): void {
+    if (this.visits.has(key)) return;
+    this.visits.add(key);
+    this.save();
+  }
+
+  visited(key: string): boolean {
+    return this.visits.has(key);
+  }
+
+  /** Forget everything: a new game starts with blank maps. */
+  clear(): void {
+    this.seen.clear();
+    this.squares.clear();
+    this.visits.clear();
+    this.save();
+  }
+
+  /**
+   * The store holds JSON: each dungeon level's flags as a string of 256 '0'/'1' characters ("id:level"), each map's
+   * as its packed flags ("map:id"), and the visits joined by "|" ("visits"). A store from before the maps holds
+   * only the levels.
+   */
   private load(): void {
     if (!this.store) return;
     try {
@@ -90,7 +206,18 @@ export class AutoMap {
       if (!raw) return;
       const data = JSON.parse(raw) as Record<string, string>;
       for (const [key, flags] of Object.entries(data)) {
-        if (typeof flags !== 'string' || flags.length !== LEVEL_CELLS) continue;
+        if (typeof flags !== 'string') continue;
+        if (key === VISITS_KEY) {
+          for (const v of flags.split('|')) if (v) this.visits.add(v);
+          continue;
+        }
+        if (key.startsWith(MAP_PREFIX)) {
+          const id = Number(key.slice(MAP_PREFIX.length));
+          const unpacked = unpackFlags(flags, MAP_CELLS);
+          if (Number.isInteger(id) && unpacked) this.squares.set(id, unpacked);
+          continue;
+        }
+        if (flags.length !== LEVEL_CELLS) continue;
         this.seen.set(
           key,
           Uint8Array.from(flags, (ch) => (ch === '1' ? 1 : 0)),
@@ -105,6 +232,8 @@ export class AutoMap {
     if (!this.store) return;
     const data: Record<string, string> = {};
     for (const [key, mask] of this.seen) data[key] = Array.from(mask, (v) => (v ? '1' : '0')).join('');
+    for (const [id, flags] of this.squares) data[`${MAP_PREFIX}${id}`] = packFlags(flags);
+    if (this.visits.size) data[VISITS_KEY] = [...this.visits].join('|');
     try {
       this.store.write(JSON.stringify(data));
     } catch {
@@ -129,4 +258,21 @@ export function cellVisible(world: World, x: number, y: number): boolean {
 /** The next map mode after `mode`, cycling off -> small -> full -> off. */
 export function nextMapMode(mode: MapMode): MapMode {
   return MAP_MODES[(MAP_MODES.indexOf(mode) + 1) % MAP_MODES.length];
+}
+
+/**
+ * Record what the viewport shows of the map the party is on (Sosaria, Ambrosia, a town or a castle): every square of
+ * it the line of sight leaves open (viewport.ts blanks the rest to Void). Nothing is recorded in a dungeon (the
+ * auto-map's cells are) or in a fight.
+ */
+export function recordView(world: World, view: Viewport): void {
+  const where = world.party.location;
+  if (where === Location.Dungeon || where === Location.Combat || world.current.size !== MAP_SIDE) return;
+  const side = Math.round(Math.sqrt(view.cells.length));
+  const squares: [number, number][] = [];
+  view.cells.forEach((cell, i) => {
+    if (cell.base === Shape.Void) return;
+    squares.push([world.constrain(view.originX + (i % side)), world.constrain(view.originY + Math.floor(i / side))]);
+  });
+  world.autoMap.markSquares(world.current.id, squares);
 }

@@ -19,7 +19,7 @@ import { type GameIO, Key, Sound, Music, deathSound } from './io.ts';
 import { what2, noGo } from './commands.ts';
 import { combat } from './combat.ts';
 import { cast, quickHeal, quickSafeChest, quickLight } from './spells.ts';
-import { QUICK_CAST_KEY, SAFE_CHEST_KEY, LIGHT_KEY } from './context.ts';
+import { QUICK_CAST_KEY, SAFE_CHEST_KEY, LIGHT_KEY, VIEW_MAP_KEY } from './context.ts';
 import { ageChars } from './turn.ts';
 import { checkAllDead } from './death.ts';
 import { speech, otherCommand, yell } from './interact.ts';
@@ -203,6 +203,10 @@ export async function runDungeon(world: World, io: GameIO): Promise<void> {
     }
     if (key === 'J' || key === 'j') {
       await io.showJournal(); // no turn passes
+      continue;
+    }
+    if (key === VIEW_MAP_KEY) {
+      await io.showMap(); // the level's auto-map, and Sosaria (worldMap.ts); no turn passes
       continue;
     }
     const before = `${d.level}:${world.x}:${world.y}`;

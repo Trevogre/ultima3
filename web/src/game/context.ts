@@ -128,7 +128,7 @@ export function commandAvailability(world: World, scope: CommandScope): Map<stri
   set('U', door);
   if (door) set('U', world.party.keys > 0, true);
   set('S', counter);
-  set(VIEW_MAP_KEY, loc !== Location.Ambrosia); // the map is of Sosaria
+  set(VIEW_MAP_KEY, true); // the map of what the party has seen, wherever it is (worldMap.ts)
   set('M', world.party.size > 1);
   set('C', canCast(world), true);
   set('N', world.party.powders > 0, true);
@@ -167,7 +167,7 @@ export function commandMenu(world: World, scope: CommandScope, template: MenuOpt
 /** Key of the "Cast (Light)" shortcut in the dungeon menu (this port); lights a dark dungeon with the strongest light spell on hand at once. */
 export const LIGHT_KEY = '$';
 
-/** Key of "View map" in the field menu (this port): the cloth map of Sosaria over the whole screen. No turn passes. */
+/** Key of "View map" in the field menu (this port): the map of what the party has seen (worldMap.ts). No turn passes. */
 export const VIEW_MAP_KEY = '#';
 
 /** Key of the "Cast (Safe chest)" shortcut in the field and dungeon menus (this port); casts it on the chest underfoot at once. */

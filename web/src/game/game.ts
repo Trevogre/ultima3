@@ -123,7 +123,7 @@ export class Game {
         await io.showJournal(); // no turn passes
         continue;
       }
-      if (key === VIEW_MAP_KEY && world.party.location !== Location.Ambrosia) {
+      if (key === VIEW_MAP_KEY) {
         await io.showMap(); // no turn passes
         continue;
       }
