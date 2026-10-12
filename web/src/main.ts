@@ -35,6 +35,7 @@ import { Keyboard } from './ui/input.ts';
 import { LEVELS, SoundPlayer, SOUND_SETS, validLevel, type SoundSet } from './ui/sound.ts';
 import { TouchPad } from './ui/touch.ts';
 import { fullScreen } from './ui/fullScreen.ts';
+import { bootHold } from './ui/bootHold.ts';
 import { MusicPlayer } from './ui/music.ts';
 import { Screen } from './ui/screen.ts';
 import { TILE_SETS } from './ui/help.ts';
@@ -198,6 +199,8 @@ function pickFile(): Promise<string> {
 }
 
 async function start(): Promise<void> {
+  // The boot screen is held a while before the title, and a click or tap from now on cuts it short (bootHold.ts).
+  const holdBootScreen = bootHold();
   const canvas = document.getElementById('screen') as HTMLCanvasElement;
   const params = new URLSearchParams(location.search);
   const prefs = loadPrefs();
@@ -375,7 +378,9 @@ async function start(): Promise<void> {
     apply: () => (native ? void native.openRelease() : location.assign(offer.url)),
   };
   // The title (or the game) comes next: the boot screen, kept up while the release was waited for (a black canvas
-  // otherwise, for as long as GitHub takes to answer the apps), gives way to it.
+  // otherwise, for as long as GitHub takes to answer the apps) and then held until it has been up 5 seconds or a
+  // press skips it, gives way to it. A development start goes straight on.
+  await holdBootScreen(keyboard, !(dev && (params.has('play') || params.has('at'))));
   bootDone();
   // ?play and ?at= (development): straight into the game, placed where asked, the start's first key played.
   if (dev && (params.has('play') || params.has('at'))) {
