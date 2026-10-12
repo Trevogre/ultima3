@@ -33,8 +33,9 @@ export interface AutoMapStore {
 }
 
 /**
- * The dungeon's view (L): first person alone, first person with a 5x5 piece of the auto-map beside it, or the whole
- * level top down in place of the first-person view (kept by these names in the settings).
+ * The dungeon's view (L): first person alone, first person with a 5x5 piece of the auto-map beside it, or the level
+ * top down round the party in place of the first-person view (kept by these names in the settings; dungeonLayout.ts
+ * places the cells).
  */
 export type MapMode = 'off' | 'small' | 'full';
 export const MAP_MODES: MapMode[] = ['off', 'small', 'full'];

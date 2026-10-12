@@ -41,7 +41,8 @@ import { CHEATS } from '../game/cheats.ts';
 import { Location } from '../game/party.ts';
 import { buildViewport, VIEW_SIZE, VIEW_CENTRE, type Viewport } from '../game/viewport.ts';
 import { buildDungeonView, secretMessage } from '../game/dungeon.ts';
-import { cellVisible, recordView, MAP_SIDE } from '../game/automap.ts';
+import { recordView, MAP_SIDE } from '../game/automap.ts';
+import { aroundParty, wholeLevel } from '../game/dungeonLayout.ts';
 import { mapPages, marksOn, stepMark, pageTitle, isLandValue, type MapPage, type MapMark, type Direction } from '../game/worldMap.ts';
 import { drawChart } from './chart.ts';
 import { MapId } from '../data/resources.ts';
@@ -108,6 +109,8 @@ const DUNGEON_MAP_PIECE_COLUMN = 7;
 const MAP_OVERLAY_SIZE = 5;
 const MAP_OVERLAY_LEFT = 35;
 const MAP_OVERLAY_TOP = 13;
+/** The Top down view's cells each way from the party: 21 a side, in the 22 of the window. */
+const TOP_DOWN_REACH = 10;
 
 /**
  * Which of the nine map pieces (UI sheet row 1 from column 7) draws a
@@ -1158,13 +1161,20 @@ export class Screen implements GameIO {
   ): void {
     const { ctx, cell, world } = this;
     this.black(1, 1, 22, 22);
-    // Where a mark's square is, and how big a square is, on this page.
+    // Where a mark's square is, and how big a square is, on this page: a dungeon's level drawn whole and still, cut at
+    // its seams (dungeonLayout.ts), in the middle of the window.
     const dungeon = page.kind === 'dungeon';
-    const sq = dungeon ? cell : (22 * cell) / MAP_SIDE;
-    const origin = dungeon ? 4 * cell : cell;
-    if (dungeon) this.paintAutoMap(0, 0, 16, 16, 4, 4);
+    const level = dungeon ? wholeLevel(world) : null;
+    const sq = level ? cell : (22 * cell) / MAP_SIDE;
+    const [left, top] = level
+      ? [cell + Math.round(((22 - level.cols) * cell) / 2), cell + Math.round(((22 - level.rows) * cell) / 2)]
+      : [cell, cell];
+    if (level) this.paintAutoMap((i, j) => level.at(i, j), [0, 0], [level.cols, level.rows], [left, top], level.party);
     else if (art) ctx.drawImage(art, cell, cell, 22 * cell, 22 * cell);
-    const corner = (m: MapMark) => [origin + m.x * sq, origin + m.y * sq];
+    const corner = (m: MapMark) => {
+      const [x, y] = level && m.kind === 'party' ? level.party : [m.x, m.y];
+      return [left + x * sq, top + y * sq];
+    };
     // The moongates the party has come out of, each as the moon that opens it.
     for (const m of marks) {
       if (m.kind !== 'moongate' || m.phase === undefined) continue;
@@ -1751,7 +1761,10 @@ export class Screen implements GameIO {
         // The level fills the window; the first-person view shrinks into the overlay slot.
         this.overlayShown = true;
         this.black(1, 1, 22, 22);
-        this.paintAutoMap(0, 0, 16, 16, 4, 4); // where Peer draws the level
+        // The party in the middle and the level round it, moving as it walks (dungeonLayout.ts).
+        const span = TOP_DOWN_REACH * 2 + 1;
+        const edge = cell + Math.round(((22 - span) * cell) / 2);
+        this.paintAutoMap(aroundParty(world), [-TOP_DOWN_REACH, -TOP_DOWN_REACH], [span, span], [edge, edge], [0, 0]);
         this.black(MAP_OVERLAY_LEFT, MAP_OVERLAY_TOP, MAP_OVERLAY_SIZE, MAP_OVERLAY_SIZE);
         if (view) {
           const w = MAP_OVERLAY_SIZE * cell;
@@ -1762,7 +1775,14 @@ export class Screen implements GameIO {
       }
       if (overlay) {
         this.overlayShown = true;
-        this.paintAutoMap(world.x - 2, world.y - 2, MAP_OVERLAY_SIZE, MAP_OVERLAY_SIZE, MAP_OVERLAY_LEFT, MAP_OVERLAY_TOP);
+        const half = MAP_OVERLAY_SIZE >> 1;
+        this.paintAutoMap(
+          aroundParty(world),
+          [-half, -half],
+          [MAP_OVERLAY_SIZE, MAP_OVERLAY_SIZE],
+          [MAP_OVERLAY_LEFT * cell, MAP_OVERLAY_TOP * cell],
+          [0, 0],
+        );
       }
       this.black(1, 1, 22, 22);
       if (!view) return;
@@ -2003,33 +2023,40 @@ export class Screen implements GameIO {
   }
 
   /**
-   * The dungeon auto-map: `w` x `h` cells of the current level from (x0, y0),
-   * wrapping as the dungeon does, drawn at text cell (left, top) with the
-   * pieces Peer at gem uses. Only cells the party has seen (or, in the
+   * Cells of the dungeon auto-map, `at` saying which cell of the level goes
+   * where (dungeonLayout.ts: round the party, or the whole level): `w` x `h`
+   * of them from (i0, j0) in its terms, drawn from pixel (left, top) with
+   * the pieces Peer at gem uses. Only cells the party has seen (or, in the
    * dark, the 3x3 around it) are drawn; the rest stay black. Secret doors
    * are drawn as a wall with one pixel out of place, so a sharp eye can
-   * spot them where Peer shows them plainly. The party is the figure of
-   * its first living member, standing still (Peer's blinking diamond was
-   * a distraction on a map that stays up).
+   * spot them where Peer shows them plainly. The party, at `party` in the
+   * same terms, is the figure of its first living member, standing still
+   * (Peer's blinking diamond was a distraction on a map that stays up).
    */
-  private paintAutoMap(x0: number, y0: number, w: number, h: number, left: number, top: number): void {
+  private paintAutoMap(
+    at: (i: number, j: number) => number,
+    [i0, j0]: [number, number],
+    [w, h]: [number, number],
+    [left, top]: [number, number],
+    party: [number, number],
+  ): void {
     const { ctx, cell, world } = this;
-    this.black(left, top, w, h);
+    ctx.fillStyle = '#000';
+    ctx.fillRect(left, top, w * cell, h * cell);
     for (let row = 0; row < h; row++) {
       for (let col = 0; col < w; col++) {
-        const xs = (x0 + col) & 0x0f;
-        const ys = (y0 + row) & 0x0f;
-        if (!cellVisible(world, xs, ys)) continue;
-        const dx = (left + col) * cell;
-        const dy = (top + row) * cell;
-        const value = world.getXYDng(xs, ys);
+        const c = at(i0 + col, j0 + row);
+        if (c < 0) continue;
+        const [dx, dy] = [left + col * cell, top + row * cell];
+        const value = world.getXYDng(c & 0x0f, c >> 4);
         if (value === DungeonCell.SecretDoor) ctx.drawImage(this.secretDoor(), dx, dy, cell, cell);
         else this.gfx.drawUiPiece(ctx, DUNGEON_MAP_PIECE_COLUMN + dungeonMapPiece(value), 1, dx, dy, cell);
-        if (xs === world.x && ys === world.y) {
-          const leader = this.livingLeader();
-          if (leader !== undefined) this.drawMember(leader, dx, dy, cell);
-        }
       }
+    }
+    const [col, row] = [party[0] - i0, party[1] - j0];
+    const leader = this.livingLeader();
+    if (leader !== undefined && col >= 0 && col < w && row >= 0 && row < h) {
+      this.drawMember(leader, left + col * cell, top + row * cell, cell);
     }
   }
 

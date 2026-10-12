@@ -324,10 +324,16 @@ These apply whatever tile set and sound set are chosen.
   or walls hide stays unknown. It replaces the cloth map from the box.
 - A dungeon auto-map, the graph paper of old: cells seen by torchlight are
   recorded. L changes the dungeon's view between First person, 1st person
-  + map (a 5x5 piece of the level beside the view) and Top down (the whole
-  level in place of the first-person view, which turns the dungeon into a
-  top-down crawl). View map shows the level too, as a page with the rest
-  of the map.
+  + map (a 5x5 piece of the level beside the view) and Top down (the level
+  in place of the first-person view, which turns the dungeon into a
+  top-down crawl). Both maps keep the party in the middle and move the
+  level round it, after the Ultima V port's. The levels wrap, as they
+  always did, and most were laid out inside one wall that bounds them on
+  both sides through the wrap: the maps draw that wall beside the party at
+  whichever edge it stands, never on the far side, and run a passage on
+  across an edge it crosses; a level that loops right round goes on past
+  its edges. View map shows the whole level, still, as a page with the
+  rest of the map.
 
 #### Party and inventory
 

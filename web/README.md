@@ -271,7 +271,9 @@ src/game/   pure game logic, no DOM, unit tested
   death.ts        party wipe and resurrection
   menu.ts         title screen, character creation, party organisation (menus)
   journal.ts      the quest journal: entries, clues, hints
-  automap.ts      the dungeon auto-map
+  automap.ts      what the party has seen, for the maps (dungeon cells, map squares)
+  worldMap.ts     the map's pages and their marks (View map)
+  dungeonLayout.ts where the dungeon maps draw each cell: round the party, or the whole level
   cheats.ts       the cheat table
   names.ts        stock of names for the "random name" option
   game.ts         the main loop (Game) and command dispatch
@@ -294,6 +296,7 @@ src/ui/     browser only
   sound.ts        Web Audio effects: two sets, a gain table, repeat rules
   music.ts        QuickTime music decoder and synthesizer
   bootHold.ts     the boot screen held 3 s before the title; any press skips it
+  chart.ts        Sosaria's coast chart under the map
 src/main.ts       bootstrap, service worker, export/import transfer
 tools/compose-figures.ts   art/figures/ -> the Standard tile sheet
 tools/key-art.mjs          art/box/ -> the Steam artwork, the banner, the boot screen (needs ImageMagick 7)
