@@ -238,7 +238,8 @@ key press. The Apple II commands, one letter each:
               direction, C N R Z (auto combat is in the Pause menu;
               while it plays, B or Escape takes the fight back)
     Dungeons: up/down advance or retreat, left/right turn, I K D
-              ignite, klimb, descend, L cycle the auto-map
+              ignite, klimb, descend, L change view (first person,
+              with a map, top down)
     Shortcuts: ! cast the heal the party needs, @ safe chest, $ light
 
 A "whom" prompt takes a member number, or Up and Down through the stats
@@ -318,12 +319,15 @@ These apply whatever tile set and sound set are chosen.
   steps between them, A opens the map of a town or castle the party has
   been in, Y comes back to the party and X turns to the next map. Every
   moongate the party has come out of is marked with the moon that opens
-  it, so the gate table writes itself one trip at a time, and a gem puts
-  the whole map of where it was peered at on it. It replaces the cloth map
-  from the box.
+  it, so the gate table writes itself one trip at a time. What is on it is
+  what the party has had in its line of sight: whatever forest, mountains
+  or walls hide stays unknown. It replaces the cloth map from the box.
 - A dungeon auto-map, the graph paper of old: cells seen by torchlight are
-  recorded, shown as a small overlay or as the whole level in place of the
-  first-person view, which turns the dungeon into a top-down crawl.
+  recorded. L changes the dungeon's view between First person, 1st person
+  + map (a 5x5 piece of the level beside the view) and Top down (the whole
+  level in place of the first-person view, which turns the dungeon into a
+  top-down crawl). View map shows the level too, as a page with the rest
+  of the map.
 
 #### Party and inventory
 

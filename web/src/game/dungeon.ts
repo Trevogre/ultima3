@@ -14,7 +14,7 @@
  */
 
 import { World, DungeonCell } from './world.ts';
-import { nextMapMode } from './automap.ts';
+import { nextMapMode, VIEW_NAMES } from './automap.ts';
 import { type GameIO, Key, Sound, Music, deathSound } from './io.ts';
 import { what2, noGo } from './commands.ts';
 import { combat } from './combat.ts';
@@ -240,13 +240,15 @@ export async function runDungeon(world: World, io: GameIO): Promise<void> {
 }
 
 /**
- * L: cycle the auto-map between off, a 5x5 overlay beside the text and the
- * whole level in place of the first-person view. A display change, not a
- * turn: the loop passes a turn anyway, as any dungeon command does.
+ * L: change the dungeon's view, between first person, first person with a
+ * 5x5 piece of the auto-map beside the text, and the whole level top down
+ * in place of the first-person view (View map, #, is the map). A display
+ * change, not a turn: the loop passes a turn anyway, as any dungeon
+ * command does.
  */
 export function toggleMap(world: World, io: GameIO): void {
   world.mapMode = nextMapMode(world.mapMode);
-  io.print(`Map: ${world.mapMode}\n`);
+  io.print(`View:\n${VIEW_NAMES[world.mapMode]}\n`);
   world.onMapModeChange?.();
   io.redrawMap();
 }

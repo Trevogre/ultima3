@@ -35,14 +35,17 @@ describe("the map's record of what has been seen", () => {
       [63, 63],
       [10, 20],
     ]);
-    map.markWholeMap(YEW);
+    map.markSquares(YEW, [
+      [1, 32],
+      [2, 32],
+    ]);
     map.visit('shrine:6,6');
     const again = new AutoMap(store);
     expect(again.squareSeen(MapId.Sosaria, 10, 20)).toBe(true);
     expect(again.squareSeen(MapId.Sosaria, 63, 63)).toBe(true);
     expect(again.squareSeen(MapId.Sosaria, 11, 20)).toBe(false);
     expect(again.mapSeenCount(MapId.Sosaria)).toBe(3);
-    expect(again.mapSeenCount(YEW)).toBe(MAP_SIDE * MAP_SIDE);
+    expect(again.mapSeenCount(YEW)).toBe(2);
     expect(again.visited('shrine:6,6')).toBe(true);
     again.clear();
     expect(new AutoMap(store).hasMap(YEW)).toBe(false);
@@ -75,14 +78,46 @@ describe("the map's record of what has been seen", () => {
     expect(world.autoMap.hasMap(MapId.Sosaria)).toBe(false);
   });
 
-  it('puts the whole map on it where a gem is peered at', async () => {
+  it('records only what is in sight: nothing behind forest or mountains', () => {
+    const world = newWorld();
+    world.autoMap = new AutoMap();
+    // A square on Sosaria from which some of the view is hidden.
+    let view = buildViewport(world);
+    for (let y = 0; y < MAP_SIDE && view.cells.filter((c) => c.base === Shape.Void).length < 20; y++)
+      for (let x = 0; x < MAP_SIDE; x++) {
+        [world.x, world.y] = [x, y];
+        view = buildViewport(world);
+        if (view.cells.filter((c) => c.base === Shape.Void).length >= 20) break;
+      }
+    const hidden = view.cells.filter((c) => c.base === Shape.Void).length;
+    expect(hidden).toBeGreaterThanOrEqual(20);
+    recordView(world, view);
+    view.cells.forEach((cell, i) => {
+      const [x, y] = [world.constrain(view.originX + (i % 11)), world.constrain(view.originY + Math.floor(i / 11))];
+      expect(world.autoMap.squareSeen(MapId.Sosaria, x, y)).toBe(cell.base !== Shape.Void);
+    });
+    expect(world.autoMap.mapSeenCount(MapId.Sosaria)).toBe(121 - hidden);
+  });
+
+  it("records nothing past a town's edge, though the view there shows its far side", () => {
+    const world = newWorld();
+    world.autoMap = new AutoMap();
+    world.party.location = Location.Town;
+    world.enterMap(YEW);
+    [world.x, world.y] = [1, 32];
+    recordView(world, buildViewport(world));
+    for (let y = 0; y < MAP_SIDE; y++) for (let x = 7; x < MAP_SIDE; x++) expect(world.autoMap.squareSeen(YEW, x, y)).toBe(false);
+    expect(world.autoMap.hasMap(YEW)).toBe(true);
+  });
+
+  it('is not added to by peering at a gem', async () => {
     const world = newWorld();
     world.autoMap = new AutoMap();
     world.party.gems = 1;
     const io = new FakeIO(world.resources);
     io.keys = [' '];
     await peerGem(world, io);
-    expect(world.autoMap.mapSeenCount(MapId.Sosaria)).toBe(MAP_SIDE * MAP_SIDE);
+    expect(world.autoMap.hasMap(MapId.Sosaria)).toBe(false);
   });
 });
 

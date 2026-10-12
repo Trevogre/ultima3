@@ -63,7 +63,7 @@ export const TIPS: Tip[] = [
     topic: 'Guilds',
     text: [
       'Guilds sell keys (50 gold), five torches (30), powders (90) and gems (75).',
-      'A key opens a locked door: walk into it. A powder stops the foes in a fight for ten rounds (Negate time). A gem shows the whole map of where you stand, and fills it in on View map (Peer at gem).',
+      'A key opens a locked door: walk into it. A powder stops the foes in a fight for ten rounds (Negate time). A gem shows a map (Peer at gem).',
     ],
   },
   {

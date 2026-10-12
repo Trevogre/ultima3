@@ -61,7 +61,6 @@
 		A896F5D70B7492DA00A4045D /* RaceClassInfo.gif in Resources */ = {isa = PBXBuildFile; fileRef = A896F5BD0B7492DA00A4045D /* RaceClassInfo.gif */; };
 		A896F5D80B7492DA00A4045D /* Rod.jpg in Resources */ = {isa = PBXBuildFile; fileRef = A896F5BE0B7492DA00A4045D /* Rod.jpg */; };
 		A896F5D90B7492DA00A4045D /* Shrine.jpg in Resources */ = {isa = PBXBuildFile; fileRef = A896F5BF0B7492DA00A4045D /* Shrine.jpg */; };
-		A896F5DA0B7492DA00A4045D /* SosariaMap.jpg in Resources */ = {isa = PBXBuildFile; fileRef = A896F5C00B7492DA00A4045D /* SosariaMap.jpg */; };
 		A896F5DB0B7492DA00A4045D /* SpellList.pdf in Resources */ = {isa = PBXBuildFile; fileRef = A896F5C10B7492DA00A4045D /* SpellList.pdf */; };
 		A896F5DC0B7492DA00A4045D /* Stalagtites.png in Resources */ = {isa = PBXBuildFile; fileRef = A896F5C20B7492DA00A4045D /* Stalagtites.png */; };
 		A896F5DD0B7492DA00A4045D /* TimeLord.jpg in Resources */ = {isa = PBXBuildFile; fileRef = A896F5C30B7492DA00A4045D /* TimeLord.jpg */; };
@@ -162,7 +161,6 @@
 		A896F5BD0B7492DA00A4045D /* RaceClassInfo.gif */ = {isa = PBXFileReference; lastKnownFileType = image.gif; path = RaceClassInfo.gif; sourceTree = "<group>"; };
 		A896F5BE0B7492DA00A4045D /* Rod.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = Rod.jpg; sourceTree = "<group>"; };
 		A896F5BF0B7492DA00A4045D /* Shrine.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = Shrine.jpg; sourceTree = "<group>"; };
-		A896F5C00B7492DA00A4045D /* SosariaMap.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = SosariaMap.jpg; sourceTree = "<group>"; };
 		A896F5C10B7492DA00A4045D /* SpellList.pdf */ = {isa = PBXFileReference; lastKnownFileType = image.pdf; path = SpellList.pdf; sourceTree = "<group>"; };
 		A896F5C20B7492DA00A4045D /* Stalagtites.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = Stalagtites.png; sourceTree = "<group>"; };
 		A896F5C30B7492DA00A4045D /* TimeLord.jpg */ = {isa = PBXFileReference; lastKnownFileType = image.jpeg; path = TimeLord.jpg; sourceTree = "<group>"; };
@@ -324,7 +322,6 @@
 				A896F5BD0B7492DA00A4045D /* RaceClassInfo.gif */,
 				A896F5BE0B7492DA00A4045D /* Rod.jpg */,
 				A896F5BF0B7492DA00A4045D /* Shrine.jpg */,
-				A896F5C00B7492DA00A4045D /* SosariaMap.jpg */,
 				A896F5C10B7492DA00A4045D /* SpellList.pdf */,
 				A896F5C20B7492DA00A4045D /* Stalagtites.png */,
 				A896F5C30B7492DA00A4045D /* TimeLord.jpg */,
@@ -419,7 +416,6 @@
 				A896F5D70B7492DA00A4045D /* RaceClassInfo.gif in Resources */,
 				A896F5D80B7492DA00A4045D /* Rod.jpg in Resources */,
 				A896F5D90B7492DA00A4045D /* Shrine.jpg in Resources */,
-				A896F5DA0B7492DA00A4045D /* SosariaMap.jpg in Resources */,
 				A896F5DB0B7492DA00A4045D /* SpellList.pdf in Resources */,
 				A896F5DC0B7492DA00A4045D /* Stalagtites.png in Resources */,
 				A896F5DD0B7492DA00A4045D /* TimeLord.jpg in Resources */,

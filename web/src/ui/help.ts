@@ -127,8 +127,9 @@ const KEYBOARD_PAGES: HelpPage[] = [
       'Left/Right: turn',
       'I, K, D: ignite,',
       '  klimb, descend',
-      'L: map off, 5x5,',
-      '  whole level',
+      'L: change view:',
+      '  first person,',
+      '  + map, top down',
     ],
   },
 ];

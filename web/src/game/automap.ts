@@ -7,8 +7,8 @@
  * - the dungeon auto-map: which cells of each dungeon level the party has
  *   stood next to with a lit torch;
  * - the maps of Sosaria, Ambrosia and each town and castle (worldMap.ts):
- *   every square the viewport has shown, past the line of sight
- *   (`recordView`), and the whole map where a gem was peered at;
+ *   every square in the party's line of sight, as the viewport shows it
+ *   (`recordView`);
  * - the shrines the party has been in, so the map can name them.
  *
  * What is "seen" is only a mask. The map itself is drawn from the live
@@ -32,9 +32,14 @@ export interface AutoMapStore {
   write(text: string): void;
 }
 
-/** How the map shows in a dungeon: not at all, a 5x5 overlay, or the whole level. */
+/**
+ * The dungeon's view (L): first person alone, first person with a 5x5 piece of the auto-map beside it, or the whole
+ * level top down in place of the first-person view (kept by these names in the settings).
+ */
 export type MapMode = 'off' | 'small' | 'full';
 export const MAP_MODES: MapMode[] = ['off', 'small', 'full'];
+/** Each view as the player is told it: on its own line in the message area, so no longer than its 16 columns. */
+export const VIEW_NAMES: Record<MapMode, string> = { off: 'First person', small: '1st person + map', full: 'Top down' };
 
 const LEVEL_CELLS = 256;
 /** Sosaria, Ambrosia, the towns and the castles are all 64 squares a side. */
@@ -117,14 +122,6 @@ export class AutoMap {
     return mask ? mask.reduce((n, v) => n + v, 0) : 0;
   }
 
-  /** Record a whole dungeon level as seen (a gem peered at in it). */
-  markLevel(dungeon: number, level: number): void {
-    const mask = this.levelMask(dungeon, level, true)!;
-    if (mask.every((v) => v === 1)) return;
-    mask.fill(1);
-    this.save();
-  }
-
   /** Whether any level of a dungeon has been seen: the party has been in it. */
   hasDungeon(dungeon: number): boolean {
     for (const [key, mask] of this.seen) if (key.startsWith(`${dungeon}:`) && mask.some((v) => v === 1)) return true;
@@ -150,14 +147,6 @@ export class AutoMap {
       flags[i] = 1;
     }
     if (changed) this.save();
-  }
-
-  /** Record a whole map as seen (a gem peered at on it). */
-  markWholeMap(mapId: number): void {
-    const flags = this.mapFlags(mapId, true)!;
-    if (flags.every((v) => v === 1)) return;
-    flags.fill(1);
-    this.save();
   }
 
   squareSeen(mapId: number, x: number, y: number): boolean {
@@ -261,18 +250,23 @@ export function nextMapMode(mode: MapMode): MapMode {
 }
 
 /**
- * Record what the viewport shows of the map the party is on (Sosaria, Ambrosia, a town or a castle): every square of
- * it the line of sight leaves open (viewport.ts blanks the rest to Void). Nothing is recorded in a dungeon (the
- * auto-map's cells are) or in a fight.
+ * Record what the party can see of the map it is on (Sosaria, Ambrosia, a town or a castle): every square of the view
+ * its line of sight leaves open - viewport.ts blanks to Void whatever forest, mountains or walls hide, as the original
+ * did. Nothing is recorded in a dungeon (the auto-map's cells are) or in a fight.
  */
 export function recordView(world: World, view: Viewport): void {
   const where = world.party.location;
   if (where === Location.Dungeon || where === Location.Combat || world.current.size !== MAP_SIDE) return;
+  // Sosaria and Ambrosia join at their edges; a town or castle does not, though the view near its edge shows the far
+  // side of it (the original's wrap), which is not in sight from here and so not recorded.
+  const wraps = where === Location.Sosaria || where === Location.Ambrosia;
   const side = Math.round(Math.sqrt(view.cells.length));
   const squares: [number, number][] = [];
   view.cells.forEach((cell, i) => {
     if (cell.base === Shape.Void) return;
-    squares.push([world.constrain(view.originX + (i % side)), world.constrain(view.originY + Math.floor(i / side))]);
+    const [x, y] = [view.originX + (i % side), view.originY + Math.floor(i / side)];
+    if (!wraps && (x < 0 || y < 0 || x >= MAP_SIDE || y >= MAP_SIDE)) return;
+    squares.push([world.constrain(x), world.constrain(y)]);
   });
   world.autoMap.markSquares(world.current.id, squares);
 }

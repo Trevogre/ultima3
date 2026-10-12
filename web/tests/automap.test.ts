@@ -89,16 +89,19 @@ describe('the auto-map in play', () => {
     expect(cellVisible(world, 8, 8)).toBe(false);
   });
 
-  it('L cycles the map mode and tells the page', () => {
+  it('L changes the view, says which by name, and tells the page', () => {
     const { world, io } = dungeonWorld();
     let told = 0;
     world.onMapModeChange = () => told++;
     toggleMap(world, io);
     expect(world.mapMode).toBe('small');
+    expect(io.output).toContain('View:\n1st person + map');
     toggleMap(world, io);
     expect(world.mapMode).toBe('full');
-    expect(io.output).toContain('Map: full');
-    expect(told).toBe(2);
+    expect(io.output).toContain('View:\nTop down');
+    toggleMap(world, io);
+    expect(io.output).toContain('View:\nFirst person');
+    expect(told).toBe(3);
   });
 });
 
