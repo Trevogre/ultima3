@@ -16,8 +16,8 @@ function hold(left: number, tapped = false, pressAt: number | null = null) {
 }
 
 describe('the boot screen held before the title', () => {
-  it('is up five seconds at least', () => {
-    expect(BOOT_HOLD_MS).toBe(5000);
+  it('is up three seconds at least', () => {
+    expect(BOOT_HOLD_MS).toBe(3000);
   });
 
   it('waits out what is left of its time, the loading counted towards it', async () => {
@@ -37,7 +37,7 @@ describe('the boot screen held before the title', () => {
     expect(waited).toEqual([]);
   });
 
-  it('is not held when the game took five seconds or more to load', async () => {
+  it('is not held when the game took three seconds or more to load', async () => {
     const { h, waited } = hold(-250);
     expect(await holdFor(h)).toBe('none');
     expect(waited).toEqual([]);

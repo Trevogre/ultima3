@@ -36,7 +36,7 @@ Under `npm run dev` the address bar can put the game somewhere, so
 checking a fix or taking a screenshot is a page load
 (`src/game/devStarts.ts`; none of it is in a build):
 
-- `?play` skips the title (and the boot screen's 5-second hold): the saved game, or with `?new` a new one.
+- `?play` skips the title (and the boot screen's 3-second hold): the saved game, or with `?new` a new one.
 - `?at=world:X,Y` on Sosaria; `?at=ambrosia` (or `ambrosia:X,Y`).
 - `?at=place:yew`: a town, castle or dungeon, entered from its square as
   Enter enters it. Any start of a name that is the only one does
@@ -293,7 +293,7 @@ src/ui/     browser only
   platform.ts     iOS detection and the storage warning
   sound.ts        Web Audio effects: two sets, a gain table, repeat rules
   music.ts        QuickTime music decoder and synthesizer
-  bootHold.ts     the boot screen held 5 s before the title; any press skips it
+  bootHold.ts     the boot screen held 3 s before the title; any press skips it
 src/main.ts       bootstrap, service worker, export/import transfer
 tools/compose-figures.ts   art/figures/ -> the Standard tile sheet
 tools/key-art.mjs          art/box/ -> the Steam artwork, the banner, the boot screen (needs ImageMagick 7)

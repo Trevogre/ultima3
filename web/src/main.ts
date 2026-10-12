@@ -378,7 +378,7 @@ async function start(): Promise<void> {
     apply: () => (native ? void native.openRelease() : location.assign(offer.url)),
   };
   // The title (or the game) comes next: the boot screen, kept up while the release was waited for (a black canvas
-  // otherwise, for as long as GitHub takes to answer the apps) and then held until it has been up 5 seconds or a
+  // otherwise, for as long as GitHub takes to answer the apps) and then held until it has been up 3 seconds or a
   // press skips it, gives way to it. A development start goes straight on.
   await holdBootScreen(keyboard, !(dev && (params.has('play') || params.has('at'))));
   bootDone();

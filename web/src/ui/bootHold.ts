@@ -10,7 +10,7 @@
 import type { Keyboard } from './input.ts';
 
 /** How long the boot screen is up at least, ms, from when its art arrived. */
-export const BOOT_HOLD_MS = 5000;
+export const BOOT_HOLD_MS = 3000;
 /** How long to wait for the art itself before giving up on holding it. */
 const ART_WAIT_MS = 5000;
 /** The key a click or tap gives the waiting hold, to wake it (used up by the hold, never seen by the game). */
