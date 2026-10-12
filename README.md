@@ -543,6 +543,24 @@ Every release, with the desktop and Android downloads, is on the
 web version is updated with each release, so it runs the same game as the
 apps.
 
+### v1.0.48, October 12, 2026
+
+- The demon from the 1983 box stays up for at least 3 seconds as the game
+  starts, the loading counted towards it. Any key, button, click or tap
+  skips it, and is not passed on to the title.
+- In the desktop and Android apps the cover art stays up until the title
+  appears, instead of a black screen while the app asks for a newer
+  release.
+- Fixed: after readying or wearing a purchase on the spot, the shop's Buy
+  list still weighed its wares against what had been put away. It weighs
+  them against the new one now.
+- Fixed: the Sell list showed the Buy list's comparison under each item.
+- Fixed: with a long name, the end of a weapon's comparison was cut off.
+  Every comparison now fits whole.
+- Fixed: the desktop app could open its window off-screen, where it was
+  last left on a monitor since unplugged. It now opens on a screen there
+  is, no larger than it.
+
 ### v1.0.46, October 10, 2026
 
 - Fixed: the macOS app could not go full screen. The green button, F11
