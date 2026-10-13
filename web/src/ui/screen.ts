@@ -183,8 +183,8 @@ export class Screen implements GameIO {
   private overlayShown = false;
   /** Auto-map: the secret-door piece (a wall with one pixel out of place), per tile set. */
   private secretDoorPiece: HTMLCanvasElement | null = null;
-  /** The frame's light edge, body and dark edge colours in the tile set in use (`chrome`), read once a set. */
-  private chromeColours: { light: string; body: string; dark: string } | null = null;
+  /** The frame's light and dark edge colours in the tile set in use (`chrome`), read once a set. */
+  private chromeColours: { light: string; dark: string } | null = null;
   private dungeonRenderer: DungeonRenderer | null;
   /** A spell's white pulse over part of the view, while it lasts (cells). */
   private pulse: { x: number; y: number; w: number; h: number } | null = null;
@@ -1378,20 +1378,21 @@ export class Screen implements GameIO {
       ctx.lineWidth = Math.max(2, sq / 5);
       ctx.strokeRect(x - 1, y - 1, sq + 2, sq + 2);
     }
-    // The cursor: brackets round the mark it is on, three squares across, each arm a piece of the frame in small - its
-    // light edge on top (or left), its body, its dark edge below (or right), a band each - and where two arms meet,
-    // mitred: a pixel of the corner nearer the cursor's top or bottom edge than its side is the arm across's, the rest
-    // (the diagonal too) the side arm's.
+    // The cursor: brackets round the mark it is on, three squares across, in the frame's two edge colours - its dark
+    // edge outside all round, its light edge inside, a band each - so that it reads as centred on dark ground and
+    // light alike (lit as the frame is, the dark bottom and right sank into dark ground and pulled it up and left).
+    // Where two arms meet they are mitred: a pixel of the corner nearer the cursor's top or bottom edge than its side
+    // is the arm across's, the rest (the diagonal too) the side arm's.
     const chosen = marks[selected];
     if (chosen) {
       const [x, y] = corner(chosen);
       const r = sq * 1.5;
       const [cx, cy] = [x + sq / 2, y + sq / 2];
       const band = Math.max(1, Math.round((2 * cell) / 32)); // two of the Standard sheet's pixels, a cell being 32 of them
-      const t = band * 3;
+      const { light, dark } = this.chrome();
+      const inward = [dark, light]; // an arm's bands from its outer edge in
+      const t = band * inward.length;
       const arm = Math.max(t * 2, Math.round(r * 0.7));
-      const { light, body, dark } = this.chrome();
-      const bands = [light, body, dark];
       const [left, top] = [Math.round(cx - r), Math.round(cy - r)];
       const [right, bottom] = [Math.round(cx + r) - t, Math.round(cy + r) - t];
       const fill = (colour: string, fx: number, fy: number, fw: number, fh: number) => {
@@ -1405,18 +1406,22 @@ export class Screen implements GameIO {
         [right, bottom],
       ]) {
         const [atLeft, atTop] = [sx === left, sy === top];
+        // Each arm's bands from its top (or left) row: outside first on the top and left, inside first below and right.
+        const across = atTop ? inward : [...inward].reverse();
+        const down = atLeft ? inward : [...inward].reverse();
         // The arm across and the arm down, beyond the corner they share.
         const ax = atLeft ? sx + t : sx + t - arm;
         const ay = atTop ? sy + t : sy + t - arm;
-        for (let k = 0; k < 3; k++) {
-          fill(bands[k], ax, sy + k * band, arm - t, band);
-          fill(bands[k], sx + k * band, ay, band, arm - t);
+        for (let k = 0; k < inward.length; k++) {
+          fill(across[k], ax, sy + k * band, arm - t, band);
+          fill(down[k], sx + k * band, ay, band, arm - t);
         }
         for (let dy = 0; dy < t; dy++) {
           for (let dx = 0; dx < t; dx++) {
             const fromSide = atLeft ? dx : t - 1 - dx;
             const fromEnd = atTop ? dy : t - 1 - dy;
-            fill(bands[Math.floor((fromEnd < fromSide ? dy : dx) / band)], sx + dx, sy + dy, 1, 1);
+            const [bands, at] = fromEnd < fromSide ? [across, dy] : [down, dx];
+            fill(bands[Math.floor(at / band)], sx + dx, sy + dy, 1, 1);
           }
         }
       }
@@ -2283,11 +2288,11 @@ export class Screen implements GameIO {
   }
 
   /**
-   * The frame's colours in the tile set in use: the lightest down its top half (the light its top and left catch), its
-   * body (the middle of it) and the darkest down its bottom half (the shade on its bottom and right), read from the
-   * frame's straight piece, for the map's cursor.
+   * The frame's two edge colours in the tile set in use: the lightest down its top half (the light its top and left
+   * catch) and the darkest down its bottom half (the shade on its bottom and right), read from the frame's straight
+   * piece, for the map's cursor.
    */
-  private chrome(): { light: string; body: string; dark: string } {
+  private chrome(): { light: string; dark: string } {
     if (this.chromeColours) return this.chromeColours;
     const size = this.gfx.uiSize;
     const off = document.createElement('canvas');
@@ -2295,8 +2300,6 @@ export class Screen implements GameIO {
     const octx = off.getContext('2d')!;
     this.gfx.drawUiPiece(octx, Piece.Horizontal - 1, 0, 0, 0, size);
     const column = octx.getImageData(Math.floor(size / 2), 0, 1, size).data;
-    const mid = Math.floor(size / 2) * 4;
-    const body = [column[mid], column[mid + 1], column[mid + 2]];
     let [light, dark] = [
       [255, 255, 255],
       [0, 0, 0],
@@ -2309,7 +2312,7 @@ export class Screen implements GameIO {
       if (y < size / 2 && lum > most) [most, light] = [lum, [r, g, b]];
       if (y >= size / 2 && lum < least) [least, dark] = [lum, [r, g, b]];
     }
-    this.chromeColours = { light: `rgb(${light.join(',')})`, body: `rgb(${body.join(',')})`, dark: `rgb(${dark.join(',')})` };
+    this.chromeColours = { light: `rgb(${light.join(',')})`, dark: `rgb(${dark.join(',')})` };
     return this.chromeColours;
   }
 
