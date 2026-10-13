@@ -254,23 +254,23 @@ until Resume. A window that loses focus pauses itself and opens the same
 menu, which stays up until you close it, so nothing runs on while you are
 away.
 
-The menu holds the settings: Visuals (the tile set and scanlines), auto
-combat, Gameplay (the input mode, poison kills, starvation, balanced XP
-and the turn timer), Audio (Sound FX, Standard, Lairware or Off, and the
-FX level, music and the Music level), Tips (how the game works, for a new
-player, without the quest's answers), Help, Cheats, and Quit and save
-where the game allows it, on the surface and out of a fight. A new game's first turn points to
-Tips, once. A level is a dial, Off or 10% to 100%: each step is heard as
-it turns, the music playing under the paused game until the dial closes.
-The title screen shows the same settings under Settings, all but Cheats,
-which want a game going. The input mode is offered only when the menu was
-opened with a key press: keyboard mode wants a keyboard, and choosing it
-with a thumb or a gamepad used to leave a player pressing buttons the
-letter commands ignore. Every setting is remembered by the
-browser. A new game asks "Choose Thine
-Adventure!": Modern (recommended), Classic (hardcore, the Apple II's
-rules) or Story (relaxed), each a preset of the difficulty settings that
-can be changed afterwards.
+The menu holds the settings: auto combat, Visuals (the tile set and
+scanlines), Gameplay (the input mode, poison kills, starvation, balanced
+XP and the turn timer), Audio (Sound FX, Standard, Lairware or Off, and
+the FX level, music and the Music level), Tips (how the game works, for a
+new player, without the quest's answers), Help, Cheats, and Quit and save
+where the game allows it, on the surface and out of a fight. A new game's
+first turn points to Tips, once. A level is a dial, Off or 10% to 100%:
+each step is heard as it turns, the music playing under the paused game
+until the dial closes. The title screen shows the same settings under
+Settings, all but Cheats, which want a game going. The input mode is
+offered only when the menu was opened with a key press: keyboard mode
+wants a keyboard, and choosing it with a thumb or a gamepad used to leave
+a player pressing buttons the letter commands ignore. Every setting is
+remembered by the browser. A new game asks "Choose Thine Adventure!":
+Modern (recommended), Classic (hardcore, the Apple II's rules) or Story
+(relaxed), each a preset of the difficulty settings that can be changed
+afterwards.
 
 ## What changed
 

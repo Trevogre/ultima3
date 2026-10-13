@@ -741,8 +741,8 @@ export class Screen implements GameIO {
     for (;;) {
       const options: MenuOption[] = [
         ...resume,
-        { key: 'V', label: 'Visuals' },
         { key: 'A', label: `Auto combat: ${onOff(w.autoCombat)}` },
+        { key: 'V', label: 'Visuals' },
         { key: 'P', label: 'Gameplay' },
         { key: 'U', label: 'Audio' },
         { key: 'G', label: 'Tips' },
