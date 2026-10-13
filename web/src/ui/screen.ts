@@ -1313,7 +1313,6 @@ export class Screen implements GameIO {
       for (const line of wrapText(chosen.detail, WIDTH, 2)) this.drawText(line, LEFT, row++, grey);
       if (chosen.kind === 'moongate' && chosen.phase !== undefined) {
         this.drawMoonMark((LEFT + 1) * cell, (row + 0.6) * cell, cell * 0.55, chosen.phase);
-        row += 2;
       }
     }
     const keys = can.controller
