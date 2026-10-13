@@ -109,6 +109,9 @@ const DUNGEON_MAP_PIECE_COLUMN = 7;
 const MAP_OVERLAY_SIZE = 5;
 const MAP_OVERLAY_LEFT = 35;
 const MAP_OVERLAY_TOP = 13;
+/** A switch's state as a menu line shows it. */
+const onOff = (on: boolean): string => (on ? 'On' : 'Off');
+
 /** The Top down view's cells each way from the party: 21 a side, in the 22 of the window. */
 const TOP_DOWN_REACH = 10;
 
@@ -718,17 +721,15 @@ export class Screen implements GameIO {
 
   /**
    * The settings, as the title screen's Settings menu or the in-game Pause
-   * menu (which leads with Resume, offers the cheats and can end the game).
-   * Each toggle shows its state and flips in place; Tiles opens the list of
-   * sets; Gameplay opens the input and the rules; Help shows the pages for
-   * the current input mode.
+   * menu (which leads with Resume, offers the cheats and can end the game):
+   * Visuals, Audio and Gameplay each open a list of their own; Auto combat
+   * flips in place; Help shows the pages for the current input mode.
    *
    * Returns a command for the game to run now: 'Q' when Quit and save was
    * chosen, which the field loop carries out once the menu is gone.
    */
   private async settingsMenu(title: 'Settings' | 'Paused'): Promise<string | null> {
     const w = this.world;
-    const onOff = (b: boolean) => (b ? 'On' : 'Off');
     const place: MenuPlacement | undefined = this.frameShown ? undefined : { row: 13, title };
     const resume: MenuOption[] = title === 'Paused' ? [{ key: 'E', label: 'Resume' }] : [];
     // Quit and save, where the game allows it: on the surface, out of a fight. The field loop carries it out.
@@ -740,14 +741,10 @@ export class Screen implements GameIO {
     for (;;) {
       const options: MenuOption[] = [
         ...resume,
-        { key: 'T', label: `Tiles: ${this.tileSetName}` },
-        { key: 'L', label: `Scanlines: ${onOff(this.scanlines)}` },
+        { key: 'V', label: 'Visuals' },
         { key: 'A', label: `Auto combat: ${onOff(w.autoCombat)}` },
         { key: 'P', label: 'Gameplay' },
-        { key: 'S', label: `Sound FX: ${w.soundEnabled ? this.sounds.set : 'Off'}` },
-        { key: 'F', label: `FX level: ${levelLabel(this.sounds.level)}` },
-        { key: 'M', label: `Music: ${onOff(this.musicPlayer.enabled)}` },
-        { key: 'U', label: `Music level: ${levelLabel(this.musicPlayer.level)}` },
+        { key: 'U', label: 'Audio' },
         { key: 'G', label: 'Tips' },
         { key: 'H', label: 'Help' },
         ...cheats,
@@ -762,6 +759,9 @@ export class Screen implements GameIO {
           return null; // Resume
         case 'Q':
           return 'Q'; // the game saves and ends once this menu is gone
+        case 'V':
+          await this.visualsMenu();
+          break;
         case 'A':
           w.autoCombat = !w.autoCombat;
           w.onAutoCombatChange?.();
@@ -769,41 +769,8 @@ export class Screen implements GameIO {
         case 'P':
           await this.gameplayMenu();
           break;
-        case 'T':
-          await this.chooseTiles();
-          break;
-        case 'L':
-          this.scanlines = !this.scanlines;
-          break;
-        case 'S':
-          // Standard, Lairware, Off, round again.
-          if (!w.soundEnabled) {
-            w.soundEnabled = true;
-            this.sounds.set = 'Standard';
-          } else if (this.sounds.set === 'Standard') {
-            this.sounds.set = 'Lairware';
-          } else {
-            w.soundEnabled = false;
-          }
-          break;
-        case 'M':
-          this.musicPlayer.enabled = !this.musicPlayer.enabled; // the player stops or resumes the current track itself
-          break;
-        case 'F':
-          // Each step is heard: a footstep at the new level, where sound effects are on.
-          await this.dialLevel('FX level', this.sounds.level, place, (n) => {
-            this.sounds.level = n;
-            this.sound(MENU_SOUNDS.move);
-          });
-          break;
         case 'U':
-          // The music is heard while the dial turns, though the Pause menu holds it.
-          this.musicPlayer.hear(true);
-          try {
-            await this.dialLevel('Music level', this.musicPlayer.level, place, (n) => (this.musicPlayer.level = n));
-          } finally {
-            this.musicPlayer.hear(false);
-          }
+          await this.audioMenu();
           break;
         case 'G':
           await this.showTips();
@@ -824,9 +791,93 @@ export class Screen implements GameIO {
   }
 
   /**
-   * Gameplay, under Settings and Pause: the input mode and the rules the
-   * port lets the player soften or keep as the Apple II had them, each
-   * flipped in place and kept as it changes.
+   * A list of settings under Settings and Pause (Visuals, Audio, Gameplay):
+   * each line as it now stands, Back last; the one chosen is acted on in
+   * place and kept, and the list shown again with the cursor where it was.
+   */
+  private async settingsList(
+    title: string,
+    lines: () => MenuOption[],
+    act: (key: string, place: MenuPlacement | undefined) => Promise<void> | void,
+  ): Promise<void> {
+    const place: MenuPlacement | undefined = this.frameShown ? undefined : { row: 13, title };
+    let cursor = 0;
+    for (;;) {
+      const options: MenuOption[] = [...lines(), { key: 'B', label: 'Back' }];
+      const picked = await this.runMenu(title, options, 1, place && { ...place, cursor }, cursor);
+      if (picked < 0 || options[picked].key === 'B') return;
+      cursor = picked;
+      await act(options[picked].key, place);
+      this.onSettingsChange?.();
+    }
+  }
+
+  /** Visuals: the tile set (its own list of sets) and the scanlines. */
+  private async visualsMenu(): Promise<void> {
+    await this.settingsList(
+      'Visuals',
+      () => [
+        { key: 'T', label: `Tiles: ${this.tileSetName}` },
+        { key: 'L', label: `Scanlines: ${onOff(this.scanlines)}` },
+      ],
+      async (key) => {
+        if (key === 'T') await this.chooseTiles();
+        else if (key === 'L') this.scanlines = !this.scanlines;
+      },
+    );
+  }
+
+  /** Audio: the sound effects and their level, the music and its level, each level a dial heard as it turns. */
+  private async audioMenu(): Promise<void> {
+    const w = this.world;
+    await this.settingsList(
+      'Audio',
+      () => [
+        { key: 'S', label: `Sound FX: ${w.soundEnabled ? this.sounds.set : 'Off'}` },
+        { key: 'F', label: `FX level: ${levelLabel(this.sounds.level)}` },
+        { key: 'M', label: `Music: ${onOff(this.musicPlayer.enabled)}` },
+        { key: 'U', label: `Music level: ${levelLabel(this.musicPlayer.level)}` },
+      ],
+      async (key, place) => {
+        switch (key) {
+          case 'S':
+            // Standard, Lairware, Off, round again.
+            if (!w.soundEnabled) {
+              w.soundEnabled = true;
+              this.sounds.set = 'Standard';
+            } else if (this.sounds.set === 'Standard') {
+              this.sounds.set = 'Lairware';
+            } else {
+              w.soundEnabled = false;
+            }
+            break;
+          case 'M':
+            this.musicPlayer.enabled = !this.musicPlayer.enabled; // the player stops or resumes the current track itself
+            break;
+          case 'F':
+            // Each step is heard: a footstep at the new level, where sound effects are on.
+            await this.dialLevel('FX level', this.sounds.level, place, (n) => {
+              this.sounds.level = n;
+              this.sound(MENU_SOUNDS.move);
+            });
+            break;
+          case 'U':
+            // The music is heard while the dial turns, though the Pause menu holds it.
+            this.musicPlayer.hear(true);
+            try {
+              await this.dialLevel('Music level', this.musicPlayer.level, place, (n) => (this.musicPlayer.level = n));
+            } finally {
+              this.musicPlayer.hear(false);
+            }
+            break;
+        }
+      },
+    );
+  }
+
+  /**
+   * Gameplay: the input mode and the rules the port lets the player soften
+   * or keep as the Apple II had them.
    *
    * Input is offered only to a player pressing real keys (`lastSource`).
    * Keyboard mode wants a keyboard: chosen from a gamepad or the on-screen
@@ -835,48 +886,39 @@ export class Screen implements GameIO {
    */
   private async gameplayMenu(): Promise<void> {
     const w = this.world;
-    const onOff = (b: boolean) => (b ? 'On' : 'Off');
     const named = (mode: string) => `${mode[0].toUpperCase()}${mode.slice(1)}`;
-    const place: MenuPlacement | undefined = this.frameShown ? undefined : { row: 13, title: 'Gameplay' };
-    let cursor = 0;
-    for (;;) {
-      const input: MenuOption[] =
-        this.keyboard.lastSource === 'keyboard'
+    await this.settingsList(
+      'Gameplay',
+      () => [
+        ...(this.keyboard.lastSource === 'keyboard'
           ? [{ key: 'I', label: `Input: ${this.inputMode === 'controller' ? 'Controller' : 'Keyboard'}` }]
-          : [];
-      const options: MenuOption[] = [
-        ...input,
+          : []),
         { key: 'P', label: `Poison kills: ${onOff(w.poisonKills)}` },
         { key: 'V', label: `Starving: ${named(w.starvation)}` },
         { key: 'X', label: `Balanced XP: ${onOff(w.balancedXp)}` },
         { key: 'R', label: `Timer: ${named(w.timer)}` },
-        { key: 'B', label: 'Back' },
-      ];
-      const picked = await this.runMenu('Gameplay', options, 1, place && { ...place, cursor }, cursor);
-      if (picked < 0) return;
-      cursor = picked;
-      switch (options[picked].key) {
-        case 'I':
-          this.inputMode = this.inputMode === 'controller' ? 'keyboard' : 'controller';
-          this.onModeChange?.();
-          break;
-        case 'P':
-          w.poisonKills = !w.poisonKills;
-          break;
-        case 'V':
-          w.starvation = STARVATION_MODES[(STARVATION_MODES.indexOf(w.starvation) + 1) % STARVATION_MODES.length];
-          break;
-        case 'X':
-          w.balancedXp = !w.balancedXp;
-          break;
-        case 'R':
-          w.timer = TIMER_MODES[(TIMER_MODES.indexOf(w.timer) + 1) % TIMER_MODES.length];
-          break;
-        default:
-          return; // Back
-      }
-      this.onSettingsChange?.();
-    }
+      ],
+      (key) => {
+        switch (key) {
+          case 'I':
+            this.inputMode = this.inputMode === 'controller' ? 'keyboard' : 'controller';
+            this.onModeChange?.();
+            break;
+          case 'P':
+            w.poisonKills = !w.poisonKills;
+            break;
+          case 'V':
+            w.starvation = STARVATION_MODES[(STARVATION_MODES.indexOf(w.starvation) + 1) % STARVATION_MODES.length];
+            break;
+          case 'X':
+            w.balancedXp = !w.balancedXp;
+            break;
+          case 'R':
+            w.timer = TIMER_MODES[(TIMER_MODES.indexOf(w.timer) + 1) % TIMER_MODES.length];
+            break;
+        }
+      },
+    );
   }
 
   /**
