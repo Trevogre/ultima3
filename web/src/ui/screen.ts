@@ -1316,8 +1316,6 @@ export class Screen implements GameIO {
         row += 2;
       }
     }
-    const seen = dungeon ? world.autoMap.seenCount(page.id, page.level) / 256 : world.autoMap.mapSeenCount(page.id) / (MAP_SIDE * MAP_SIDE);
-    this.drawText(`${Math.round(seen * 100)}% seen`, LEFT, Math.max(row + 1, 11), grey);
     const keys = can.controller
       ? [
           'D-pad: places',
