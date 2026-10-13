@@ -575,6 +575,13 @@ Every release, with the desktop and Android downloads, is on the
 web version is updated with each release, so it runs the same game as the
 apps.
 
+### v1.0.55, October 13, 2026
+
+- The map's cursor is left off where the party is the only mark - a
+  dungeon's level, a town's or a castle's own map - where it had nowhere
+  to go and only doubled the party's blinking box. The keys listed there
+  are the ones that do something: the next map, and closing.
+
 ### v1.0.53, October 13, 2026
 
 - In controller mode the party panel shows what the menu's bar is on,
