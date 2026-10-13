@@ -24,7 +24,7 @@ changes:
 3. Includes an updated Standard experience: controller play, new art and
    sound, and tweakable settings.
 
-![The Standard experience: a town, combat, controller mode, a dungeon with the map off, small and full, the quest journal, the cloth map and Settings](promo/features.jpg)
+![The Standard experience: a town, combat, controller mode, a dungeon in first person, with a map beside the view and top down, a dungeon's View map, the map of Sosaria as the party has seen it, the quest journal, Tips, a shop weighing its wares and the Pause menu](promo/features.jpg)
 
 ![Twelve tile sets, each at the opening, in combat and in a dungeon](promo/tile-sets.jpg)
 

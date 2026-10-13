@@ -36,12 +36,15 @@ The READMEs open with the banner, `promo/banner.jpg`: the wide capsule at
 twice its size. It, the logo (`promo/logo.png`), the Steam artwork and the
 boot screen are made by `web/tools/key-art.mjs` from the box (see
 [its README](web/art/box/README.md)). The two sheets after the banner are
-in [`promo/`](promo/): nine screenshots of the Standard experience, and
+in [`promo/`](promo/): twelve screenshots of the Standard experience, and
 each of the twelve tile sets at the opening, in one fight and in one
-dungeon corridor. The tile-set shots are the game canvas captured through
-the debug hook `window.u3` in a development build: each scene is set up
-once and redrawn in every set, so a row compares the same moment. The
-sheets are laid out on a browser canvas and saved as JPEG.
+dungeon corridor. The shots are the game canvas captured through the
+debug hook `window.u3` in a development build. For the tile sets each
+scene is set up once and redrawn in every set, so a row compares the same
+moment; that sheet was laid out on a browser canvas. The features sheet's
+shots are saved to `screenshots/` by `web/tools/pilot/shots.mjs` and laid
+out by `web/tools/features-sheet.sh` (ImageMagick 7), which names each
+shot and its caption. Both are JPEG.
 
 Inside the app, F11 or Alt+Enter toggles full screen, as do the system's
 own controls (macOS's green button) and the touch pad's full-screen switch
