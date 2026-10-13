@@ -575,6 +575,23 @@ Every release, with the desktop and Android downloads, is on the
 web version is updated with each release, so it runs the same game as the
 apps.
 
+### v1.0.53, October 13, 2026
+
+- In controller mode the party panel shows what the menu's bar is on,
+  after the Ultima V port. On Ztats each member's line shows their
+  experience toward the next level (blue where Lord British owes one), on
+  Ready weapon the weapon in hand, on Wear armour the armour worn.
+- In a shop's Buy list and in Ready's and Wear's lists, a card over the
+  party panel weighs the item for the member against what they have:
+  damage a hit and reach, or how often foes would hit, green where it is
+  better and red where it is worse, with the price (red where the party
+  is short of it) or how many are in the pack. In the spell lists the
+  card gives the spell's book name, its cost against the caster's mana
+  and what it does. These replace the line that ran under the menu.
+- The map's cursor is drawn in the frame's colours, dark outside and
+  light inside, with mitred corners, in place of yellow brackets that
+  were lost against the inked chart.
+
 ### v1.0.50, October 13, 2026
 
 - A map of what the party has seen replaces the cloth map from the box.
