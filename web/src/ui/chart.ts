@@ -4,7 +4,8 @@
  * Sosaria's chart: the page of the map (worldMap.ts) under what the party has seen of the land, as a map the party
  * set out with would be - its coasts drawn in ink on old paper, the land a shade darker than the sea, and nothing
  * else: no forests, no towns, no names. Made from the map as the game ships it, so a ship or a monster at sea is not
- * drawn into it. The squares the party has seen are drawn over it in the tile set's tiles (screen.ts).
+ * drawn into it. The squares the party has seen are drawn over it in the tile set's tiles (screen.ts); a town known
+ * of but not yet seen is a sign in the same ink (`drawPlaceSign`).
  */
 
 import { MAP_SIDE } from '../game/automap.ts';
@@ -62,4 +63,25 @@ export function drawChart(ctx: CanvasRenderingContext2D, sq: number, isLand: (x:
   age.addColorStop(1, 'rgba(90, 60, 20, 0.35)');
   ctx.fillStyle = age;
   ctx.fillRect(0, 0, size, size);
+}
+
+/**
+ * A place marked on the chart before the party has seen it (worldMap.ts charted), in the chart's ink, centred on
+ * (cx, cy) on its square, `sq` across: a town a ring about a dot, as maps mark one; a castle a square about a dot.
+ * Drawn larger than its square, as a map draws its towns, so it reads at the map's small scale.
+ */
+export function drawPlaceSign(ctx: CanvasRenderingContext2D, cx: number, cy: number, sq: number, castle: boolean): void {
+  const r = sq * 0.8;
+  ctx.save();
+  ctx.strokeStyle = INK;
+  ctx.fillStyle = INK;
+  ctx.lineWidth = Math.max(1.5, sq * 0.22);
+  ctx.beginPath();
+  if (castle) ctx.rect(cx - r, cy - r, r * 2, r * 2);
+  else ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.arc(cx, cy, Math.max(1.2, sq * 0.24), 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
 }

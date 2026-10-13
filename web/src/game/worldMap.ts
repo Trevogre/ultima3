@@ -9,7 +9,8 @@
  * This module decides what is on a page - which pages there are, the marks on each, their names, and where the d-pad
  * takes the cursor among them; screen.ts draws them. A place's mark shows once its square has been seen, named once
  * the party has been inside (till then by what it looks like: "Towne?"); a moongate once the party has come out of
- * it; a shrine once seen, named once the party has been in it.
+ * it; a shrine once seen, named once the party has been in it. The towns and Lord British's castle are marked from
+ * the start, as the box's cloth map showed them, "Undiscovered" till their squares are seen (`charted`).
  */
 
 import type { World } from './world.ts';
@@ -34,6 +35,8 @@ export interface MapMark {
   phase?: number;
   /** The party is here: in this place, where it is inside one (its mark blinks, as the party's own does). */
   party?: boolean;
+  /** Marked from the start but its square not yet seen: the map inks a sign there (`charted`). */
+  unseen?: boolean;
 }
 
 /** A page of the map: a 64-square map (Sosaria, Ambrosia, a town or castle), or a dungeon's level. */
@@ -57,6 +60,14 @@ export function mapPages(world: World): MapPage[] {
 /** A place's name from the game's files, its Macintosh apostrophe made plain. */
 export function placeName(world: World, id: number): string {
   return (world.resources.mapNames.get(id) ?? '?').replace(/[Õ’]/g, "'");
+}
+
+/**
+ * Whether a place is marked on Sosaria before its square is seen, as the box's cloth map had it: every town and Lord
+ * British's castle - not Dawn, which stands only while both moons are new, nor Exodus' castle, nor a dungeon.
+ */
+export function charted(id: number): boolean {
+  return id >= MapId.LordBritishCastle && id < MapId.FirstDungeon && id !== MapId.ExodusCastle && id !== DAWN;
 }
 
 /** What sort of place a location is. */
@@ -107,15 +118,33 @@ export function marksOn(world: World, page: MapPage): MapMark[] {
     for (let id: number = MapId.LordBritishCastle; id <= MapId.LastDungeon; id++) {
       const [x, y] = [locationX[id - 400], locationY[id - 400]];
       const here = id === inside;
-      if (x === 0xff || (!here && !seen(x, y))) continue;
+      const unseen = !here && !seen(x, y);
+      if (x === 0xff || (unseen && !charted(id))) continue;
       const known = here || beenIn(world, id);
       // Dawn stands only while both moons are new: its mark is there while it stands, or once the party has been in.
       if (id === DAWN && !known && world.surface.tiles[y * MAP_SIDE + x] !== MapValue.Town) continue;
       const kind = placeKind(id);
       const opens = known && kind !== 'dungeon' ? id : undefined;
       const looks = kind === 'castle' ? 'Castle?' : kind === 'dungeon' ? 'Dungeon?' : 'Towne?';
-      const detail = here ? 'Party inside' : opens !== undefined ? 'A: its map' : known ? 'Been in' : 'Not yet entered';
-      const mark: MapMark = { kind, x, y, label: known ? placeName(world, id) : looks, detail, opens, party: here || undefined };
+      const detail = here
+        ? 'Party inside'
+        : opens !== undefined
+          ? 'A: its map'
+          : known
+            ? 'Been in'
+            : unseen
+              ? 'Undiscovered'
+              : 'Not yet entered';
+      const mark: MapMark = {
+        kind,
+        x,
+        y,
+        label: known ? placeName(world, id) : looks,
+        detail,
+        opens,
+        party: here || undefined,
+        unseen: unseen || undefined,
+      };
       if (here) marks.unshift(mark);
       else marks.push(mark);
     }

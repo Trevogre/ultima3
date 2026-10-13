@@ -122,14 +122,23 @@ describe("the map's record of what has been seen", () => {
 });
 
 describe("the map's marks", () => {
-  it('shows only the party on a new game, and a place once its square is seen, by what it looks like', () => {
+  it("marks every town but Dawn, and Lord British's castle, from the start: Undiscovered till seen", () => {
     const world = newWorld();
     world.autoMap = new AutoMap();
     const page = { kind: 'map' as const, id: MapId.Sosaria };
-    expect(marksOn(world, page).map((m) => m.kind)).toEqual(['party']);
-    world.autoMap.markSquares(MapId.Sosaria, [at(world, YEW)]);
-    const yew = marksOn(world, page).find((m) => m.kind === 'towne')!;
-    expect(yew).toMatchObject({ label: 'Towne?', detail: 'Not yet entered', opens: undefined });
+    const [party, ...places] = marksOn(world, page);
+    expect(party.kind).toBe('party');
+    // Not Exodus' castle (401), Dawn (408) or a dungeon.
+    const charted = [400, 402, 403, 404, 405, 406, 407, 409, 410, 411];
+    expect(places.map((m) => [m.x, m.y])).toEqual(charted.map((id) => at(world, id)));
+    expect(places.map((m) => m.label)).toEqual(['Castle?', ...charted.slice(1).map(() => 'Towne?')]);
+    for (const m of places) expect(m).toMatchObject({ detail: 'Undiscovered', unseen: true, opens: undefined });
+    // Seen, it is a place not yet entered; a dungeon shows only once seen.
+    world.autoMap.markSquares(MapId.Sosaria, [at(world, YEW), at(world, 412)]);
+    const now = marksOn(world, page);
+    const yew = now.find((m) => m.x === at(world, YEW)[0] && m.y === at(world, YEW)[1]);
+    expect(yew).toMatchObject({ label: 'Towne?', detail: 'Not yet entered', unseen: undefined });
+    expect(now.find((m) => m.kind === 'dungeon')).toMatchObject({ label: 'Dungeon?', detail: 'Not yet entered' });
   });
 
   it('names a place once the party has been in it, and A opens its map', () => {
@@ -139,7 +148,7 @@ describe("the map's marks", () => {
     world.autoMap.markSquares(YEW, [[1, 32]]);
     world.autoMap.mark(412, 0, 1, 1);
     const marks = marksOn(world, { kind: 'map', id: MapId.Sosaria });
-    expect(marks.find((m) => m.kind === 'towne')).toMatchObject({ label: 'Yew', opens: YEW, detail: 'A: its map' });
+    expect(marks.find((m) => m.opens === YEW)).toMatchObject({ label: 'Yew', detail: 'A: its map' });
     expect(marks.find((m) => m.kind === 'dungeon')).toMatchObject({ label: 'Dungeon Doom', opens: undefined, detail: 'Been in' });
   });
 
@@ -147,11 +156,13 @@ describe("the map's marks", () => {
     const world = newWorld();
     world.autoMap = new AutoMap();
     const [x, y] = at(world, DAWN);
+    const dawn = () => marksOn(world, { kind: 'map', id: MapId.Sosaria }).some((m) => m.x === x && m.y === y);
+    expect(dawn()).toBe(false); // not marked from the start, as the other towns are
     world.autoMap.markSquares(MapId.Sosaria, [[x, y]]);
     world.surface.tiles[y * MAP_SIDE + x] = MapValue.Grass;
-    expect(marksOn(world, { kind: 'map', id: MapId.Sosaria }).some((m) => m.label === 'Towne?')).toBe(false);
+    expect(dawn()).toBe(false);
     world.surface.tiles[y * MAP_SIDE + x] = MapValue.Town;
-    expect(marksOn(world, { kind: 'map', id: MapId.Sosaria }).some((m) => m.label === 'Towne?')).toBe(true);
+    expect(dawn()).toBe(true);
   });
 
   it('makes the place the party is in its mark on Sosaria, first, seen or not', () => {

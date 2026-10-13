@@ -317,7 +317,9 @@ These apply whatever tile set and sound set are chosen.
   the tile set's own tiles, and in a dungeon its level's auto-map.
   Sosaria's unexplored land and sea are a chart of its coasts in ink on
   paper; elsewhere the unexplored is dark. Places are marked once seen and
-  named once the party has been inside ("Towne?" till then), the d-pad
+  named once the party has been inside ("Towne?" till then); the towns
+  and Lord British's castle are marked from the start, as the box's map
+  had them, inked on the chart as "Undiscovered" until seen. The d-pad
   steps between them, A opens the map of a town or castle the party has
   been in, Y comes back to the party and X turns to the next map. Every
   moongate the party has come out of is marked with the moon that opens

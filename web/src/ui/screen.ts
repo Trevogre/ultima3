@@ -44,7 +44,7 @@ import { buildDungeonView, secretMessage } from '../game/dungeon.ts';
 import { recordView, MAP_SIDE } from '../game/automap.ts';
 import { aroundParty, wholeLevel } from '../game/dungeonLayout.ts';
 import { mapPages, marksOn, stepMark, pageTitle, isLandValue, type MapPage, type MapMark, type Direction } from '../game/worldMap.ts';
-import { drawChart } from './chart.ts';
+import { drawChart, drawPlaceSign } from './chart.ts';
 import { MapId } from '../data/resources.ts';
 import { Key, Sound, type GameIO, type MenuOption, type CommandScope, type MenuPlacement, type SpellFlash } from '../game/io.ts';
 import {
@@ -1250,6 +1250,12 @@ export class Screen implements GameIO {
       const [x, y] = level && m.kind === 'party' ? level.party : [m.x, m.y];
       return [left + x * sq, top + y * sq];
     };
+    // The towns known of but not yet seen, each a sign in the chart's ink.
+    for (const m of marks) {
+      if (!m.unseen) continue;
+      const [x, y] = corner(m);
+      drawPlaceSign(ctx, x + sq / 2, y + sq / 2, sq, m.kind === 'castle');
+    }
     // The moongates the party has come out of, each as the moon that opens it.
     for (const m of marks) {
       if (m.kind !== 'moongate' || m.phase === undefined) continue;
