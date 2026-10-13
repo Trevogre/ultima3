@@ -718,14 +718,10 @@ export class Screen implements GameIO {
 
   /**
    * The settings, as the title screen's Settings menu or the in-game Pause
-   * menu (which leads with Resume and can end the game). Each toggle shows
-   * its state and flips in place; Tiles opens the list of sets; Help shows
-   * the pages for the current input mode.
-   *
-   * Input is offered only to a player pressing real keys (`lastSource`).
-   * Keyboard mode wants a keyboard: chosen from a gamepad or the on-screen
-   * pad it left the player with buttons the letter commands ignore, and
-   * choosing it again only switched the mode back for the press itself.
+   * menu (which leads with Resume, offers the cheats and can end the game).
+   * Each toggle shows its state and flips in place; Tiles opens the list of
+   * sets; Gameplay opens the input and the rules; Help shows the pages for
+   * the current input mode.
    *
    * Returns a command for the game to run now: 'Q' when Quit and save was
    * chosen, which the field loop carries out once the menu is gone.
@@ -738,28 +734,23 @@ export class Screen implements GameIO {
     // Quit and save, where the game allows it: on the surface, out of a fight. The field loop carries it out.
     const canQuit = title === 'Paused' && w.onSurface && !w.combat;
     const quit: MenuOption[] = canQuit ? [{ key: 'Q', label: 'Quit and save' }] : [];
+    // The cheats, in play only: at the title there is no party for them to work on.
+    const cheats: MenuOption[] = title === 'Paused' ? [{ key: 'C', label: 'Cheats' }] : [];
     let cursor = 0;
     for (;;) {
-      const input: MenuOption[] =
-        this.keyboard.lastSource === 'keyboard'
-          ? [{ key: 'I', label: `Input: ${this.inputMode === 'controller' ? 'Controller' : 'Keyboard'}` }]
-          : [];
       const options: MenuOption[] = [
         ...resume,
-        ...input,
         { key: 'T', label: `Tiles: ${this.tileSetName}` },
         { key: 'L', label: `Scanlines: ${onOff(this.scanlines)}` },
         { key: 'A', label: `Auto combat: ${onOff(w.autoCombat)}` },
-        { key: 'P', label: `Poison kills: ${onOff(w.poisonKills)}` },
-        { key: 'V', label: `Starving: ${w.starvation[0].toUpperCase()}${w.starvation.slice(1)}` },
-        { key: 'X', label: `Balanced XP: ${onOff(w.balancedXp)}` },
-        { key: 'R', label: `Timer: ${w.timer[0].toUpperCase()}${w.timer.slice(1)}` },
+        { key: 'P', label: 'Gameplay' },
         { key: 'S', label: `Sound FX: ${w.soundEnabled ? this.sounds.set : 'Off'}` },
         { key: 'F', label: `FX level: ${levelLabel(this.sounds.level)}` },
         { key: 'M', label: `Music: ${onOff(this.musicPlayer.enabled)}` },
         { key: 'U', label: `Music level: ${levelLabel(this.musicPlayer.level)}` },
         { key: 'G', label: 'Tips' },
         { key: 'H', label: 'Help' },
+        ...cheats,
         ...quit,
         { key: 'B', label: 'Back' },
       ];
@@ -775,27 +766,14 @@ export class Screen implements GameIO {
           w.autoCombat = !w.autoCombat;
           w.onAutoCombatChange?.();
           break;
-        case 'I':
-          this.inputMode = this.inputMode === 'controller' ? 'keyboard' : 'controller';
-          this.onModeChange?.();
+        case 'P':
+          await this.gameplayMenu();
           break;
         case 'T':
           await this.chooseTiles();
           break;
         case 'L':
           this.scanlines = !this.scanlines;
-          break;
-        case 'P':
-          w.poisonKills = !w.poisonKills;
-          break;
-        case 'V':
-          w.starvation = STARVATION_MODES[(STARVATION_MODES.indexOf(w.starvation) + 1) % STARVATION_MODES.length];
-          break;
-        case 'X':
-          w.balancedXp = !w.balancedXp;
-          break;
-        case 'R':
-          w.timer = TIMER_MODES[(TIMER_MODES.indexOf(w.timer) + 1) % TIMER_MODES.length];
           break;
         case 'S':
           // Standard, Lairware, Off, round again.
@@ -833,8 +811,69 @@ export class Screen implements GameIO {
         case 'H':
           await this.showHelp();
           break;
+        case 'C': {
+          const done = await this.cheatMenu();
+          if (done) this.printWrapped(done); // to the message area beside the menu, as any other event
+          break;
+        }
         default:
           return null;
+      }
+      this.onSettingsChange?.();
+    }
+  }
+
+  /**
+   * Gameplay, under Settings and Pause: the input mode and the rules the
+   * port lets the player soften or keep as the Apple II had them, each
+   * flipped in place and kept as it changes.
+   *
+   * Input is offered only to a player pressing real keys (`lastSource`).
+   * Keyboard mode wants a keyboard: chosen from a gamepad or the on-screen
+   * pad it left the player with buttons the letter commands ignore, and
+   * choosing it again only switched the mode back for the press itself.
+   */
+  private async gameplayMenu(): Promise<void> {
+    const w = this.world;
+    const onOff = (b: boolean) => (b ? 'On' : 'Off');
+    const named = (mode: string) => `${mode[0].toUpperCase()}${mode.slice(1)}`;
+    const place: MenuPlacement | undefined = this.frameShown ? undefined : { row: 13, title: 'Gameplay' };
+    let cursor = 0;
+    for (;;) {
+      const input: MenuOption[] =
+        this.keyboard.lastSource === 'keyboard'
+          ? [{ key: 'I', label: `Input: ${this.inputMode === 'controller' ? 'Controller' : 'Keyboard'}` }]
+          : [];
+      const options: MenuOption[] = [
+        ...input,
+        { key: 'P', label: `Poison kills: ${onOff(w.poisonKills)}` },
+        { key: 'V', label: `Starving: ${named(w.starvation)}` },
+        { key: 'X', label: `Balanced XP: ${onOff(w.balancedXp)}` },
+        { key: 'R', label: `Timer: ${named(w.timer)}` },
+        { key: 'B', label: 'Back' },
+      ];
+      const picked = await this.runMenu('Gameplay', options, 1, place && { ...place, cursor }, cursor);
+      if (picked < 0) return;
+      cursor = picked;
+      switch (options[picked].key) {
+        case 'I':
+          this.inputMode = this.inputMode === 'controller' ? 'keyboard' : 'controller';
+          this.onModeChange?.();
+          break;
+        case 'P':
+          w.poisonKills = !w.poisonKills;
+          break;
+        case 'V':
+          w.starvation = STARVATION_MODES[(STARVATION_MODES.indexOf(w.starvation) + 1) % STARVATION_MODES.length];
+          break;
+        case 'X':
+          w.balancedXp = !w.balancedXp;
+          break;
+        case 'R':
+          w.timer = TIMER_MODES[(TIMER_MODES.indexOf(w.timer) + 1) % TIMER_MODES.length];
+          break;
+        default:
+          return; // Back
       }
       this.onSettingsChange?.();
     }
@@ -947,23 +986,17 @@ export class Screen implements GameIO {
 
   /**
    * The help pages for the current input mode, in a box over the map. Any
-   * key (A) turns the page, Escape or B closes, and Y (V on the keyboard
-   * in controller mode) opens the cheat menu.
+   * key (A) turns the page, and Escape or B closes.
    */
   private async showHelp(): Promise<void> {
     const pages = helpPages(this.inputMode, this.tileSetName); // the last page speaks of the set in use
-    const footer = this.inputMode === 'controller' ? ['A next  B close', 'Y cheats'] : ['Any key next  Esc', 'Y cheats'];
+    const footer = this.inputMode === 'controller' ? ['A next  B close'] : ['Any key next  Esc'];
     const wasCovered = this.openPage();
     try {
       for (let index = 0; index < pages.length; ) {
         this.drawPage(pages[index].title, pages[index].lines, footer);
         const key = await this.readKey();
         if (key === Key.Escape || key === Key.B) break;
-        if (key === Key.Y || key === 'y' || key === 'Y') {
-          const done = await this.cheatMenu();
-          if (done) this.printWrapped(done); // to the message area, as any other event
-          continue;
-        }
         index++;
       }
     } finally {
@@ -1277,10 +1310,11 @@ export class Screen implements GameIO {
     ctx.stroke();
   }
 
-  /** The cheat menu over the help page. Returns a confirmation line for the message area, or '' when nothing was done. */
+  /** The cheat menu, from the Pause menu. Returns a confirmation line for the message area, or '' when nothing was done. */
   private async cheatMenu(): Promise<string> {
     const cheats = CHEATS.filter((c) => c.available(this.world));
     const options: MenuOption[] = [...cheats.map((c) => ({ key: c.key, label: c.label })), { key: 'B', label: 'Back' }];
+    // Placed on the whole screen, so the longest ("Go home (Lord British)") is not cut to the map's width.
     const picked = await this.runMenu('Cheats', options, 1, { row: 8, title: 'Cheats' });
     if (picked < 0 || picked >= cheats.length) return '';
     return cheats[picked].apply(this.world, this);

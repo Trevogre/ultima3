@@ -3,8 +3,8 @@
  *
  * A virtual controller for touch screens (and the mouse): a d-pad at the
  * lower left, A and B at the lower right in the Xbox arrangement (A low,
- * B up and to its right) with Y above B (Y opens the cheats from the help
- * pages, and is Look, Attack or Ignite in play), a close button at the
+ * B up and to its right) with Y above B (Look, Attack or Ignite in play),
+ * a close button at the
  * upper left, a pause button at the top centre, and at the upper right a
  * full-screen switch where full screen can be had (fullScreen.ts: the
  * desktop app's window, or the browser's). Everything is drawn as one-pixel lines at

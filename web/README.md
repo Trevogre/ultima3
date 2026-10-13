@@ -204,8 +204,8 @@ contains except the pooled gold, food and gear.
   grid; the other sets keep their HIT tile.
 - **Repeated turns** fold when a turn prints exactly what the previous one
   printed.
-- **Cheats** are a table in `cheats.ts`, reached from the Help pages with
-  Y (V on a keyboard in controller mode), and print to the message area.
+- **Cheats** are a table in `cheats.ts`, reached from the Pause menu's
+  Cheats, and print to the message area.
 
 ## The desktop app
 

@@ -34,7 +34,7 @@ export const TIPS: Tip[] = [
     topic: 'Food',
     text: [
       'The party eats as it travels; F, on the top border, is what is left.',
-      'Grocers sell food at a gold piece a ration. Out of food, members go hungry: Starving, in this menu, says how hard that is.',
+      'Grocers sell food at a gold piece a ration. Out of food, members go hungry: Starving, in Gameplay, says how hard that is.',
     ],
   },
   {
@@ -77,7 +77,7 @@ export const TIPS: Tip[] = [
     topic: 'Fights',
     text: [
       'Walk into a monster to fight it. A fight has no way out: pick them with care.',
-      'Timer, in this menu, sets how long a turn waits. Auto combat plays the fight for you.',
+      'Timer, in Gameplay, sets how long a turn waits. Auto combat plays the fight for you.',
       'If the whole party falls, the game offers the last save again.',
     ],
   },
