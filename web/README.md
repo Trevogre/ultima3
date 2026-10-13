@@ -3,7 +3,7 @@
 ![EXODUS: Ultima III, 1983 to 2026, beside the demon from Denis Loubet's box painting](../promo/banner.jpg)
 
 A TypeScript port of LairWare's Macintosh remake of Ultima III (the C sources
-in `../Sources`). It renders with plain Canvas 2D, plays sound and music with
+in `../Lairware/Sources`). It renders with plain Canvas 2D, plays sound and music with
 Web Audio, and needs no game engine. What the game is and what changed for
 the player is in the [root README](../README.md); this file is about the
 code.
@@ -164,7 +164,7 @@ contains except the pooled gold, food and gear.
 - **Masks**: the Mac shipped a grey Mask image per set for creature
   transparency (QuickDraw had no alpha); those are baked into the alpha of
   the five sheets that had one. A set that ships a Mask file is still
-  honoured. LairWare's originals remain in `Resources/Graphics`.
+  honoured. LairWare's originals remain in `Lairware/Resources/Graphics`.
 - **Dungeon art per set** is painted at run time (`dungeonArt.ts`) into the
   Mac sheet's layout and cut by its mask, so the first-person renderer is
   unchanged; `docs/dungeon-sheet.md` documents the layout. Moons likewise

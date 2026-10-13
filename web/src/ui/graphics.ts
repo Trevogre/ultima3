@@ -3,7 +3,7 @@
  *
  * Loads a tile set and knows how to find any tile in it. A tile set is a
  * family of images in public/graphics named "<Set>-Tiles", "-Font" and
- * "-UI" (after LairWare's layout, `Resources/Graphics/_About This Folder_.rtf`):
+ * "-UI" (after LairWare's layout, `Lairware/Resources/Graphics/_About This Folder_.rtf`):
  *
  *   Tiles  12 columns x 16 rows. Column pairs hold the two animation frames
  *          of a tile: tile index i is at row i % 16, column (i / 16) * 2, and

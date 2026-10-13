@@ -1,7 +1,7 @@
 /**
  * music.ts
  *
- * Background music. The original tracks (Resources/Music/Song_*.mov) are
+ * Background music. The original tracks (Lairware/Resources/Music/Song_*.mov) are
  * QuickTime Music Architecture files: not audio, but a list of note events
  * that QuickTime's software synthesizer played. Browsers cannot play them,
  * so this module reads the note list itself and plays it with Web Audio

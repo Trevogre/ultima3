@@ -7,7 +7,7 @@ import { parseQuickTimeMusic, MusicPlayer } from '../src/ui/music.ts';
 const HERE = dirname(fileURLToPath(import.meta.url));
 
 function loadSong(name: string): ArrayBuffer {
-  const buf = readFileSync(join(HERE, '..', '..', 'Resources', 'Music', name));
+  const buf = readFileSync(join(HERE, '..', '..', 'Lairware', 'Resources', 'Music', name));
   return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
 }
 

@@ -1,7 +1,8 @@
 # Developing Ultima III
 
 *The new version lives in the `web` directory. The sources, resources and
-Xcode project at the root are the old LairWare build, kept for reference.*
+Xcode project in [`Lairware/`](Lairware/) are the old LairWare build, kept
+for reference.*
 
 The port is in [`web/`](web/README.md): how to run it, how the code is
 organized, data formats and testing. The desktop app is in
@@ -11,7 +12,7 @@ game, with its own notes, and the Android app in
 
 The art briefs the new figures and dungeon sheets were drawn to are in
 [`web/docs/`](web/docs/). The original Macintosh sources and resources are
-at the root of the repository, unchanged.
+in [`Lairware/`](Lairware/), unchanged.
 
 [`showcase/`](showcase/README.md) holds exported games at the game's
 sights, for trying it, screenshots and testing: `npm run saves` in `web/`

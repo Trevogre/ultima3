@@ -2,9 +2,10 @@
  * extract-resources.ts
  *
  * One-time build step that converts the original Macintosh game data into
- * files a browser can fetch.
+ * files a browser can fetch. It has been run: web/public has been worked on
+ * since (sheets redrawn, sounds remade), and running it again overwrites that.
  *
- *   Input  (repo root)                          Output (web/public)
+ *   Input  (Lairware/)                          Output (web/public)
  *   ------------------------------------------  --------------------------------
  *   Resources/English.lproj/MainResources.rsrc  data/resources.json
  *   Resources/English.lproj/Strings/*.plist     data/resources.json (strings)
@@ -33,8 +34,8 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const REPO_ROOT = join(HERE, '..', '..');
-const RESOURCES = join(REPO_ROOT, 'Resources');
+const LAIRWARE = join(HERE, '..', '..', 'Lairware');
+const RESOURCES = join(LAIRWARE, 'Resources');
 const OUT = join(HERE, '..', 'public');
 
 // ---------------------------------------------------------------------------
@@ -191,9 +192,9 @@ function main(): void {
   // (see docs/scene-images.md).
   const images = ['DungeonShapes.jpg', 'DungeonMasks.png', 'Exodus.png'];
   mkdirSync(join(OUT, 'images'), { recursive: true });
-  for (const file of images) copyFileSync(join(REPO_ROOT, 'Images', file), join(OUT, 'images', file));
+  for (const file of images) copyFileSync(join(LAIRWARE, 'Images', file), join(OUT, 'images', file));
   for (const scene of ['Fountain', 'Rod', 'Shrine', 'TimeLord']) {
-    copyFileSync(join(REPO_ROOT, 'Images', `${scene}.jpg`), join(OUT, 'graphics', `Lairware-${scene}.jpg`));
+    copyFileSync(join(LAIRWARE, 'Images', `${scene}.jpg`), join(OUT, 'graphics', `Lairware-${scene}.jpg`));
   }
 
   const counts = Object.entries(wanted)
