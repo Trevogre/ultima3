@@ -1379,8 +1379,9 @@ export class Screen implements GameIO {
       ctx.strokeRect(x - 1, y - 1, sq + 2, sq + 2);
     }
     // The cursor: brackets round the mark it is on, three squares across, each arm a piece of the frame in small - its
-    // light edge on top (or left), its body, its dark edge below (or right), a band each - the bands laid dark first and
-    // light last, so where two arms meet they mitre as the frame's corners do.
+    // light edge on top (or left), its body, its dark edge below (or right), a band each - and where two arms meet,
+    // mitred: a pixel of the corner nearer the cursor's top or bottom edge than its side is the arm across's, the rest
+    // (the diagonal too) the side arm's.
     const chosen = marks[selected];
     if (chosen) {
       const [x, y] = corner(chosen);
@@ -1390,25 +1391,33 @@ export class Screen implements GameIO {
       const t = band * 3;
       const arm = Math.max(t * 2, Math.round(r * 0.7));
       const { light, body, dark } = this.chrome();
+      const bands = [light, body, dark];
       const [left, top] = [Math.round(cx - r), Math.round(cy - r)];
       const [right, bottom] = [Math.round(cx + r) - t, Math.round(cy + r) - t];
-      // Each arm: where it starts (x, y), and whether it runs across (its bands one above another) or down.
-      const arms: [number, number, boolean][] = [
-        [left, top, true],
-        [left, top, false],
-        [right + t - arm, top, true],
-        [right, top, false],
-        [left, bottom, true],
-        [left, bottom + t - arm, false],
-        [right + t - arm, bottom, true],
-        [right, bottom + t - arm, false],
-      ];
-      for (const [k, colour] of [dark, body, light].entries()) {
-        const off = (2 - k) * band; // dark the far band, light the near
+      const fill = (colour: string, fx: number, fy: number, fw: number, fh: number) => {
         ctx.fillStyle = colour;
-        for (const [ax, ay, across] of arms) {
-          if (across) ctx.fillRect(ax, ay + off, arm, band);
-          else ctx.fillRect(ax + off, ay, band, arm);
+        ctx.fillRect(fx, fy, fw, fh);
+      };
+      for (const [sx, sy] of [
+        [left, top],
+        [right, top],
+        [left, bottom],
+        [right, bottom],
+      ]) {
+        const [atLeft, atTop] = [sx === left, sy === top];
+        // The arm across and the arm down, beyond the corner they share.
+        const ax = atLeft ? sx + t : sx + t - arm;
+        const ay = atTop ? sy + t : sy + t - arm;
+        for (let k = 0; k < 3; k++) {
+          fill(bands[k], ax, sy + k * band, arm - t, band);
+          fill(bands[k], sx + k * band, ay, band, arm - t);
+        }
+        for (let dy = 0; dy < t; dy++) {
+          for (let dx = 0; dx < t; dx++) {
+            const fromSide = atLeft ? dx : t - 1 - dx;
+            const fromEnd = atTop ? dy : t - 1 - dy;
+            fill(bands[Math.floor((fromEnd < fromSide ? dy : dx) / band)], sx + dx, sy + dy, 1, 1);
+          }
         }
       }
     }
