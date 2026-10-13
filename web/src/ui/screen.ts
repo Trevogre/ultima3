@@ -46,7 +46,20 @@ import { aroundParty, wholeLevel } from '../game/dungeonLayout.ts';
 import { mapPages, marksOn, stepMark, pageTitle, isLandValue, type MapPage, type MapMark, type Direction } from '../game/worldMap.ts';
 import { drawChart, drawPlaceSign } from './chart.ts';
 import { MapId } from '../data/resources.ts';
-import { Key, Sound, type GameIO, type MenuOption, type CommandScope, type MenuPlacement, type SpellFlash } from '../game/io.ts';
+import {
+  Key,
+  Sound,
+  CARD_ROWS,
+  CARD_WIDTH,
+  type Card,
+  type CardTone,
+  type GameIO,
+  type MenuOption,
+  type CommandScope,
+  type MenuPlacement,
+  type SpellFlash,
+} from '../game/io.ts';
+import { gearName } from '../game/cards.ts';
 import {
   controllerKeyFor,
   COMMAND_MENUS,
@@ -114,6 +127,17 @@ const onOff = (on: boolean): string => (on ? 'On' : 'Off');
 
 /** The Top down view's cells each way from the party: 21 a side, in the 22 of the window. */
 const TOP_DOWN_REACH = 10;
+
+/**
+ * What each member's second line in the party panel shows (after the Ultima V port's): hit points and mana, or, while
+ * the command menu's bar is on Ztats, Ready weapon or Wear armour, the experience toward the next level, the weapon in
+ * hand or the armour worn - kept through the command, its "Who?" with it.
+ */
+type PanelLine = 'hp' | 'xp' | 'weapon' | 'armour';
+const PANEL_LINES: Partial<Record<string, PanelLine>> = { Z: 'xp', R: 'weapon', W: 'armour' };
+
+/** A card's lines by tone (cards.ts): better green, worse red, by the way grey, else white. */
+const CARD_TONES: Record<CardTone, string> = { better: '#40ff40', worse: '#ff4040', dim: '#b0b0b0' };
 
 /**
  * Which of the nine map pieces (UI sheet row 1 from column 7) draws a
@@ -187,6 +211,10 @@ export class Screen implements GameIO {
   /** Member marked with arrows in the stats boxes while "Who?" is asked, or -1. */
   private selectedMember = -1;
   private highlighted = new Set<number>();
+  /** What each member's second line shows (`PanelLine`): hit points and mana, or what the command menu's bar is on. */
+  private panelLine: PanelLine = 'hp';
+  /** The card over the party panel while a list's item is highlighted (`showCard`), or null for the members. */
+  private card: Card | null = null;
 
   /**
    * 'controller' (the default): d-pad movement and pop-up menus, driven by
@@ -296,28 +324,21 @@ export class Screen implements GameIO {
     this.frameShown = true;
     this.black(0, 0, COLUMNS, ROWS);
     const piece = (n: number, x: number, y: number) => this.piece(n, x, y);
-    for (let x = 1; x < 39; x++) piece(Piece.Horizontal, x, 0);
-    for (let x = 1; x < 23; x++) piece(Piece.Horizontal, x, 23);
-    for (let x = 24; x < 39; x++) for (const y of BOX_SEPARATORS) piece(Piece.Horizontal, x, y);
+    for (let x = 1; x < 23; x++) {
+      piece(Piece.Horizontal, x, 0);
+      piece(Piece.Horizontal, x, 23);
+    }
     for (let y = 1; y < 23; y++) {
       piece(Piece.Vertical, 0, y);
       piece(Piece.Vertical, 23, y);
     }
-    for (let y = 1; y < BOXES_BOTTOM; y++) piece(Piece.Vertical, 39, y);
     piece(Piece.TopLeft, 0, 0);
     piece(Piece.TopRight, 39, 0);
     piece(Piece.BottomLeft, 0, 23);
     piece(Piece.TopTee, 23, 0);
-    piece(Piece.BottomRight, 39, BOXES_BOTTOM);
     piece(Piece.BottomRight, 23, 23);
-    for (const y of BOX_SEPARATORS) piece(Piece.LeftTee, 23, y);
-    for (const y of BOX_SEPARATORS.slice(0, 3)) piece(Piece.RightTee, 39, y);
-    // Member numbers 1-4 sit in the separators above each box.
-    for (let i = 0; i < 4; i++) {
-      piece(Piece.CapLeft, 30, i * BOX_PITCH);
-      piece(Piece.CapRight, 32, i * BOX_PITCH);
-      this.drawText(String(i + 1), 31, i * BOX_PITCH);
-    }
+    this.card = null;
+    this.drawPanelFrame();
     this.textRows.forEach((row) => row.fill(' '));
     this.prevTurn = null;
     this.thisTurn = { texts: [], rows: [] };
@@ -371,6 +392,68 @@ export class Screen implements GameIO {
     this.secretDoorPiece = null;
     this.dungeonRenderer = DungeonRenderer.forSet(gfx);
     this.redrawAll();
+  }
+
+  /** The frame round the party panel: its top, the separators between the members' boxes with their numbers, its sides. */
+  private drawPanelFrame(): void {
+    const piece = (n: number, x: number, y: number) => this.piece(n, x, y);
+    for (let x = 24; x < 39; x++) {
+      piece(Piece.Horizontal, x, 0);
+      for (const y of BOX_SEPARATORS) piece(Piece.Horizontal, x, y);
+    }
+    for (let y = 1; y < BOXES_BOTTOM; y++) {
+      piece(Piece.Vertical, 23, y);
+      piece(Piece.Vertical, 39, y);
+    }
+    for (const y of BOX_SEPARATORS) piece(Piece.LeftTee, 23, y);
+    for (const y of BOX_SEPARATORS.slice(0, 3)) piece(Piece.RightTee, 39, y);
+    piece(Piece.BottomRight, 39, BOXES_BOTTOM);
+    // Member numbers 1-4 sit in the separators above each box.
+    for (let i = 0; i < 4; i++) {
+      piece(Piece.CapLeft, 30, i * BOX_PITCH);
+      piece(Piece.CapRight, 32, i * BOX_PITCH);
+      this.drawText(String(i + 1), 31, i * BOX_PITCH);
+    }
+  }
+
+  /**
+   * A card over the party panel (cards.ts, spells.ts), while a list's item is highlighted, after the Ultima V port's:
+   * the four members' boxes made one, its title on the panel's top border in the frame's caps, as a member's number
+   * is, and its lines in their tones. Null puts the members back.
+   */
+  private showCard(card: Card | null): void {
+    if (!this.frameShown || (!card && !this.card)) return;
+    this.card = card;
+    if (!card) {
+      this.drawPanelFrame();
+      this.updateStats(true);
+      return;
+    }
+    for (const y of BOX_SEPARATORS.slice(0, 3)) {
+      this.black(24, y, CARD_WIDTH, 1);
+      this.piece(Piece.Vertical, 23, y);
+      this.piece(Piece.Vertical, 39, y);
+    }
+    for (let x = 24; x < 39; x++) this.piece(Piece.Horizontal, x, 0);
+    const title = card.title.slice(0, CARD_WIDTH);
+    const tx = 24 + Math.floor((CARD_WIDTH - title.length) / 2);
+    if (title.length <= CARD_WIDTH - 2) {
+      this.piece(Piece.CapLeft, tx - 1, 0);
+      this.piece(Piece.CapRight, tx + title.length, 0);
+    }
+    this.black(tx, 0, title.length, 1);
+    this.drawText(title, tx, 0);
+    this.black(24, 1, CARD_WIDTH, CARD_ROWS);
+    card.lines.slice(0, CARD_ROWS).forEach((line, i) => {
+      this.drawText(line.text.slice(0, CARD_WIDTH), 24, 1 + i, line.tone ? CARD_TONES[line.tone] : undefined);
+    });
+  }
+
+  /** What each member's second line shows (`PanelLine`), redrawn when it changes. */
+  private setPanelLine(line: PanelLine): void {
+    if (line === this.panelLine) return;
+    this.panelLine = line;
+    this.updateStats(true);
   }
 
   /** Redraw the whole screen from what the Screen already knows (after a tile change or a full-screen page). */
@@ -616,8 +699,19 @@ export class Screen implements GameIO {
    * all it opens) each key is answered with a sound, subject to the Sound
    * FX setting; over the game frame the game's own sounds are playing, so
    * its menus stay quiet.
+   *
+   * Over the game frame, an item with a card shows it over the party panel
+   * while it is highlighted (`showCard`), the members coming back with the
+   * menu's close. `onCursor` hears of each item the bar comes to.
    */
-  private async runMenu(title: string, options: MenuOption[], columns = 1, place?: MenuPlacement, cursor = 0): Promise<number> {
+  private async runMenu(
+    title: string,
+    options: MenuOption[],
+    columns = 1,
+    place?: MenuPlacement,
+    cursor = 0,
+    onCursor?: (option: MenuOption | undefined) => void,
+  ): Promise<number> {
     const visible = options.filter((o) => !o.hidden);
     const menu = layoutMenu(
       title,
@@ -635,6 +729,15 @@ export class Screen implements GameIO {
     }
     this.openMenu(menu);
     const feedback = !this.frameShown;
+    const cards = this.frameShown && visible.some((o) => o.card);
+    const watch = () => {
+      if (cards) {
+        this.showCard(visible[menu.cursor]?.card ?? null);
+        this.showMenuNow(); // over the card, where a wide window reaches the panel
+      }
+      onCursor?.(visible[menu.cursor]);
+    };
+    watch();
     try {
       for (;;) {
         const key = await this.readKey();
@@ -643,6 +746,7 @@ export class Screen implements GameIO {
         if (action.kind === 'move') {
           if (feedback) this.sound(MENU_SOUNDS.move);
           this.showMenuNow();
+          watch();
         } else if (action.kind === 'choose') {
           if (feedback) this.sound(MENU_SOUNDS.choose);
           return action.index;
@@ -655,6 +759,7 @@ export class Screen implements GameIO {
       }
     } finally {
       this.closeMenu();
+      if (cards) this.showCard(null);
     }
   }
 
@@ -1466,6 +1571,8 @@ export class Screen implements GameIO {
   }
 
   async waitCommand(scope: CommandScope, timeoutMs?: number): Promise<string | null> {
+    // A command done, the members' hit points come back to the panel (`PanelLine`).
+    this.setPanelLine('hp');
     // Null means the time ran out (the turn passes), so a menu closed with B goes back to waiting instead.
     let left = timeoutMs;
     for (;;) {
@@ -1485,8 +1592,10 @@ export class Screen implements GameIO {
       if (fading) fading.markedFrozenAt = performance.now();
       // The commands the surroundings call for come first.
       const options = commandMenu(this.world, scope, COMMAND_MENUS[scope]);
-      const picked = await this.runMenu('Command', options);
+      // The panel shows what the bar's command is about (`PanelLine`), and keeps it while the command is carried out.
+      const picked = await this.runMenu('Command', options, 1, undefined, 0, (o) => this.setPanelLine(PANEL_LINES[o?.key ?? ''] ?? 'hp'));
       if (picked >= 0) return options[picked].key;
+      this.setPanelLine('hp');
       // Closed: the turn's time and the outline's fade go on from where they stopped.
       if (fading) {
         fading.markedAt += performance.now() - fading.markedFrozenAt;
@@ -2262,14 +2371,27 @@ export class Screen implements GameIO {
    *
    * Hit points turn yellow under a quarter of the maximum and red under a
    * tenth. Gold and food are pooled and shown on the top border (`showMoons`).
+   *
+   * While the command menu's bar is on Ztats, Ready weapon or Wear armour
+   * the second line shows the experience toward the next level instead
+   * (blue where Lord British owes a level), the weapon in hand or the armour
+   * worn (`PanelLine`). Under a card (`showCard`) nothing is drawn.
    */
   updateStats(force = false): void {
+    if (this.card) {
+      this.statsCache = ['', '', '', ''];
+      this.showMoons();
+      return;
+    }
     for (let m = 0; m < 4; m++) {
       const slot = this.world.party.memberSlot(m);
       const p = slot >= 0 ? this.world.roster.get(slot) : null;
       const due = p ? levelUpDue(p) : false;
       const selected = m === this.selectedMember;
-      const key = p ? `${p.name}|${p.status}|${due}|${p.hitPoints}|${p.maxHitPoints}|${p.mana}|${selected}` : '';
+      const line = this.panelLine;
+      const key = p
+        ? `${p.name}|${p.status}|${due}|${p.hitPoints}|${p.maxHitPoints}|${p.mana}|${selected}|${line}|${p.bytes[30]}|${p.bytes[31]}|${p.bytes[48]}|${p.bytes[40]}`
+        : '';
       if (!force && key === this.statsCache[m]) continue;
       this.statsCache[m] = key;
 
@@ -2299,13 +2421,23 @@ export class Screen implements GameIO {
         this.drawText(p.name, 24, top, nameColour);
         if (classic) this.drawText(statusLetter(p), 38, top);
         const gone = p.status === 'D' || p.status === 'A';
-        const hp = p.hitPoints;
-        const max = Math.max(1, p.maxHitPoints);
-        const hpColour = classic ? undefined : gone ? nameColour : hp < max / 10 ? '#ff4040' : hp < max / 4 ? '#ffe040' : undefined;
-        this.drawText(`${hp}/${p.maxHitPoints}`, 24, top + 1, hpColour);
-        if (hasMagic(this.world, p)) {
-          const mana = `M:${p.mana}`;
-          this.drawText(mana, 39 - mana.length, top + 1, gone && !classic ? nameColour : undefined);
+        if (this.panelLine === 'xp') {
+          // Experience counts a level every hundred, to 9899 (actions.ts addExperience).
+          const xp = p.bytes[30] * 100 + p.bytes[31];
+          const next = xp >= 9899 ? ' MAX' : `/${(p.bytes[30] + 1) * 100}`;
+          this.drawText(`XP ${xp}${next}`, 24, top + 1, classic ? undefined : gone ? nameColour : due ? memberColour(p, due) : undefined);
+        } else if (this.panelLine !== 'hp') {
+          const weapon = this.panelLine === 'weapon';
+          this.drawText(gearName(this.world, weapon, p.bytes[weapon ? 48 : 40]), 24, top + 1, gone && !classic ? nameColour : undefined);
+        } else {
+          const hp = p.hitPoints;
+          const max = Math.max(1, p.maxHitPoints);
+          const hpColour = classic ? undefined : gone ? nameColour : hp < max / 10 ? '#ff4040' : hp < max / 4 ? '#ffe040' : undefined;
+          this.drawText(`${hp}/${p.maxHitPoints}`, 24, top + 1, hpColour);
+          if (hasMagic(this.world, p)) {
+            const mana = `M:${p.mana}`;
+            this.drawText(mana, 39 - mana.length, top + 1, gone && !classic ? nameColour : undefined);
+          }
         }
       }
       if (this.highlighted.has(m)) this.invert(24, top, 15, BOX_ROWS);
@@ -2314,6 +2446,7 @@ export class Screen implements GameIO {
   }
 
   async flashMember(member: number): Promise<void> {
+    if (this.card) return; // under a card the boxes are not there to flash
     const top = member * BOX_PITCH + 1;
     this.invert(24, top, 15, BOX_ROWS);
     await this.pause(100);
@@ -2324,7 +2457,7 @@ export class Screen implements GameIO {
     if (this.highlighted.has(member) === on) return;
     if (on) this.highlighted.add(member);
     else this.highlighted.delete(member);
-    this.invert(24, member * BOX_PITCH + 1, 15, BOX_ROWS);
+    if (!this.card) this.invert(24, member * BOX_PITCH + 1, 15, BOX_ROWS); // a card puts it back as it goes
   }
 
   /** Wind indicator on the bottom border, or the heading in a dungeon. (`ShowWind`, `DngInfo`) */

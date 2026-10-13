@@ -49,7 +49,7 @@ export interface MenuOption {
   label: string;
   /** Accepted from the keyboard but not shown in the menu (e.g. an item the member does not own). */
   hidden?: boolean;
-  /** One line shown under the menu while this item is highlighted. */
+  /** A line shown under the menu while this item is highlighted, where there is no party panel for a card (the title's). */
   hint?: string;
   /** Draw the hint in this colour (a CSS colour); e.g. a shop's verdict, green for better and red for worse. */
   hintColour?: string;
@@ -57,7 +57,26 @@ export interface MenuOption {
   disabled?: boolean;
   /** Draw the label in this colour (a CSS colour); e.g. a member's state. */
   colour?: string;
+  /** Shown over the party panel, in place of the four members, while this item is highlighted (in controller mode). */
+  card?: Card;
 }
+
+/** How a card's line reads: better than what the member has (green), worse (red), by the way (grey), or plain. */
+export type CardTone = 'better' | 'worse' | 'dim';
+
+/**
+ * A card over the party panel while a list is open (after the Ultima V port's): an armament weighed against what the
+ * member has, or a spell. The title goes on the panel's top border; each line is at most CARD_WIDTH letters, and
+ * there are at most CARD_ROWS of them.
+ */
+export interface Card {
+  title: string;
+  lines: { text: string; tone?: CardTone }[];
+}
+
+/** A card's width and height in letters: the party panel's, its four boxes made one. */
+export const CARD_WIDTH = 15;
+export const CARD_ROWS = 11;
 
 /** Where a top-level command is being read; decides which command menu a controller sees. */
 export type CommandScope = 'field' | 'combat' | 'dungeon';

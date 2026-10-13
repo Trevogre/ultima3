@@ -289,6 +289,14 @@ These apply whatever tile set and sound set are chosen.
 - In combat, a ranged weapon in hand puts "Attack (Bow)" first and a
   caster gets "Cast (spell)" with their last spell ready. Walking into a
   foe attacks it.
+- The party panel shows what the menu's bar is on, after the Ultima V
+  port: on Ztats each member's experience toward the next level, on Ready
+  weapon the weapon in hand, on Wear armour the armour worn. In a shop's
+  Buy list and in Ready's and Wear's lists a card over the panel weighs
+  the item for the member against what they have, green where it is
+  better and red where it is worse; in the spell lists, the spell's card
+  gives its book name, its cost against the caster's mana and what it
+  does.
 - Shortcuts cast at once, with no prompts, choosing the caster with the
   most mana: "Cast (Heal)" or "Cast (Great heal)" leads the menu when
   someone is hurt; "Cast (Safe chest)" sits under Get chest on a chest;
@@ -398,7 +406,7 @@ These apply whatever tile set and sound set are chosen.
   A spell backed out of at its own prompt gets its mana back, and Ztats in
   combat no longer uses up the member's turn.
 - Spell menus name spells by what they do (Magic bolt, Heal, Up a level),
-  with the book name, cost and effect beneath.
+  with the book name, cost and effect on the spell's card.
 - Other and Yell are one command, and EVOCARE works from either.
 - Repeated turns fold together: "North (x5)" instead of five lines.
 - Fountains and the *redacted* speak when the party steps onto them, not

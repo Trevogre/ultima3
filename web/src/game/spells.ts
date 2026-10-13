@@ -13,7 +13,8 @@
 import { World } from './world.ts';
 import { Location } from './party.ts';
 import { MapValue, Shape } from './tiles.ts';
-import { type GameIO, Sound, inputNumber, type MenuOption, type SpellFlash } from './io.ts';
+import { type Card, type GameIO, Sound, inputNumber, type MenuOption, type SpellFlash } from './io.ts';
+import { cardRow, cardWrap } from './cards.ts';
 import { getDirection, cancelled } from './commands.ts';
 import { shoot, showBall, damageMonster } from './combat.ts';
 import { getChest, incapacitated, chestHere } from './actions.ts';
@@ -191,14 +192,29 @@ const SPELL_INFO: { name: string; does: string }[] = [
   { name: 'Conjure frigate', does: 'a frigate on the nearest water' },
 ];
 
-/** Menu option for a spell: its letter and plain name, with the book name, cost and effect as the hint. */
-function spellOption(world: World, spell: number, letter: string, member: number): MenuOption {
+/**
+ * Menu option for a spell: its letter and plain name, and its card over the party panel while it is highlighted - the
+ * book's name, its cost against the caster's mana (red where they are short of it) and what it does.
+ */
+export function spellOption(world: World, spell: number, letter: string, member: number): MenuOption {
   const book = spell < 32 ? world.resources.strings.Spells[spell] : ['TERRAFORM', 'ARMAGEDDON', 'FLOTELLUM'][spell - 32];
   const cost = spellCost(spell);
   const info = SPELL_INFO[spell] ?? { name: book.trim() || '?', does: '' };
+  const mana = world.member(member).mana;
+  const does = info.does.charAt(0).toUpperCase() + info.does.slice(1);
+  const card: Card = {
+    title: info.name,
+    lines: [
+      { text: book.trim() || 'Nameless', tone: 'dim' },
+      { text: '' },
+      { text: cardRow('Cost', `${cost}`) },
+      { text: cardRow('Mana', `${mana}`), tone: mana < cost ? 'worse' : undefined },
+      { text: '' },
+      ...cardWrap(`${does}.`).map((text) => ({ text })),
+    ],
+  };
   // Greyed when the caster cannot afford it, like other menu entries with nothing on hand.
-  const disabled = cost > world.member(member).mana;
-  return { key: letter, label: `${letter} ${info.name}`, hint: `${book.trim() || 'Nameless'} (${cost} mana): ${info.does}`, disabled };
+  return { key: letter, label: `${letter} ${info.name}`, disabled: cost > mana, card };
 }
 
 async function chooseEither(world: World, io: GameIO, member: number): Promise<number> {

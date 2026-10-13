@@ -14,6 +14,7 @@ import { MapValue } from './tiles.ts';
 import { type GameIO, Key, Sound, deathSound, type MenuOption } from './io.ts';
 import { PlayerRecord } from './player.ts';
 import { cancelled } from './commands.ts';
+import { gearCard } from './cards.ts';
 
 const Msg = {
   GetChest: 40,
@@ -324,7 +325,8 @@ export async function peerGem(world: World, io: GameIO): Promise<void> {
  * with the item now in use marked. Hands/skin (A) are always there. Kinds
  * the bag lacks are hidden (a keyboard may still type them and get "Not
  * owned!", as in the original); kinds the member's class may not use are
- * greyed.
+ * greyed. Each is weighed against what the member has on a card over the
+ * party panel while it is highlighted (cards.ts gearCard).
  */
 export function ownedItems(world: World, p: PlayerRecord, isWeapon: boolean, last: string): MenuOption[] {
   const names = world.resources.strings.WeaponsArmour;
@@ -343,6 +345,7 @@ export function ownedItems(world: World, p: PlayerRecord, isWeapon: boolean, las
       label: `${letter} ${names[nameBase + index]}${tail}`,
       hidden: index > 0 && count < 1 && !inUse,
       disabled: !world.canUse(p, isWeapon, index),
+      card: gearCard(world, p, isWeapon, index, { held: count }),
     });
   }
   return options;

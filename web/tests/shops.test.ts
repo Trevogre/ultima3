@@ -1,13 +1,11 @@
 import { describe, it, expect } from 'vitest';
 import { newWorld, FakeIO } from './helpers.ts';
-import { hitChance, shop, wareHint } from '../src/game/shops.ts';
-import { Key, type MenuOption } from '../src/game/io.ts';
+import { shop } from '../src/game/shops.ts';
+import { gearCard, hitChance } from '../src/game/cards.ts';
+import { ownedItems } from '../src/game/actions.ts';
+import { spellOption } from '../src/game/spells.ts';
+import { CARD_ROWS, CARD_WIDTH, Key, type Card, type MenuOption } from '../src/game/io.ts';
 import { World } from '../src/game/world.ts';
-import { wrapText, HINT_ROWS } from '../src/ui/menus.ts';
-
-const GREEN = '#40ff40';
-const RED = '#ff4040';
-const GREY = '#808080';
 
 /** Member 0 as a named member of `career` (its letter) with weapon `weapon` readied and armour `armour` worn. */
 function member(world: World, career: string, weapon: number, armour: number) {
@@ -19,72 +17,128 @@ function member(world: World, career: string, weapon: number, armour: number) {
   return p;
 }
 
-describe('weighing a ware for the member at the counter', () => {
+/** A card's lines as text and tone, for comparing. */
+const rows = (card: Card) => card.lines.map((l) => (l.tone ? `${l.text} [${l.tone}]` : l.text));
+
+describe('weighing an armament for a member, on a card over the party panel', () => {
   it('gives the chance a blow lands for each armour, as combat rolls it', () => {
     // A roll of 0 to armour + 16, under 8: 8 chances in armour + 17.
     expect([0, 1, 2, 3, 4, 5, 6].map(hitChance)).toEqual([47, 44, 42, 40, 38, 36, 35]);
   });
 
-  it('weighs a weapon by its damage a hit against the one readied', () => {
+  it('weighs a weapon by its damage a hit and its reach against the one readied', () => {
     const world = newWorld();
+    world.party.gold = 100;
     const p = member(world, 'F', 1, 1); // a fighter with a dagger
-    expect(wareHint(world, p, true, 2)).toEqual({ hint: "3 more damage a hit than Kaix's Dagger", colour: GREEN });
+    const mace = gearCard(world, p, true, 2, { price: 30 });
+    expect(mace.title).toBe('Mace');
+    expect(rows(mace)).toEqual(['Kaix [dim]', 'vs Dagger [dim]', '', 'Damage       +3 [better]', 'Reach     close', '', 'Price      30gp']);
     p.bytes[48] = 6; // a sword
-    expect(wareHint(world, p, true, 4)).toEqual({ hint: "6 less damage a hit than Kaix's Sword", colour: RED });
-    expect(wareHint(world, p, true, 6)).toEqual({ hint: 'Kaix has one readied', colour: undefined });
+    expect(rows(gearCard(world, p, true, 4, { price: 125 }))).toEqual([
+      'Kaix [dim]',
+      'vs Sword [dim]',
+      '',
+      'Damage       -6 [worse]',
+      'Reach     close',
+      '',
+      'Price     125gp [worse]', // more than the party has
+    ]);
+    expect(rows(gearCard(world, p, true, 6, { price: 200 })).slice(0, 4)).toEqual([
+      'Kaix [dim]',
+      'In hand now [dim]',
+      '',
+      'Damage     same',
+    ]);
     p.bytes[48] = 0;
-    expect(wareHint(world, p, true, 1).hint).toBe('3 more damage a hit than bare hands');
+    expect(rows(gearCard(world, p, true, 1, { price: 5 }))[1]).toBe('vs Hands [dim]');
   });
 
-  it('says what is gained or lost in reach, and leaves a trade white', () => {
+  it('marks reach gained green and reach lost red, the damage beside it as it is', () => {
     const world = newWorld();
     const p = member(world, 'F', 6, 1); // a sword
-    expect(wareHint(world, p, true, 3)).toEqual({ hint: "9 less damage a hit than Kaix's Sword; shoots afar", colour: undefined });
-    expect(wareHint(world, p, true, 9)).toEqual({ hint: "9 more damage a hit than Kaix's Sword; shoots afar", colour: GREEN });
+    expect(rows(gearCard(world, p, true, 3, { held: 1 })).slice(3, 5)).toEqual(['Damage       -9 [worse]', 'Reach      afar [better]']);
     p.bytes[48] = 5; // a bow
-    expect(wareHint(world, p, true, 4)).toEqual({ hint: "3 less damage a hit than Kaix's Bow; close up only", colour: RED });
-    expect(wareHint(world, p, true, 6)).toEqual({ hint: "3 more damage a hit than Kaix's Bow; close up only", colour: undefined });
+    expect(rows(gearCard(world, p, true, 6, { held: 1 })).slice(3, 5)).toEqual(['Damage       +3 [better]', 'Reach     close [worse]']);
   });
 
   it('weighs armour by how often foes would hit, against what is worn', () => {
     const world = newWorld();
     const p = member(world, 'F', 1, 1); // cloth
-    expect(wareHint(world, p, false, 3)).toEqual({ hint: 'Foes would hit Kaix 40% of the time (now 44%)', colour: GREEN });
+    const chain = gearCard(world, p, false, 3, { price: 0 });
+    expect(chain.title).toBe('Chain');
+    expect(rows(chain).slice(1, 5)).toEqual(['vs Cloth [dim]', '', 'Foes hit    40% [better]', 'Now         44% [dim]']);
     p.bytes[40] = 4; // plate
-    expect(wareHint(world, p, false, 2)).toEqual({ hint: 'Foes would hit Kaix 42% of the time (now 38%)', colour: RED });
-    expect(wareHint(world, p, false, 4)).toEqual({ hint: 'Kaix wears one already', colour: undefined });
+    expect(rows(gearCard(world, p, false, 2, { price: 0 }))[3]).toBe('Foes hit    42% [worse]');
+    expect(rows(gearCard(world, p, false, 4, { price: 0 })).slice(1, 5)).toEqual(['Worn now [dim]', '', 'Foes hit    38%', '']);
   });
 
-  it("names the class that cannot use a ware, in the list's grey", () => {
+  it('says in red what a class cannot use, in place of the numbers', () => {
     const world = newWorld();
     const p = member(world, 'W', 1, 1);
-    expect(wareHint(world, p, true, 2)).toEqual({ hint: 'A Wizard cannot ready it', colour: GREY });
-    expect(wareHint(world, p, false, 2)).toEqual({ hint: 'A Wizard cannot wear it', colour: GREY });
+    expect(rows(gearCard(world, p, true, 2, { held: 1 })).slice(3, 5)).toEqual(['A Wizard cannot [worse]', 'ready it [worse]']);
     p.bytes[23] = 'I'.charCodeAt(0);
-    expect(wareHint(world, p, true, 4).hint).toBe('An Illusionist cannot ready it');
+    expect(rows(gearCard(world, p, false, 4, { held: 1 })).slice(3, 5)).toEqual(['An Illusionist [worse]', 'cannot wear it [worse]']);
   });
 
-  it('fits every weighing whole in the hint, for the longest name, every class and everything readied or worn', () => {
+  it('fits every card on the panel, for the longest name, every class and everything readied or worn', () => {
     const world = newWorld();
+    world.party.gold = 0;
     const careers = String.fromCharCode(...world.resources.misc.careerTable);
-    const cut: string[] = [];
+    const over: string[] = [];
+    const check = (card: Card) => {
+      if (card.lines.length > CARD_ROWS || card.title.length > CARD_WIDTH) over.push(card.title);
+      for (const line of card.lines) if (line.text.length > CARD_WIDTH) over.push(line.text);
+    };
     for (const career of careers) {
       const p = member(world, career, 0, 0);
       p.name = 'Abcdefghijklm'; // 13 letters, the most a name holds
       for (let held = 0; held < 16; held++)
-        for (let ware = 1; ware < 15; ware++) {
+        for (let ware = 0; ware < 16; ware++) {
           p.bytes[48] = held;
-          const { hint } = wareHint(world, p, true, ware);
-          if (wrapText(hint, 38, HINT_ROWS).join(' ') !== hint) cut.push(hint);
+          check(gearCard(world, p, true, ware, { price: 1250 }));
+          check(gearCard(world, p, true, ware, { held: 99 }));
         }
       for (let worn = 0; worn < 8; worn++)
-        for (let ware = 1; ware < 7; ware++) {
+        for (let ware = 0; ware < 8; ware++) {
           p.bytes[40] = worn;
-          const { hint } = wareHint(world, p, false, ware);
-          if (wrapText(hint, 38, HINT_ROWS).join(' ') !== hint) cut.push(hint);
+          check(gearCard(world, p, false, ware, { price: 2500 }));
         }
     }
-    expect(cut).toEqual([]);
+    expect(over).toEqual([]);
+  });
+
+  it('gives Ready and Wear the same cards, with the pack in place of a price', () => {
+    const world = newWorld();
+    const p = member(world, 'F', 1, 1);
+    world.party.setWeapons(6, 2);
+    const sword = ownedItems(world, p, true, 'P').find((o) => o.key === 'G')!;
+    expect(sword.card!.title).toBe('Sword');
+    expect(rows(sword.card!).slice(3)).toEqual(['Damage      +15 [better]', 'Reach     close', '', 'In pack       2 [dim]']);
+    expect(rows(ownedItems(world, p, true, 'P')[0].card!)).not.toContain('In pack       0 [dim]'); // hands are no stock
+  });
+
+  it("puts a spell's book name, its cost against the caster's mana and what it does on its card", () => {
+    const world = newWorld();
+    const p = world.member(0);
+    p.mana = 10;
+    const fireball = spellOption(world, 5, 'F', 0);
+    expect(fireball.card!.title).toBe('Fireball');
+    expect(rows(fireball.card!)).toEqual([
+      'FULGAR [dim]',
+      '',
+      'Cost         25',
+      'Mana         10 [worse]',
+      '',
+      'A strong bolt',
+      'at one foe.',
+    ]);
+    expect(fireball.disabled).toBe(true);
+    for (let spell = 0; spell < 35; spell++) {
+      const card = spellOption(world, spell, 'A', 0).card!;
+      expect(card.lines.length, card.title).toBeLessThanOrEqual(CARD_ROWS);
+      for (const line of card.lines) expect(line.text.length, line.text).toBeLessThanOrEqual(CARD_WIDTH);
+      expect(card.title.length).toBeLessThanOrEqual(CARD_WIDTH);
+    }
   });
 
   it('weighs the Buy list afresh after a ware is readied on the spot, and leaves the Sell list unweighed', async () => {
@@ -104,17 +158,17 @@ describe('weighing a ware for the member at the counter', () => {
     const buys = menus.filter((m) => m.some((o) => o.key === 'C' && o.label.includes('Mace')));
     expect(buys).toHaveLength(2);
     const after = buys[1];
-    expect(after.find((o) => o.key === 'C')!.hint).toBe('Kaix has one readied');
-    expect(after.find((o) => o.key === 'B')).toMatchObject({ hint: "3 less damage a hit than Kaix's Mace", hintColour: RED });
-    // Selling the dagger it put back in the bag: no weighing for buying under the Sell list.
+    expect(rows(after.find((o) => o.key === 'C')!.card!)[1]).toBe('In hand now [dim]');
+    expect(rows(after.find((o) => o.key === 'B')!.card!).slice(1, 4)).toEqual(['vs Mace [dim]', '', 'Damage       -3 [worse]']);
+    // Selling the dagger it put back in the bag: no weighing for buying on the Sell list.
     menus.length = 0;
     io.keys = ['N', 'S', Key.Escape];
     await shop(world, io, 3, 0);
     const sell = menus.find((m) => m.some((o) => o.key === 'B' && o.label.includes('Dagger')))!;
-    expect(sell.map((o) => o.hint ?? null)).toEqual(sell.map(() => null));
+    expect(sell.map((o) => o.card ?? null)).toEqual(sell.map(() => null));
   });
 
-  it("puts each ware's weighing under the shop's Buy list", async () => {
+  it("gives each ware in the shop's Buy list its card", async () => {
     const world = newWorld();
     member(world, 'F', 1, 1);
     world.party.gold = 500;
@@ -130,8 +184,7 @@ describe('weighing a ware for the member at the counter', () => {
     await shop(world, io, 3, 0);
     const buy = menus.find((m) => m.some((o) => o.key === 'C' && o.label.includes('Mace')))!;
     const mace = buy.find((o) => o.key === 'C')!;
-    expect(mace.hint).toBe("3 more damage a hit than Kaix's Dagger");
-    expect(mace.hintColour).toBe(GREEN);
-    expect(buy.find((o) => o.key === 'B')!.hint).toBe('Kaix has one readied');
+    expect(rows(mace.card!)).toContain('Damage       +3 [better]');
+    expect(rows(buy.find((o) => o.key === 'B')!.card!)[1]).toBe('In hand now [dim]');
   });
 });
