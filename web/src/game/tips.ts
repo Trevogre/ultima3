@@ -17,89 +17,105 @@ export const TIPS: Tip[] = [
   {
     topic: 'First steps',
     text: [
-      "A new party starts a few steps west of Lord British's castle, by the town of Britain. Walk into the king.",
-      'Walk into townsfolk to talk. What they tell of the quest goes in the Journal.',
-      'Help, in this menu, lists the keys and buttons.',
+      "A new party starts next to Lord British's castle and the town of Britain.",
+      'Go visit Lord British first!',
+      'Walk into townsfolk to talk. Notes are saved to the Journal.',
     ],
   },
   {
     topic: 'Levels',
     text: [
-      'Fights give experience: a level for every 100 points.',
-      'Only Lord British grants a level, and 100 hit points with it. An L by a name (blue with the Standard tiles) says one is waiting.',
-      'After a few he asks for the Mark of Kings. The most is 25.',
+      'Fights give experience. A level is earned every 100 XP.',
+      'A character with an L or blue name can level up - go visit Lord British!',
+      'Levels increase max hit points by 100.',
+      'Abilities are raised at shrines, not by leveling.',
     ],
   },
   {
     topic: 'Food',
     text: [
-      'The party eats as it travels; F, on the top border, is what is left.',
-      'Grocers sell food at a gold piece a ration. Out of food, members go hungry: Starving, in Gameplay, says how hard that is.',
+      'The party eats as it travels. F: shows remaining food.',
+      'Grocers sell food at a gold piece a ration.',
+      'Out of food, the party starves!',
+      'Gameplay -> Starving sets the starvation penalty.',
     ],
   },
   {
     topic: 'Healing',
     text: [
       'Members heal a little as the party travels.',
-      'Healers cure poison for 100 gold, heal for 200, raise the dead for 500 and restore ashes for 900.',
+      'Healers cure poison, heal, raise the dead and restore ashes.',
+      "There is a healer in Lord British's castle.",
       "With a member hurt, the command menu puts a caster's heal first.",
     ],
   },
   {
     topic: 'Casters',
     text: [
-      "A wizard's mana grows back to its intelligence, a cleric's to its wisdom. Paladins, larks and the other mixed classes get half.",
-      'The spell list greys a spell its caster cannot pay for.',
+      "A wizard's mana grows back to its intelligence, a cleric's to its wisdom.",
+      'Paladins, larks and the other mixed classes get half.',
+      'The spell list greys a spell if the caster lacks sufficient mana.',
+      'Mana grows back as the party travels.',
     ],
   },
   {
     topic: 'Chests',
     text: [
-      'Beaten monsters leave chests: gold, and now and then arms. About half are trapped, with acid, poison, a bomb or gas.',
-      'Safe chest, a cleric spell, opens one without its trap. On a chest, the menu offers it.',
+      'Defeated monsters leave treasure chests.',
+      'About half are trapped with acid, poison, a bomb or gas!',
+      'Safe chest, a cleric spell, opens one without springing a trap.',
     ],
   },
   {
     topic: 'Guilds',
     text: [
-      'Guilds sell keys (50 gold), five torches (30), powders (90) and gems (75).',
-      'A key opens a locked door: walk into it. A powder stops the foes in a fight for ten rounds (Negate time). A gem shows a map (Peer at gem).',
+      'Guilds sell keys, torches, powders and gems. Keys open locked doors.',
+      'Powders can pause time in a combat!',
+      'Gems can show a map of the area you are in.',
+      'Grey is about 60 steps south-west of the castle and has a guild.',
     ],
   },
   {
     topic: 'Dungeons',
     text: [
-      'Dungeons are dark. A torch (Ignite) burns for 255 turns, the Light spell for 10, Long light for 250.',
-      'Klimb and Descend take the ladders.',
+      'Dungeons are dark.',
+      'A torch (Ignite) burns for 255 turns.',
+      'The Light spell activates for 10 turns, Long light for 250.',
+      'Klimb and Descend to activate ladders.',
     ],
   },
   {
     topic: 'Fights',
     text: [
-      'Walk into a monster to fight it. A fight has no way out: pick them with care.',
-      'Timer, in Gameplay, sets how long a turn waits. Auto combat plays the fight for you.',
-      'If the whole party falls, the game offers the last save again.',
+      "A fight has no way out - you can't run away!",
+      'Gameplay -> Timer sets how long a turn waits before automatically passing.',
+      'Auto combat plays the fight for you.',
+      'If the whole party falls, you can reload or go back to Lord British.',
     ],
   },
   {
     topic: 'Ships and horses',
     text: [
-      'No one sells ships. Attack a pirate ship from the shore: with its crew beaten, Board the frigate they leave.',
+      'No one sells ships.',
+      'Attack a pirate ship from the shore!',
+      'Board the frigate they leave.',
       'Horse dealers sell a horse for each member, 200 gold a head.',
     ],
   },
   {
     topic: 'Stats',
     text: [
-      "Strength, dexterity, intelligence and wisdom rise only at Ambrosia's shrines, for gold.",
-      "Each stops at its race's limit. Gold paid past it is lost.",
+      "Strength, dexterity, intelligence and wisdom rise only at Ambrosia's shrines.",
+      "Each stops at its race's limit.",
+      'Gold paid past it is lost.',
     ],
   },
   {
     topic: 'Saving',
     text: [
-      'The game saves itself at every town, castle and dungeon door. Quit and save, in this menu, saves on the surface.',
-      'Export game, on the title screen, keeps a copy as a file.',
+      'The game saves itself at every town, castle and dungeon door.',
+      'Quit and save saves on the surface.',
+      'Export game on the title screen to keep a copy as a file.',
     ],
   },
 ];
