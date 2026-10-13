@@ -94,6 +94,15 @@ export const TIPS: Tip[] = [
     ],
   },
   {
+    topic: 'Monsters',
+    text: [
+      'The spell Repel orcs also affects goblins and trolls.',
+      'The spell Repel undead affects ghouls and zombies.',
+      'Both Repel spells are free, but get one try a fight.',
+      'Many monsters poison - stay near a healer until you can cure poison.',
+    ],
+  },
+  {
     topic: 'Ships and horses',
     text: [
       'No one sells ships.',
