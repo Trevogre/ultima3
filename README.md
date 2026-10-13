@@ -567,6 +567,32 @@ Every release, with the desktop and Android downloads, is on the
 web version is updated with each release, so it runs the same game as the
 apps.
 
+### v1.0.50, October 13, 2026
+
+- A map of what the party has seen replaces the cloth map from the box.
+  View map (# on a keyboard, or the command menu, in dungeons and Ambrosia
+  too) shows Sosaria, Ambrosia and each town and castle whole on the
+  screen in the tile set's own tiles, filled in square by square from
+  what has been in the party's line of sight. Sosaria's unexplored land
+  and sea are a chart of its coasts in ink on paper. The towns and Lord
+  British's castle are inked on it from the start as "Undiscovered";
+  places are named once the party has been inside, A opens the map of a
+  town or castle it has been in, and every moongate it has come out of
+  is marked with the moon that opens it.
+- In a dungeon L now changes the view, called First person, 1st person +
+  map and Top down. Top down and the small map keep the party in the
+  middle and the level round it. The levels wrap, as they always did: the
+  wall at a level's edge is now drawn beside the party, not on the far
+  side of the map. View map shows the whole level, still.
+- The Pause menu is shorter: Auto combat, then Visuals (tiles and
+  scanlines), Gameplay (input, poison, starving, balanced XP and the
+  timer) and Audio (sound effects, music and their levels), then Tips,
+  Help and Cheats. Cheats moved there from the Help pages; the title's
+  Settings has the same lists, without Cheats.
+- The Tips are shorter, one fact to a paragraph, with a new Monsters
+  topic: Repel orcs also works on goblins and trolls, Repel undead on
+  ghouls and zombies, and both are free but get one try a fight.
+
 ### v1.0.48, October 12, 2026
 
 - The demon from the 1983 box stays up for at least 3 seconds as the game
