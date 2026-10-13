@@ -183,6 +183,8 @@ export class Screen implements GameIO {
   private overlayShown = false;
   /** Auto-map: the secret-door piece (a wall with one pixel out of place), per tile set. */
   private secretDoorPiece: HTMLCanvasElement | null = null;
+  /** The frame's light and dark edge colours in the tile set in use (`chrome`), read once a set. */
+  private chromeColours: { light: string; dark: string } | null = null;
   private dungeonRenderer: DungeonRenderer | null;
   /** A spell's white pulse over part of the view, while it lasts (cells). */
   private pulse: { x: number; y: number; w: number; h: number } | null = null;
@@ -390,6 +392,7 @@ export class Screen implements GameIO {
     this.gfx = gfx;
     this.greenFigures.clear();
     this.secretDoorPiece = null;
+    this.chromeColours = null;
     this.dungeonRenderer = DungeonRenderer.forSet(gfx);
     this.redrawAll();
   }
@@ -1375,27 +1378,30 @@ export class Screen implements GameIO {
       ctx.lineWidth = Math.max(2, sq / 5);
       ctx.strokeRect(x - 1, y - 1, sq + 2, sq + 2);
     }
-    // The cursor: brackets round the mark it is on, three squares across.
+    // The cursor: brackets round the mark it is on, three squares across, bevelled as the frame is - each arm on its
+    // top or left in the frame's light edge, each on its bottom or right in its dark one - two pixels thick.
     const chosen = marks[selected];
     if (chosen) {
       const [x, y] = corner(chosen);
       const r = sq * 1.5;
       const [cx, cy] = [x + sq / 2, y + sq / 2];
-      const arm = r * 0.6;
-      ctx.strokeStyle = '#ffe040';
-      ctx.lineWidth = Math.max(2, sq / 5);
-      ctx.beginPath();
-      for (const [sx, sy] of [
-        [-1, -1],
-        [1, -1],
-        [1, 1],
-        [-1, 1],
-      ]) {
-        ctx.moveTo(cx + sx * r, cy + sy * (r - arm));
-        ctx.lineTo(cx + sx * r, cy + sy * r);
-        ctx.lineTo(cx + sx * (r - arm), cy + sy * r);
-      }
-      ctx.stroke();
+      const arm = Math.round(r * 0.6);
+      const w = Math.max(2, Math.round((2 * cell) / 32)); // two of the Standard sheet's pixels, a cell being 32 of them
+      const { light, dark } = this.chrome();
+      const [left, top] = [Math.round(cx - r), Math.round(cy - r)];
+      const [right, bottom] = [Math.round(cx + r) - w, Math.round(cy + r) - w];
+      const bar = (colour: string, bx: number, by: number, bw: number, bh: number) => {
+        ctx.fillStyle = colour;
+        ctx.fillRect(bx, by, bw, bh);
+      };
+      bar(light, left, top, arm, w); // top left
+      bar(light, left, top, w, arm);
+      bar(light, right + w - arm, top, arm, w); // top right
+      bar(dark, right, top, w, arm);
+      bar(dark, left, bottom, arm, w); // bottom left
+      bar(light, left, bottom + w - arm, w, arm);
+      bar(dark, right + w - arm, bottom, arm, w); // bottom right
+      bar(dark, right, bottom + w - arm, w, arm);
     }
     // The legend, in one box beside the map's where the party's boxes and the messages are (closing the map draws
     // the frame again as it was).
@@ -2256,6 +2262,35 @@ export class Screen implements GameIO {
       if (s !== 'D' && s !== 'A') return m;
     }
     return undefined;
+  }
+
+  /**
+   * The frame's two edge colours in the tile set in use: the lightest down its top half (the light its top and left
+   * catch) and the darkest down its bottom half (the shade on its bottom and right), read from the frame's straight
+   * piece, for the map's cursor.
+   */
+  private chrome(): { light: string; dark: string } {
+    if (this.chromeColours) return this.chromeColours;
+    const size = this.gfx.uiSize;
+    const off = document.createElement('canvas');
+    off.width = off.height = size;
+    const octx = off.getContext('2d')!;
+    this.gfx.drawUiPiece(octx, Piece.Horizontal - 1, 0, 0, 0, size);
+    const column = octx.getImageData(Math.floor(size / 2), 0, 1, size).data;
+    let [light, dark] = [
+      [255, 255, 255],
+      [0, 0, 0],
+    ];
+    let [most, least] = [-1, Infinity];
+    for (let y = 0; y < size; y++) {
+      const [r, g, b, a] = column.slice(y * 4, y * 4 + 4);
+      if (a < 128) continue;
+      const lum = 0.299 * r + 0.587 * g + 0.114 * b;
+      if (y < size / 2 && lum > most) [most, light] = [lum, [r, g, b]];
+      if (y >= size / 2 && lum < least) [least, dark] = [lum, [r, g, b]];
+    }
+    this.chromeColours = { light: `rgb(${light.join(',')})`, dark: `rgb(${dark.join(',')})` };
+    return this.chromeColours;
   }
 
   /** The wall piece with one pixel (one Apple-scale pixel, whatever the sheet's size) turned black. */
