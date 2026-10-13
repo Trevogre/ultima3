@@ -1382,9 +1382,12 @@ export class Screen implements GameIO {
     // edge outside all round, its light edge inside, a band each - so that it reads as centred on dark ground and
     // light alike (lit as the frame is, the dark bottom and right sank into dark ground and pulled it up and left).
     // Where two arms meet they are mitred: a pixel of the corner nearer the cursor's top or bottom edge than its side
-    // is the arm across's, the rest (the diagonal too) the side arm's.
+    // is the arm across's, the rest (the diagonal too) the side arm's. Where the party is all there is to mark (a
+    // dungeon's level, a town's or a castle's map) there is nothing to step between and no cursor: its blinking box
+    // says where it is.
     const chosen = marks[selected];
-    if (chosen) {
+    const places = marks.length > 1;
+    if (chosen && places) {
       const [x, y] = corner(chosen);
       const r = sq * 1.5;
       const [cx, cy] = [x + sq / 2, y + sq / 2];
@@ -1455,18 +1458,19 @@ export class Screen implements GameIO {
         this.drawMoonMark((LEFT + 1) * cell, (row + 0.6) * cell, cell * 0.55, chosen.phase);
       }
     }
+    // The keys that do something on this page: stepping between places and back to the party only where there are any.
     const keys = can.controller
       ? [
-          'D-pad: places',
+          places ? 'D-pad: places' : '',
           chosen?.opens !== undefined ? 'A: its map' : '',
-          'Y: the party',
+          places ? 'Y: the party' : '',
           can.more ? 'X: next map' : '',
           can.back ? 'B: back' : 'B: close',
         ]
       : [
-          'Arrows: places',
+          places ? 'Arrows: places' : '',
           chosen?.opens !== undefined ? 'Enter: its map' : '',
-          'Space: party',
+          places ? 'Space: party' : '',
           can.more ? 'X: next map' : '',
           can.back ? 'Bksp: back' : 'Esc: close',
         ];
