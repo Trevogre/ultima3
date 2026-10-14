@@ -36,7 +36,7 @@ import { commandMenu, hasMagic } from '../game/context.ts';
 import { memberShape } from '../game/combat.ts';
 import { TILE_SETS, helpPages, PAGE_ROWS, PAGE_WIDTH } from './help.ts';
 import { journalCard, journalSnapshot, journalTop, wordCard, type JournalLine } from '../game/journal.ts';
-import { TIPS, tipsPage } from '../game/tips.ts';
+import { TIPS, tipPages, type Tip } from '../game/tips.ts';
 import { CHEATS } from '../game/cheats.ts';
 import { Location } from '../game/party.ts';
 import { buildViewport, VIEW_SIZE, VIEW_CENTRE, type Viewport } from '../game/viewport.ts';
@@ -1220,33 +1220,50 @@ export class Screen implements GameIO {
   }
 
   /**
-   * Tips (the Pause menu and the title's Settings): pointers for a new
-   * player, one page over the map as the journal is. Every topic is a
-   * heading, the one under the cursor opened to its text; Up and Down move
-   * the cursor, the page scrolling to keep it in view, and Escape (B) closes.
+   * Tips (the Pause menu and the title's Settings): pointers for a new player, one page over the map as the journal
+   * is - the topics, a list; A (Enter, Right) opens the one under the cursor to its text, B (Backspace) comes back
+   * from it and on the list closes, Escape closes from either.
    */
   private async showTips(): Promise<void> {
-    const controller = this.inputMode === 'controller';
     const wasCovered = this.openPage();
     let selected = 0;
-    let top = 0;
     try {
       for (;;) {
-        const page = tipsPage(TIPS, selected, PAGE_WIDTH, wrapText);
-        const maxTop = Math.max(0, page.lines.length - PAGE_ROWS);
-        if (page.cursorLine < top) top = page.cursorLine;
-        // The opened topic's text in view below its heading, as much of it as the page holds.
-        if (page.openEnd > top + PAGE_ROWS) top = Math.min(page.cursorLine, page.openEnd - PAGE_ROWS);
-        top = Math.max(0, Math.min(maxTop, top));
-        this.drawPage('Tips', page.lines.slice(top), [controller ? 'B close' : 'Esc close', ''], 'Up/Down: topics', page.cursorLine - top);
+        this.drawPage(
+          'Tips',
+          TIPS.map((t) => t.topic),
+          [],
+          '',
+          selected,
+        );
         const key = await this.readKey();
-        if (key === Key.Escape || key === Key.B) break;
+        if (key === null) continue;
+        if (key === Key.Escape || key === Key.B || key === Key.Backspace) break;
         if (key === Key.Up) selected = (selected + TIPS.length - 1) % TIPS.length;
         else if (key === Key.Down) selected = (selected + 1) % TIPS.length;
+        else if ((key === Key.A || key === Key.Enter || key === Key.Right) && !(await this.readTip(TIPS[selected]))) break;
       }
     } finally {
       this.closePage(wasCovered);
     }
+  }
+
+  /**
+   * A topic's text, a page at a time (tips.ts tipPages), its name on the page's top border: A (Enter, Right) turns
+   * the page, and from the last comes back to the topics, as B (Backspace, Left) does from any page. False where
+   * Escape closed Tips altogether.
+   */
+  private async readTip(tip: Tip): Promise<boolean> {
+    const pages = tipPages(tip, PAGE_WIDTH, PAGE_ROWS, wrapText);
+    for (let index = 0; index < pages.length; ) {
+      this.drawPage(tip.topic, pages[index], []);
+      const key = await this.readKey();
+      if (key === null) continue;
+      if (key === Key.Escape) return false;
+      if (key === Key.B || key === Key.Backspace || key === Key.Left) return true;
+      if (key === Key.A || key === Key.Enter || key === Key.Right) index++;
+    }
+    return true;
   }
 
   /** Print a sentence to the message area, wrapped to its sixteen columns (journal hints, cheat confirmations). */

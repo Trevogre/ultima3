@@ -2,8 +2,8 @@
  * tips.ts
  *
  * Pointers for a new player, this port's own: how the game works, without
- * the quest's answers (those are the journal's). The Tips page in the Pause
- * menu lists the topics, the one under the cursor opened to its text.
+ * the quest's answers (those are the journal's). Tips, in the Pause menu,
+ * lists the topics; A opens one to its text, a page at a time.
  * Prices, places and numbers are as the shop, map and rules code has them.
  */
 
@@ -129,38 +129,24 @@ export const TIPS: Tip[] = [
   },
 ];
 
-/** The Tips page: every topic's heading, the selected one opened to its text. */
-export interface TipsPage {
-  lines: string[];
-  /** The line of the selected topic's heading. */
-  cursorLine: number;
-  /** The line after the selected topic's text. */
-  openEnd: number;
-}
-
 /**
- * Lay out the Tips page, the topic at `selected` (clamped to the list)
- * opened to its paragraphs. `width` is the page's width in characters;
- * `wrap` wraps a paragraph to it.
+ * A topic's text as pages of at most `rows` lines of `width` characters: its paragraphs wrapped (`wrap`), a blank
+ * line between them, and a paragraph that would not fit in the rest of a page starting the next (one longer than a
+ * whole page is cut where each page ends).
  */
-export function tipsPage(
-  tips: Tip[],
-  selected: number,
-  width: number,
-  wrap: (text: string, width: number, max: number) => string[],
-): TipsPage {
-  const lines: string[] = [];
-  let cursorLine = 0;
-  let openEnd = 0;
-  const pick = Math.max(0, Math.min(tips.length - 1, selected));
-  tips.forEach((tip, i) => {
-    if (i === pick) cursorLine = lines.length;
-    lines.push(`- ${tip.topic}`);
-    if (i !== pick) return;
-    for (const paragraph of tip.text) lines.push(...wrap(paragraph, width, Infinity), '');
-    openEnd = lines.length;
-  });
-  return { lines, cursorLine, openEnd };
+export function tipPages(tip: Tip, width: number, rows: number, wrap: (text: string, width: number, max: number) => string[]): string[][] {
+  const pages: string[][] = [[]];
+  let page = pages[0];
+  for (const paragraph of tip.text) {
+    const lines = wrap(paragraph, width, Infinity);
+    if (page.length && page.length + 1 + lines.length > rows) pages.push((page = []));
+    else if (page.length) page.push('');
+    for (const line of lines) {
+      if (page.length === rows) pages.push((page = []));
+      page.push(line);
+    }
+  }
+  return pages;
 }
 
 /** Said once, on a new game's first turn (Game.run), in the message area's sixteen columns. */

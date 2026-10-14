@@ -1,33 +1,31 @@
 import { describe, it, expect } from 'vitest';
 import { FakeIO, newWorld, savedCopy } from './helpers.ts';
-import { TIPS, TIPS_NUDGE, tipsPage } from '../src/game/tips.ts';
+import { TIPS, TIPS_NUDGE, tipPages, type Tip } from '../src/game/tips.ts';
 import { wrapText } from '../src/ui/menus.ts';
-import { PAGE_WIDTH } from '../src/ui/help.ts';
+import { PAGE_ROWS, PAGE_WIDTH } from '../src/ui/help.ts';
 import { Game } from '../src/game/game.ts';
 import { restore } from '../src/game/save.ts';
 import { World } from '../src/game/world.ts';
 
-describe('the Tips page', () => {
-  it('lists every topic, the selected one opened to its text, all within the page', () => {
-    const page = tipsPage(TIPS, 2, PAGE_WIDTH, wrapText);
-    expect(page.lines.filter((l) => l.startsWith('- '))).toEqual(TIPS.map((t) => `- ${t.topic}`));
-    expect(page.lines[page.cursorLine]).toBe(`- ${TIPS[2].topic}`);
-    expect(page.lines[page.openEnd]).toBe(`- ${TIPS[3].topic}`);
-    const opened = page.lines
-      .slice(page.cursorLine + 1, page.openEnd)
-      .join(' ')
-      .replace(/\s+/g, ' ')
-      .trim();
-    expect(opened).toBe(TIPS[2].text.join(' '));
-    for (let i = 0; i < TIPS.length; i++)
-      for (const line of tipsPage(TIPS, i, PAGE_WIDTH, wrapText).lines) expect(line.length, line).toBeLessThanOrEqual(PAGE_WIDTH);
+describe("a Tips topic's pages", () => {
+  const pages = (tip: Tip, rows = PAGE_ROWS) => tipPages(tip, PAGE_WIDTH, rows, wrapText);
+
+  it('holds every paragraph, a blank line between, each line within the page', () => {
+    for (const tip of TIPS) {
+      const all = pages(tip).flat();
+      for (const line of all) expect(line.length, line).toBeLessThanOrEqual(PAGE_WIDTH);
+      expect(all.join(' ').replace(/\s+/g, ' ').trim(), tip.topic).toBe(tip.text.join(' '));
+    }
   });
 
-  it('keeps every opened topic short enough to show whole on the page', () => {
-    for (let i = 0; i < TIPS.length; i++) {
-      const page = tipsPage(TIPS, i, PAGE_WIDTH, wrapText);
-      expect(page.openEnd - page.cursorLine, TIPS[i].topic).toBeLessThanOrEqual(19); // PAGE_ROWS
-    }
+  it('keeps every topic short enough to show whole on one page', () => {
+    for (const tip of TIPS) expect(pages(tip), tip.topic).toHaveLength(1);
+  });
+
+  it('starts a paragraph that would not fit on the next page, and cuts one longer than a page', () => {
+    const tip: Tip = { topic: 'Test', text: ['one two', 'three four five six seven eight nine ten eleven'] };
+    const wrap = (text: string, width: number) => wrapText(text, width, Infinity);
+    expect(tipPages(tip, 12, 3, wrap)).toEqual([['one two'], ['three four', 'five six', 'seven eight'], ['nine ten', 'eleven']]);
   });
 });
 
