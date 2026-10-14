@@ -144,7 +144,7 @@ export async function transactToward(world: World, io: GameIO, dx: number, dy: n
     io.music(Music.Shop);
     if (!partyGoods) io.highlightMember(member, true);
     await shop(world, io, shopNumber, member);
-    journalCheck(world, io); // a guild or Dawn's magic arms found
+    journalCheck(world, io); // a guild or Dawn's magic arms found, a rumour or a verse heard
     io.highlightMember(member, false);
     world.music = previousMusic;
     io.music(previousMusic);

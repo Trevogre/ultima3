@@ -312,18 +312,21 @@ These apply whatever tile set and sound set are chosen.
 #### Journal, map and hints
 
 - A quest journal, which the Apple II never had, after the Ultima V
-  port's. The main quest lists the steps to Exodus: speak to the king,
-  the Marks of Kings, Fire and Force, the four cards, exotic arms, the
-  silver snake, the order of the cards, Exodus. After the king they may
-  be taken in any order, so each is shown once something has told of it,
-  and opens to every clue heard about it, as it was spoken. Beside it are
-  the places: Lord British's castle and the ten towns, with how many of
-  each one's clues have been heard; the seven dungeons, with what each
-  holds for the quest found; Ambrosia's four shrines and their cards; and
-  the words Other answers to. A card over the party panel says where the
-  highlighted line stands, and H (Y on a controller) prints a hint
-  written for this port. "Journal updated" prints when something real
-  changes.
+  port's. The main quest lists the steps to Exodus: speak to the king, the
+  Marks of Kings, Fire and Force, the four cards, exotic arms, the silver
+  snake, the order of the cards, Exodus. After the king they may be taken
+  in any order, so each is shown once something has told of it, and opens
+  to every clue heard about it, as it was spoken - townsfolk, pub rumours
+  and the oracle's verses alike. Beside it are the places: Lord British's
+  castle and the ten towns, with how many of each one's clues have been
+  heard (the towns on isles, and Dawn, a mystery until found or told of);
+  the seven dungeons, with what each holds for the quest found; and
+  Ambrosia's four shrines and their cards. Then the equipment to go and
+  get: a guild's supplies, the magic weapons and armour, a ship, and the
+  moongates come out of; and the words Other answers to. A card over the
+  party panel says where the highlighted line stands, and H (Y on a
+  controller) prints a hint written for this port. "Journal updated"
+  prints when something real changes.
 - Words for Other are learnt by hearing them said. On a controller, Other
   offers only the words learnt; a keyboard may type any word, as on the
   Apple II.

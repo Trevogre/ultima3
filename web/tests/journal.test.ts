@@ -85,7 +85,7 @@ describe('the journal', () => {
       'Towns           0/11',
       'Dungeons         0/7',
       'Mystery...',
-      'Equipment        0/4',
+      'Equipment        0/5',
       'Words            0/7',
     ]);
     // Lord British and Exodus are known from the start; the rest wait to be heard of.
@@ -301,7 +301,7 @@ describe('the journal', () => {
 
   it("Equipment: a guild, Dawn's magic weapons and armour, and a ship, each done once found", async () => {
     const { world, io } = inTown(407); // Grey
-    expect(labels(world, 'Equipment')).toEqual(['Supplies', 'Magic Weapons', 'Magic Armour', 'Ships']);
+    expect(labels(world, 'Equipment')).toEqual(['Supplies', 'Magic Weapons', 'Magic Armour', 'Ships', 'Mystery...']);
     expect(lineOf(world, 'Equipment', 'Supplies').about).toBe('Find a guild to get adventuring supplies.');
     io.keys = ['N'];
     await shop(world, io, 5, 0); // the guild: nothing bought
@@ -315,8 +315,14 @@ describe('the journal', () => {
     await shop(world, io, 3, 0);
     io.keys = ['N', 'B', Key.Escape];
     await shop(world, io, 4, 0);
-    expect(labels(world, 'Equipment')).toEqual(['Supplies        done', 'Magic Weapons   done', 'Magic Armour    done', 'Ships']);
-    expect(section(world, 'Equipment').label).toBe('Equipment        3/4');
+    expect(labels(world, 'Equipment')).toEqual([
+      'Supplies        done',
+      'Magic Weapons   done',
+      'Magic Armour    done',
+      'Ships',
+      'Mystery...',
+    ]);
+    expect(section(world, 'Equipment').label).toBe('Equipment        3/5');
   });
 
   it('boarding a ship marks Ships done and updates the journal', () => {
@@ -327,6 +333,35 @@ describe('the journal', () => {
     board(world, io);
     expect(lineOf(world, 'Equipment', 'Ships').label).toBe('Ships           done');
     expect(io.output).toContain('Journal updated');
+  });
+
+  it('the moongates are a mystery till told of or come out of, then counted', () => {
+    const world = newWorld();
+    expect(labels(world, 'Equipment').at(-1)).toBe('Mystery...');
+    hearClue(world, 'Pub:3'); // "The conjunction of the moons finds link!"
+    expect(lineOf(world, 'Equipment', 'Moongates').label).toBe('Moongates        0/8');
+    world.gatesKnown.push(7);
+    const gates = lineOf(world, 'Equipment', 'Moongates');
+    expect(gates.label).toBe('Moongates        1/8');
+    expect(gates.about).toContain('Come out of 1 of 8.');
+    expect(gates.hint).toContain('Time Awaits');
+  });
+
+  it("a pub's rumour and Radrion's verse are clues: the Lord of Time, and Devil Guard", async () => {
+    const { world, io } = inTown(MapId.FirstTown);
+    world.party.gold = 1000;
+    io.inputs = ['90']; // a drink for 90 gold: the best rumour
+    io.keys = ['N'];
+    await shop(world, io, 0, 0);
+    const order = lineOf(world, 'Main quest', "Cards' order");
+    expect(order.open?.text).toEqual(['A pub: Seek ye out the Lord of Time, and the one way is a sure find!']);
+    io.keys = ['3', 'N']; // 300 gold to Radrion: his third verse
+    await shop(world, io, 6, 0);
+    expect(world.journal.clues).toContain('Radrion:3');
+    expect(lineOf(world, 'Towns', 'Devil Guard').about).toBe('Heard of, not yet found.');
+    expect(lineOf(world, 'Main quest', 'Mark of Fire').open?.text).toContain(
+      "Radrion: Learn their use in Devil Guard, or death you'll surely bring.",
+    );
   });
 
   it("Ambrosia's shrines are named by the stat each raises, with the card found there", () => {

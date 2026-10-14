@@ -18,7 +18,7 @@
  *   the Time Lord met).
  * - Ambrosia: its four shrines, and the cards found in them.
  * - Equipment: what the party can go and get - a guild's supplies, Dawn's magic weapons and armour, a ship - each
- *   done once found. (The exotic arms are a main-quest step.)
+ *   done once found, and the moongates come out of. (The exotic arms are a main-quest step.)
  * - Words: the words Other answers to, each learnt by being heard said (CLUES' `word`). A controller's Other offers
  *   only these (interact.ts); a keyboard may type anything, as on the Apple II.
  *
@@ -101,14 +101,16 @@ const HIDDEN_TOWNS = [DAWN, DEVIL_GUARD, FAWN, DEATH_GULCH];
 
 /**
  * A clue: a line the party may hear that bears on the quest, and what hearing it does - the Other word it teaches,
- * the steps of the main quest it tells of, the place it makes known. A townsperson's is "<the town's name in the
- * game's files>#<their number in its talk>", its words read from the talk at the time; the others carry theirs.
+ * the steps of the main quest it tells of, what it makes known. A townsperson's is "<the town's name in the
+ * game's files>#<their number in its talk>", its words read from the talk at the time; a pub's rumour "Pub:<n>" and
+ * Radrion's verse "Radrion:<n>" from theirs (the same in every pub and at every oracle, so counted for no town); the
+ * others carry theirs.
  */
 interface Clue {
   word?: string;
   quest?: Step[];
-  /** What it makes known: Ambrosia, or a hidden town (HIDDEN_TOWNS) by its map id. */
-  reveals?: 'ambrosia' | number;
+  /** What it makes known: Ambrosia, the moongates, or a hidden town (HIDDEN_TOWNS) by its map id. */
+  reveals?: ('ambrosia' | 'moongates' | number)[];
   /** Who says it, and what, where it is not a townsperson's line. */
   from?: string;
   text?: string;
@@ -116,18 +118,18 @@ interface Clue {
 
 export const CLUES: Record<string, Clue> = {
   'LB:mark': { quest: ['kings'], from: 'Lord British', text: 'SEEK YE, THE MARK OF KINGS!' },
-  'Lord British Castle#1': { reveals: DAWN },
+  'Lord British Castle#1': { reveals: [DAWN] },
   'Lord British Castle#6': { quest: ['cards', 'order'] },
-  'LCB Towne#2': { reveals: 'ambrosia' },
+  'LCB Towne#2': { reveals: ['ambrosia'] },
   'LCB Towne#3': { quest: ['exotics'] },
   'LCB Towne#4': { quest: ['snake'] },
-  'LCB Towne#5': { reveals: DAWN },
+  'LCB Towne#5': { reveals: [DAWN] },
   'Moon#2': { quest: ['cards'] },
   'Moon#3': { word: 'BRIBE' },
   // "Peace be with you": pax, peace - the word that calms, though the line never says it.
   'Moon#5': { word: 'PAXUM' },
-  'Moon#6': { reveals: 'ambrosia' },
-  'Moon#7': { reveals: DAWN },
+  'Moon#6': { reveals: ['ambrosia'] },
+  'Moon#7': { reveals: [DAWN] },
   'Yew#1': { word: 'SEARCH', quest: ['cards'] },
   'Yew#2': {},
   'Yew:pray': { word: 'EVOCARE', quest: ['snake'], from: 'The circle of light', text: "YELL 'EVOCARE'" },
@@ -139,13 +141,13 @@ export const CLUES: Record<string, Clue> = {
   'West Montor#5': { word: 'SEARCH', quest: ['cards'] },
   'West Montor#6': { word: 'SEARCH', quest: ['cards'] },
   'Grey#3': { quest: ['exotics'] },
-  'Grey#4': { quest: ['exotics'], reveals: DAWN },
+  'Grey#4': { quest: ['exotics'], reveals: [DAWN] },
   'Grey#5': { quest: ['exotics'] },
   'Dawn#2': { word: 'DIG', quest: ['exotics'] },
   'Dawn#3': { word: 'DIG', quest: ['exotics'] },
   'Dawn#4': { word: 'DIG' },
   'Dawn#6': {},
-  'Dawn#7': { reveals: 'ambrosia' },
+  'Dawn#7': { reveals: ['ambrosia'] },
   'Devil Guard#1': { quest: ['kings'] },
   'Devil Guard#2': { quest: ['kings'] },
   'Devil Guard#3': { quest: ['kings'] },
@@ -162,9 +164,27 @@ export const CLUES: Record<string, Clue> = {
   'Death Gulch#4': { quest: ['snake'] },
   'Death Gulch#5': { quest: ['snake'] },
   // Fawn, misspelt: not counted, but the only lines outside Fawn to name it.
-  'Death Gulch#6': { reveals: FAWN },
-  'Death Gulch#7': { reveals: FAWN },
+  'Death Gulch#6': { reveals: [FAWN] },
+  'Death Gulch#7': { reveals: [FAWN] },
   TimeLord: { quest: ['order', 'exodus'], from: 'The Time Lord', text: 'THE ONE WAY IS LOVE, SOL, MOONS & DEATH, ALL ELSE FAILS.' },
+  // The pubs' rumours, the more paid the further down the list (shops.ts pub); "Thank you, kindly!" and the
+  // rumours of dungeons, fountains and the next Ultima tell of nothing here.
+  'Pub:1': { reveals: ['ambrosia'] },
+  'Pub:2': { reveals: [DAWN] },
+  'Pub:3': { reveals: ['moongates', DAWN] },
+  'Pub:5': { reveals: ['ambrosia'] },
+  'Pub:6': { reveals: ['ambrosia'], quest: ['cards'] },
+  'Pub:9': { quest: ['order'] },
+  // Radrion's rhyme, a verse for each hundred gold offered (shops.ts oracle); its opening line tells of nothing.
+  'Radrion:1': { quest: ['kings', 'cards'] },
+  'Radrion:2': { quest: ['kings', 'fire', 'force', 'snake'] },
+  'Radrion:3': { quest: ['kings', 'fire', 'force', 'snake'], reveals: [DEVIL_GUARD] },
+  'Radrion:4': { quest: ['cards'] },
+  'Radrion:5': { quest: ['cards'] },
+  'Radrion:6': { quest: ['cards'] },
+  'Radrion:7': { quest: ['cards', 'order'] },
+  'Radrion:8': { quest: ['order'] },
+  'Radrion:9': { quest: ['order'] },
   // The misty writing on a dungeon's level: "<the dungeon's map id>:<level>", its words read from the dungeon's talk.
   '415:2': { word: 'INSERT', quest: ['order'] },
   '415:3': { word: 'SEARCH', quest: ['cards'] },
@@ -189,7 +209,7 @@ const STEPS: { id: Step; name: string; hint: string }[] = [
   {
     id: 'exotics',
     name: 'Exotic arms',
-    hint: 'Both moons new, Dawn shows west of the Montors and tells of them. Other, DIG on the far north isle and the western isle, once per member.',
+    hint: 'Other, DIG once per member. Weapons: the islet east of Fawn, its east square. Armour: the islet east of Grey, its west square.',
   },
   {
     id: 'fire',
@@ -421,6 +441,8 @@ function heard(world: World, id: string): boolean {
 function clueText(world: World, id: string): string {
   const clue = CLUES[id];
   if (clue?.text) return clue.text;
+  const told = /^(Pub|Radrion):(\d)$/.exec(id);
+  if (told) return (world.resources.strings[told[1] as 'Pub' | 'Radrion'][Number(told[2])] ?? '').replace(/\s+/g, ' ').trim();
   const writing = /^(\d+):(\d+)$/.exec(id);
   if (writing) {
     const talk = world.resources.talk.get(Number(writing[1]));
@@ -434,6 +456,8 @@ function clueText(world: World, id: string): string {
 function clueFrom(world: World, id: string): string {
   const clue = CLUES[id];
   if (clue?.from) return clue.from;
+  if (id.startsWith('Pub:')) return 'A pub';
+  if (id.startsWith('Radrion:')) return 'Radrion';
   const writing = /^(\d+):(\d+)$/.exec(id);
   if (writing) return `${DUNGEONS.find((d) => d.id === Number(writing[1]))?.name ?? 'A dungeon'}, level ${writing[2]}`;
   const town = id.split('#')[0];
@@ -543,7 +567,7 @@ function townLine(world: World, town: (typeof TOWNS)[number]): JournalLine {
     seen = seen && world.surface.tiles[locationY[DAWN - 400] * 64 + locationX[DAWN - 400]] === MapValue.Town;
   }
   // Dawn and the isles' towns are mysteries till seen, entered or told of; the rest are named from the start.
-  if (HIDDEN_TOWNS.includes(town.id) && !entered && !seen && !heardOf(world, (c) => c.reveals === town.id)) {
+  if (HIDDEN_TOWNS.includes(town.id) && !entered && !seen && !heardOf(world, (c) => !!c.reveals?.includes(town.id))) {
     return mystery(town.hint);
   }
   if (!entered) {
@@ -624,16 +648,33 @@ const GUILDS = 'Guilds sell keys, torches, powders and gems: in Grey, a walk sou
 /** Dawn, for the magic arms' hints. */
 const DAWN_SHOPS = "One town's shops sell them: Dawn, in the forest west of the Montors, standing only while both moons are new.";
 
-/** The equipment the party can go and get, beyond what it starts with: each line done once found. */
-function equipment(world: World): JournalLine[] {
+/** The moongates' rule, for their hint. */
+const MOONGATES =
+  'Left moon: which gate stands. Right moon: where it leads. For Time Awaits, step in with the right moon one phase short of new.';
+
+/**
+ * The equipment the party can go and get, beyond what it starts with, each line done once found - and the
+ * moongates, a mystery till told of or come out of, done once all eight have been.
+ */
+function equipment(world: World): { lines: JournalLine[]; done: number } {
   const j = world.journal;
-  const line = (name: string, done: boolean, before: string, after: string, hint: string): JournalLine => ({
-    label: row(name, done ? 'done' : ''),
-    name,
-    about: done ? after : before,
-    hint,
-  });
-  return [
+  let done = 0;
+  const line = (name: string, found: boolean, before: string, after: string, hint: string): JournalLine => {
+    if (found) done++;
+    return { label: row(name, found ? 'done' : ''), name, about: found ? after : before, hint };
+  };
+  const gates = world.gatesKnown.length;
+  if (gates === 8) done++;
+  const moongates =
+    gates > 0 || heardOf(world, (c) => !!c.reveals?.includes('moongates'))
+      ? {
+          label: row('Moongates', `${gates}/8`),
+          name: 'Moongates',
+          about: `Come out of ${gates} of 8. One gate stands at a time, by the left moon; step in, and the right moon picks where you come out.`,
+          hint: MOONGATES,
+        }
+      : mystery(MOONGATES);
+  const lines = [
     line('Supplies', j.guild, 'Find a guild to get adventuring supplies.', 'Found a guild: keys, torches, powders and gems.', GUILDS),
     line(
       'Magic Weapons',
@@ -656,7 +697,9 @@ function equipment(world: World): JournalLine[] {
       'Boarded. A ship reaches the isles, and through the whirlpool, Ambrosia.',
       'No one sells ships. Attack a pirate ship from the shore, then board (B) the frigate it leaves.',
     ),
+    moongates,
   ];
+  return { lines, done };
 }
 
 /**
@@ -680,7 +723,7 @@ export function journalTop(world: World): JournalLine[] {
     j.ambrosia ||
     world.party.location === Location.Ambrosia ||
     world.autoMap.hasMap(MapId.Ambrosia) ||
-    heardOf(world, (c) => c.reveals === 'ambrosia');
+    heardOf(world, (c) => !!c.reveals?.includes('ambrosia'));
   const shrineLines = ambrosiaLines(world);
   const cards = shrineLines.filter((_, i) => holders(world, 1 << i).length > 0).length;
   const words = WORDS.map((w) =>
@@ -720,11 +763,11 @@ export function journalTop(world: World): JournalLine[] {
         }
       : mystery(ambrosiaHint),
     {
-      label: row('Equipment', `${gear.filter((l) => l.label.endsWith('done')).length}/${gear.length}`),
+      label: row('Equipment', `${gear.done}/${gear.lines.length}`),
       name: 'Equipment',
       about: 'What the party can go and get, beyond what it sets out with.',
       hint: 'Each line has its own hint.',
-      open: { title: 'Equipment', lines: gear },
+      open: { title: 'Equipment', lines: gear.lines },
     },
     {
       label: row('Words', `${words.filter((w) => w.label !== MYSTERY).length}/${WORDS.length}`),

@@ -15,6 +15,7 @@ import { PlayerRecord } from './player.ts';
 import { addGold } from './actions.ts';
 import { FOOD_MAX } from './party.ts';
 import { gearCard } from './cards.ts';
+import { hearClue } from './journal.ts';
 
 const Msg = {
   WelcomePub: 185,
@@ -123,7 +124,9 @@ async function pub(world: World, io: GameIO): Promise<void> {
       return error(io);
     }
     world.party.gold -= paid;
-    io.print(world.resources.strings.Pub[Math.min(9, Math.floor(paid / 10))]);
+    const rumour = Math.min(9, Math.floor(paid / 10));
+    io.print(world.resources.strings.Pub[rumour]);
+    hearClue(world, `Pub:${rumour}`); // the journal's, noted after (interact.ts)
     io.printMessage(Msg.AnotherDrink);
     if (!(await yesNo(io))) {
       io.print('N');
@@ -445,6 +448,7 @@ async function oracle(world: World, io: GameIO): Promise<void> {
     }
     world.party.gold -= cost;
     io.print(world.resources.strings.Radrion[digit]);
+    hearClue(world, `Radrion:${digit}`); // the journal's, noted after (interact.ts)
     io.printMessage(Msg.MoreOffering);
     if (!(await yesNo(io))) {
       io.print('N\n');
