@@ -57,8 +57,12 @@ export function mapPages(world: World): MapPage[] {
   return pages;
 }
 
-/** A place's name from the game's files, its Macintosh apostrophe made plain. */
+/** The town beside Lord British's castle, "LCB Towne" in the game's files: Britain, as the Tips and journal call it. */
+const BRITAIN = 402;
+
+/** A place's name from the game's files, its Macintosh apostrophe made plain (Britain's the port's). */
 export function placeName(world: World, id: number): string {
+  if (id === BRITAIN) return 'Britain';
   return (world.resources.mapNames.get(id) ?? '?').replace(/[Õ’]/g, "'");
 }
 

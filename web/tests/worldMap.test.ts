@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { newWorld, FakeIO } from './helpers.ts';
 import { AutoMap, recordView, MAP_SIDE, type AutoMapStore } from '../src/game/automap.ts';
-import { coastSegments, mapPages, marksOn, stepMark, type MapMark } from '../src/game/worldMap.ts';
+import { coastSegments, mapPages, marksOn, pageTitle, stepMark, type MapMark } from '../src/game/worldMap.ts';
 import { buildViewport } from '../src/game/viewport.ts';
 import { peerGem } from '../src/game/actions.ts';
 import { Location } from '../src/game/party.ts';
@@ -150,6 +150,16 @@ describe("the map's marks", () => {
     const marks = marksOn(world, { kind: 'map', id: MapId.Sosaria });
     expect(marks.find((m) => m.opens === YEW)).toMatchObject({ label: 'Yew', detail: 'A: its map' });
     expect(marks.find((m) => m.kind === 'dungeon')).toMatchObject({ label: 'Dungeon Doom', opens: undefined, detail: 'Been in' });
+  });
+
+  it('names the town by Lord British\'s castle Britain, not "LCB Towne" as the game\'s files do', () => {
+    const world = newWorld();
+    world.autoMap = new AutoMap();
+    world.autoMap.markSquares(MapId.Sosaria, [at(world, MapId.FirstTown)]);
+    world.autoMap.markSquares(MapId.FirstTown, [[1, 32]]);
+    const marks = marksOn(world, { kind: 'map', id: MapId.Sosaria });
+    expect(marks.find((m) => m.opens === MapId.FirstTown)).toMatchObject({ label: 'Britain' });
+    expect(pageTitle(world, { kind: 'map', id: MapId.FirstTown })).toBe('Britain');
   });
 
   it('shows Dawn only while it stands, or once the party has been in it', () => {
