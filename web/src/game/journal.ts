@@ -83,6 +83,8 @@ export const CLUES: Record<string, Clue> = {
   'LCB Towne#5': { reveals: 'dawn' },
   'Moon#2': { quest: ['cards'] },
   'Moon#3': { word: 'BRIBE' },
+  // "Peace be with you": pax, peace - the word that calms, though the line never says it.
+  'Moon#5': { word: 'PAXUM' },
   'Moon#6': { reveals: 'ambrosia' },
   'Moon#7': { reveals: 'dawn' },
   'Yew#1': { word: 'SEARCH', quest: ['cards'] },
@@ -186,7 +188,7 @@ const TOWNS: { id: number; name: string; clues: string[]; hint: string }[] = [
     clues: ['LCB Towne#2', 'LCB Towne#3', 'LCB Towne#4', 'LCB Towne#5'],
     hint: "Beside Lord British's castle, where the party starts.",
   },
-  { id: 403, name: 'Moon', clues: ['Moon#2', 'Moon#3', 'Moon#6', 'Moon#7'], hint: 'In the far north-west. On foot.' },
+  { id: 403, name: 'Moon', clues: ['Moon#2', 'Moon#3', 'Moon#5', 'Moon#6', 'Moon#7'], hint: 'In the far north-west. On foot.' },
   {
     id: 404,
     name: 'Yew',
@@ -285,7 +287,7 @@ const CARDS = ['Love', 'Sol', 'Moons', 'Death'];
 
 /**
  * The words Other answers to that someone says, in the order Other offers them: what each does, and where it is
- * learnt. PAXUM, SCREAM and PISSOFF nobody says, so they are never offered (a keyboard may still type them).
+ * learnt. SCREAM and PISSOFF nobody says, so they are never offered (a keyboard may still type them).
  */
 export const WORDS: { word: string; about: string; hint: string }[] = [
   {
@@ -306,6 +308,11 @@ export const WORDS: { word: string; about: string; hint: string }[] = [
   },
   { word: 'INSERT', about: "In Exodus' castle, sets a card in its slot.", hint: 'Taught in East Montor.' },
   { word: 'DIG', about: 'Digs where something lies buried.', hint: 'Taught in Dawn, which stands only while both moons are new.' },
+  {
+    word: 'PAXUM',
+    about: 'In a town or castle, calms those nearby who have turned on the party. Pax: peace.',
+    hint: 'Learnt in Moon, from one who wishes the party peace.',
+  },
 ];
 
 /** A line of the journal. */
