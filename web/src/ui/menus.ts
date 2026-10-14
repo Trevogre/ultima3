@@ -122,9 +122,13 @@ export const BUTTON_SHORTCUTS: Record<CommandScope, { B: string; X: string; Y: s
 
 /** Rows of the on-screen keyboard used for typing names and words with a controller. */
 export const ON_SCREEN_KEYBOARD = ['ABCDEFGHIJKLM', 'NOPQRSTUVWXYZ', 'abcdefghijklm', 'nopqrstuvwxyz', "0123456789 '-"];
-/** The keyboard's delete and done keys: plain ASCII, since every set's font has only the 96 from space up. */
+/** The keyboard's delete and done keys, by the characters that stand for them; drawn as DEL and DONE (OSK_LABELS). */
 export const OSK_DELETE = '<';
 export const OSK_DONE = '>';
+/** Every key of the on-screen keyboard, in order: the letters' rows, then DEL and DONE. */
+export const OSK_KEYS = [...ON_SCREEN_KEYBOARD.join(''), OSK_DELETE, OSK_DONE];
+/** How the keyboard's delete and done keys read: DONE at the lower right, for a pad with no Y to finish with. */
+const OSK_LABELS: Record<string, string> = { [OSK_DELETE]: 'DEL', [OSK_DONE]: 'DONE' };
 
 /** A menu window's state, kept by the Screen and drawn every frame. */
 export interface MenuWindow {
@@ -148,6 +152,11 @@ export interface MenuWindow {
   disabled?: boolean[];
   /** Optional colour per item. */
   colours?: (string | undefined)[];
+  /**
+   * A grid's short last row laid across the window, each label whole: its first item at the left, its last at the
+   * right (the on-screen keyboard's DEL and DONE). The d-pad goes to the nearer of them from the row above.
+   */
+  spreadLastRow?: boolean;
 }
 
 const MAX_ROWS = 12;
@@ -181,6 +190,21 @@ export function layoutMenu(title: string, items: string[], columns = 1): MenuWin
     visibleRows,
     columns,
   };
+}
+
+/** The on-screen keyboard's window: the letters' grid, as wide as its one-letter keys need, then DEL and DONE. */
+export function layoutKeyboard(title: string): MenuWindow {
+  const menu = layoutMenu(title, OSK_KEYS, ON_SCREEN_KEYBOARD[0].length);
+  menu.items = OSK_KEYS.map((k) => OSK_LABELS[k] ?? k);
+  menu.spreadLastRow = true;
+  return menu;
+}
+
+/** Whether a grid's short last row is laid across the window (spreadLastRow), and where that row starts. */
+function spreadRow(menu: MenuWindow): number {
+  const n = menu.items.length;
+  const c = menu.columns;
+  return menu.spreadLastRow && c > 1 && n % c !== 0 ? Math.floor(n / c) * c : -1;
 }
 
 /** Border pieces in row 0 of the UI sheet (1-based numbers as in `DrawFramePiece`). */
@@ -217,13 +241,19 @@ export function drawMenu(ctx: CanvasRenderingContext2D, gfx: GraphicsSet, cell: 
   text(title, tx, y);
 
   const colWidth = Math.floor((width - 3) / menu.columns);
+  const spread = spreadRow(menu);
   for (let row = 0; row < menu.visibleRows; row++) {
     for (let col = 0; col < menu.columns; col++) {
       const index = (menu.top + row) * menu.columns + col;
       if (index >= menu.items.length) continue;
-      const px = x + 2 + col * colWidth;
+      let px = x + 2 + col * colWidth;
       const py = y + 1 + row;
-      const label = menu.items[index].slice(0, menu.columns > 1 ? colWidth - 1 : width - 4);
+      let label = menu.items[index].slice(0, menu.columns > 1 ? colWidth - 1 : width - 4);
+      if (spread >= 0 && index >= spread) {
+        // Laid across: whole labels, the last ending under the grid's last column.
+        label = menu.items[index];
+        if (index === menu.items.length - 1 && index > spread) px = x + 2 + (menu.columns - 1) * colWidth + 1 - label.length;
+      }
       text(label, px, py);
       if (index === menu.cursor) {
         // The cursor is an inverted cell to the left of the item.
@@ -300,6 +330,24 @@ export function moveCursor(menu: MenuWindow, key: string): boolean {
   const n = menu.items.length;
   const c = menu.columns;
   let next: number;
+  // A last row laid across the window: its first item stands under the first column, its last under the last, and
+  // the d-pad goes to whichever is nearer.
+  const spread = spreadRow(menu);
+  if (spread >= 0 && [Key.Up, Key.Down, Key.Left, Key.Right].includes(key as never)) {
+    const inLast = menu.cursor >= spread;
+    const colOf = (i: number) => (i < spread ? i % c : i === spread ? 0 : c - 1);
+    const nearer = (col: number) => (col < c / 2 ? spread : n - 1);
+    if (key === Key.Left || key === Key.Right) next = inLast ? (menu.cursor === spread ? n - 1 : spread) : -1;
+    else if (key === Key.Up) next = inLast ? spread - c + colOf(menu.cursor) : menu.cursor < c ? nearer(menu.cursor) : -1;
+    else next = inLast ? colOf(menu.cursor) : menu.cursor + c >= spread ? nearer(menu.cursor % c) : -1;
+    if (next >= 0) {
+      menu.cursor = next;
+      const row = Math.floor(next / c);
+      if (row < menu.top) menu.top = row;
+      if (row >= menu.top + menu.visibleRows) menu.top = row - menu.visibleRows + 1;
+      return true;
+    }
+  }
   switch (key) {
     case Key.Up:
       next = menu.cursor - c;

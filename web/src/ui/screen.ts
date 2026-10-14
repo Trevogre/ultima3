@@ -65,9 +65,10 @@ import {
   COMMAND_MENUS,
   BUTTON_SHORTCUTS,
   DIRECTION_KEYS,
-  ON_SCREEN_KEYBOARD,
   OSK_DELETE,
   OSK_DONE,
+  OSK_KEYS,
+  layoutKeyboard,
   layoutMenu,
   drawMenu,
   moveCursor,
@@ -1859,20 +1860,14 @@ export class Screen implements GameIO {
       return picked < 0 ? '' : (words[picked] ?? '');
     }
     // On-screen keyboard.
-    const keys = [...ON_SCREEN_KEYBOARD.join(''), OSK_DELETE, OSK_DONE];
-    const columns = ON_SCREEN_KEYBOARD[0].length;
-    const options = keys.map((k) => ({ key: k, label: k }));
+    const keys = OSK_KEYS;
     const hints = keys.map((k) =>
       k === OSK_DELETE ? 'A or B: delete the last letter' : k === OSK_DONE ? 'A or Y: done' : 'A: type   B: delete   Y: done',
     );
     let text = '';
     let cursor = 0; // the window is made again for each key, the cursor kept where it was
     for (;;) {
-      const menu = layoutMenu(
-        text || 'Type',
-        options.map((o) => o.label),
-        columns,
-      );
+      const menu = layoutKeyboard(text || 'Type');
       menu.hints = hints;
       if (row !== undefined) this.placeMenu(menu, { row, title: menu.title });
       menu.cursor = cursor;

@@ -14,6 +14,8 @@ import {
   ON_SCREEN_KEYBOARD,
   OSK_DELETE,
   OSK_DONE,
+  OSK_KEYS,
+  layoutKeyboard,
 } from '../src/ui/menus.ts';
 import type { InputSource } from '../src/ui/input.ts';
 import { FONT_GLYPHS, type GraphicsSet } from '../src/ui/graphics.ts';
@@ -170,33 +172,54 @@ describe('keys in a menu window', () => {
 });
 
 describe('the on-screen keyboard', () => {
-  const keys = [...ON_SCREEN_KEYBOARD.join(''), OSK_DELETE, OSK_DONE];
+  const keys = OSK_KEYS;
   const columns = ON_SCREEN_KEYBOARD[0].length;
 
-  it('draws every key, each with a cell for the cursor before it', () => {
-    const menu = layoutMenu('Type', keys, columns);
+  it('draws every key, each with a cell for the cursor before it, and DEL and DONE across the last row', () => {
+    const menu = layoutKeyboard('Type');
     const drawn: string[] = [];
-    const gfx = { drawUiPiece: () => {}, drawGlyph: (_c: unknown, ch: string) => drawn.push(ch) } as unknown as GraphicsSet;
+    const at: number[] = [];
+    const gfx = {
+      drawUiPiece: () => {},
+      drawGlyph: (_c: unknown, ch: string, x: number) => {
+        drawn.push(ch);
+        at.push(x / 32);
+      },
+    } as unknown as GraphicsSet;
     const ctx = { fillRect: () => {}, save: () => {}, restore: () => {} } as unknown as CanvasRenderingContext2D;
     drawMenu(ctx, gfx, 32, menu);
-    expect(drawn.join('')).toBe('Type' + keys.join(''));
-    expect(Math.floor((menu.width - 3) / columns)).toBe(2);
+    expect(drawn.join('')).toBe('Type' + ON_SCREEN_KEYBOARD.join('') + 'DEL' + 'DONE');
+    const colWidth = Math.floor((menu.width - 3) / columns);
+    expect(colWidth).toBe(2); // as wide as its one-letter keys need, DEL and DONE notwithstanding
+    // DEL starts under the first column; DONE ends under the last, in the lower-right corner.
+    const lastColumn = menu.x + 2 + (columns - 1) * colWidth;
+    expect(at[drawn.length - 7]).toBe(menu.x + 2);
+    expect(at[drawn.length - 1]).toBe(lastColumn);
   });
 
-  it('reaches < and > from every column: down into the short last row lands on its last key', () => {
-    const menu = layoutMenu('Type', keys, columns);
+  it('reaches DEL and DONE from every column: the nearer of them, and back to the column it stands under', () => {
+    const menu = layoutKeyboard('Type');
     const at = (k: string) => keys.indexOf(k);
-    menu.cursor = at('9');
-    expect(moveCursor(menu, Key.Down)).toBe(true);
-    expect(keys[menu.cursor]).toBe(OSK_DONE);
-    menu.cursor = at('0');
-    moveCursor(menu, Key.Down);
-    expect(keys[menu.cursor]).toBe(OSK_DELETE);
-    moveCursor(menu, Key.Down); // from the last row, back to the top of the column
-    expect(keys[menu.cursor]).toBe('A');
-    menu.cursor = at('M');
-    moveCursor(menu, Key.Up); // and up from the top to the column's lowest key
-    expect(keys[menu.cursor]).toBe('-');
+    const press = (from: string, ...moves: string[]) => {
+      menu.cursor = at(from);
+      for (const m of moves) expect(moveCursor(menu, m)).toBe(true);
+      return keys[menu.cursor];
+    };
+    expect(press('9', Key.Down)).toBe(OSK_DONE);
+    expect(press('0', Key.Down)).toBe(OSK_DELETE);
+    expect(press('3', Key.Down)).toBe(OSK_DELETE); // the left half to DEL
+    expect(press('-', Key.Down)).toBe(OSK_DONE); // the right half to DONE
+    expect(press(OSK_DONE, Key.Up)).toBe('-'); // up from DONE to the last column
+    expect(press(OSK_DELETE, Key.Up)).toBe('0');
+    expect(press(OSK_DELETE, Key.Right)).toBe(OSK_DONE);
+    expect(press(OSK_DONE, Key.Right)).toBe(OSK_DELETE);
+    expect(press(OSK_DONE, Key.Left)).toBe(OSK_DELETE);
+    expect(press(OSK_DONE, Key.Down)).toBe('M'); // round to the top of its column
+    expect(press(OSK_DELETE, Key.Down)).toBe('A');
+    expect(press('M', Key.Up)).toBe(OSK_DONE); // and up from the top
+    expect(press('A', Key.Up)).toBe(OSK_DELETE);
+    expect(press('A', Key.Down)).toBe('N'); // the letters as before
+    expect(press('A', Key.Left)).toBe('M');
   });
 
   it("uses only keys every set's font can draw (its 96 glyphs from space up)", () => {
