@@ -575,6 +575,22 @@ Every release, with the desktop and Android downloads, is on the
 web version is updated with each release, so it runs the same game as the
 apps.
 
+### v1.0.57, October 13, 2026
+
+- In a fight, "Cast (Repel orcs)" or "Cast (Repel undead)" heads the
+  command menu on the turn of a member who can cast it, wherever it
+  would work: the foes of its type (orcs, goblins and trolls; skeletons,
+  ghouls and zombies) and the fight's one try not yet spent. Where it
+  would not, it is left off. The spell lists grey a Repel spell that
+  cannot work, its card saying why, and "Cast (spell)" no longer offers a
+  last-cast Repel spell that cannot work.
+- Cheats show what they did at once: the party healed, the gold and food
+  counted, while the Pause menu is still open.
+- The guild's torches read "Torches x5 (30 gp)", the price no longer
+  cut off.
+- Fixed: on Android the status bar could come back and stay, as on
+  waking from sleep. It is hidden again whenever it returns.
+
 ### v1.0.55, October 13, 2026
 
 - The map's cursor is left off where the party is the only mark - a
