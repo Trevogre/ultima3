@@ -589,6 +589,16 @@ Every release, with the desktop and Android downloads, is on the
 web version is updated with each release, so it runs the same game as the
 apps.
 
+### v1.0.61, October 14, 2026
+
+- A step of the journal's main quest is made known only by a line that
+  names it, such as "'CARDS' ARE USEFUL!", or by the party making a
+  start on it. A line that only bears on a step, such as "SEEK YE, THE
+  SHRINES OF TRUTH", is listed under it once it is known.
+- Each dungeon under the journal's Dungeons is a mystery until its
+  entrance is seen, the party has been inside, or a line names it.
+- The foot of the journal shows only the hint's key, Y (H on a keyboard).
+
 ### v1.0.59, October 14, 2026
 
 - The journal is rebuilt, after the Ultima V port's: the main quest,
