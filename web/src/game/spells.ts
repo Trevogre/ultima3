@@ -67,27 +67,11 @@ export async function cast(world: World, io: GameIO, member?: number): Promise<b
       return false;
     }
   }
-  const careers = String.fromCharCode(...world.resources.misc.careerTable);
-  const classIndex = careers.indexOf(world.member(member).classLetter);
+  const books = spellBooks(world, member);
   let spell = NOT_A_MAGE;
-  switch (classIndex) {
-    case 1: // Cleric
-    case 4: // Paladin
-    case 7: // Illusionist
-      spell = await chooseCleric(world, io, member);
-      break;
-    case 2: // Wizard
-    case 6: // Lark
-    case 9: // Alchemist
-      spell = await chooseWizard(world, io, member);
-      break;
-    case 8: // Druid
-    case 10: // Ranger
-      spell = await chooseEither(world, io, member);
-      break;
-    default:
-      break;
-  }
+  if (books.wizard && books.cleric) spell = await chooseEither(world, io, member);
+  else if (books.cleric) spell = await chooseCleric(world, io, member);
+  else if (books.wizard) spell = await chooseWizard(world, io, member);
   if (spell === CANCELLED) {
     cancelled(world, io);
     return false;
@@ -112,14 +96,60 @@ export function spellCost(spell: number): number {
   return spell === 32 ? 10 : spell === 33 ? 85 : spell === 34 ? 90 : (spell & 0x0f) * 5;
 }
 
+/** Which books a member's class casts from: Druids and Rangers both, Clerics, Paladins and Illusionists the cleric's, Wizards, Larks and Alchemists the wizard's, the rest neither. */
+export function spellBooks(world: World, member: number): { wizard: boolean; cleric: boolean } {
+  const careers = String.fromCharCode(...world.resources.misc.careerTable);
+  const classIndex = careers.indexOf(world.member(member).classLetter);
+  return { wizard: [2, 6, 8, 9, 10].includes(classIndex), cleric: [1, 4, 7, 8, 10].includes(classIndex) };
+}
+
+/** The Repel spells - Repond (wizard's A) and Pontori (cleric's A) - each for one type of foe, once a fight (spellEffect). */
+const REPEL: Partial<Record<number, { shape: number; flag: 'repond' | 'pontori'; foes: string }>> = {
+  0: { shape: 0x30, flag: 'repond', foes: 'orcs' }, // orcs, goblins and trolls
+  16: { shape: 0x32, flag: 'pontori', foes: 'undead' }, // skeletons, ghouls and zombies
+};
+
+/**
+ * Why a Repel spell would fail now, as spellEffect has it: not in a fight, foes not of its type, or the fight's one
+ * try already spent (by anyone). Null where it could work - and for every other spell.
+ */
+export function repelWhyNot(world: World, spell: number): string | null {
+  const repel = REPEL[spell];
+  if (!repel) return null;
+  const c = world.combat;
+  if (world.party.location !== Location.Combat || !c) return 'Only in a fight.';
+  if (c.monsterShape !== repel.shape) return `No ${repel.foes} here.`;
+  if (world.spellFlags[repel.flag]) return 'Tried already this fight.';
+  return null;
+}
+
+/** The Repel spell `member` could cast to some purpose now (their class's book, the foes its type, the try unspent), or null. */
+export function repelSpell(world: World, member: number): number | null {
+  const books = spellBooks(world, member);
+  if (books.wizard && repelWhyNot(world, 0) === null) return 0;
+  if (books.cleric && repelWhyNot(world, 16) === null) return 16;
+  return null;
+}
+
+/** Cast the Repel spell that would work now (the combat menu's first line). Returns false where none would. */
+export async function repelCast(world: World, io: GameIO, member: number): Promise<boolean> {
+  const spell = repelSpell(world, member);
+  if (spell === null) return false;
+  io.print(`${spellName(spell)}\n`);
+  await processMagic(world, io, member, spell);
+  world.lastSpell[member] = spell;
+  return true;
+}
+
 /**
  * The spell the combat menu offers as "Cast (spell)": the member's last
- * spell, else Magic bolt for anyone with wizard spells and Heal for the
- * cleric-only classes. Null for a member with no magic.
+ * spell - unless it is a Repel spell that cannot work now - else Magic
+ * bolt for anyone with wizard spells and Heal for the cleric-only
+ * classes. Null for a member with no magic.
  */
 export function quickSpell(world: World, member: number): number | null {
   const last = world.lastSpell[member];
-  if (last !== undefined) return last;
+  if (last !== undefined && repelWhyNot(world, last) === null) return last;
   const careers = String.fromCharCode(...world.resources.misc.careerTable);
   switch (careers.indexOf(world.member(member).classLetter)) {
     case 2: // Wizard
@@ -202,6 +232,7 @@ export function spellOption(world: World, spell: number, letter: string, member:
   const info = SPELL_INFO[spell] ?? { name: book.trim() || '?', does: '' };
   const mana = world.member(member).mana;
   const does = info.does.charAt(0).toUpperCase() + info.does.slice(1);
+  const why = repelWhyNot(world, spell);
   const card: Card = {
     title: info.name,
     lines: [
@@ -211,10 +242,12 @@ export function spellOption(world: World, spell: number, letter: string, member:
       { text: cardRow('Mana', `${mana}`), tone: mana < cost ? 'worse' : undefined },
       { text: '' },
       ...cardWrap(`${does}.`).map((text) => ({ text })),
+      ...(why ? [{ text: '' }, ...cardWrap(why).map((text) => ({ text, tone: 'worse' as const }))] : []),
     ],
   };
-  // Greyed when the caster cannot afford it, like other menu entries with nothing on hand.
-  return { key: letter, label: `${letter} ${info.name}`, disabled: cost > mana, card };
+  // Greyed when the caster cannot afford it, like other menu entries with nothing on hand, or (a Repel spell) where
+  // it cannot work, its card saying why.
+  return { key: letter, label: `${letter} ${info.name}`, disabled: cost > mana || why !== null, card };
 }
 
 async function chooseEither(world: World, io: GameIO, member: number): Promise<number> {

@@ -15,7 +15,7 @@ import { MapValue } from './tiles.ts';
 import type { CommandScope, MenuOption } from './io.ts';
 import { PartyShape, counterWithMerchant } from './commands.ts';
 import { monsterAt } from './combat.ts';
-import { quickSpell, spellName, spellCost, healPlan, safeChestCaster, lightPlan, SAFE_CHEST } from './spells.ts';
+import { quickSpell, repelSpell, spellName, spellCost, healPlan, safeChestCaster, lightPlan, SAFE_CHEST } from './spells.ts';
 import type { PlayerRecord } from './player.ts';
 
 /** Fighters, thieves and barbarians have no magic. */
@@ -186,19 +186,29 @@ export function rangedWeaponName(world: World, member: number): string | null {
 /** Key of the "Cast (spell)" shortcut in the combat menu (this port); cast the member's quick spell at once. */
 export const QUICK_CAST_KEY = '!';
 
+/** Key of the "Cast (Repel orcs)" or "Cast (Repel undead)" line in the combat menu (this port), where one would work. */
+export const REPEL_KEY = '%';
+
 /**
- * The combat menu for the member whose turn it is (this port). A ranged
- * weapon in hand puts "Attack (Bow)" first, since melee is done by walking
- * into the foe; a caster gets "Cast (spell)", their last spell or a
- * sensible first one, ahead of the plain Cast, first of all when there is
- * no ranged weapon. Attack is suggested for melee only beside a foe.
+ * The combat menu for the member whose turn it is (this port). A Repel
+ * spell that would work - the member's class casting it, the foes its
+ * type, the fight's try unspent (spells.ts repelSpell) - comes first of
+ * all: it costs nothing and may end the fight at once; where it would not
+ * work it is not offered. A ranged weapon in hand puts "Attack (Bow)"
+ * next, since melee is done by walking into the foe; a caster gets
+ * "Cast (spell)", their last spell or a sensible first one, ahead of the
+ * plain Cast, next of all when there is no ranged weapon. Attack is
+ * suggested for melee only beside a foe.
  */
 function combatMenu(world: World, shown: MenuOption[]): MenuOption[] {
   const me = world.combat!.activeMember;
   const ranged = rangedWeaponName(world, me);
+  const repel = repelSpell(world, me);
   const spell = hasMagic(world, world.member(me)) ? quickSpell(world, me) : null;
+  // The quick spell, unless it is the Repel spell already offered above it.
+  const quickSpellShown = spell !== null && spell !== repel;
   let options = shown.map((o) => (o.key === 'A' && ranged ? { ...o, label: `Attack (${ranged})` } : o));
-  if (spell !== null) {
+  if (quickSpellShown) {
     const quick: MenuOption = {
       key: QUICK_CAST_KEY,
       label: `Cast (${spellName(spell)})`,
@@ -206,9 +216,10 @@ function combatMenu(world: World, shown: MenuOption[]): MenuOption[] {
     };
     options = [quick, ...options];
   }
-  const casting = spell !== null ? [QUICK_CAST_KEY, 'C'] : [];
+  if (repel !== null) options = [{ key: REPEL_KEY, label: `Cast (${spellName(repel)})` }, ...options];
+  const casting = [...(quickSpellShown ? [QUICK_CAST_KEY] : []), ...(spell !== null || repel !== null ? ['C'] : [])];
   const first = ranged ? ['A', ...casting] : [...casting, ...combatSuggestions(world)];
-  return prioritise(options, first);
+  return prioritise(options, repel !== null ? [REPEL_KEY, ...first] : first);
 }
 
 /** The four orthogonal steps. */

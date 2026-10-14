@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { newWorld } from './helpers.ts';
+import { newWorld, FakeIO } from './helpers.ts';
 import { suggestedCommands, prioritise, commandMenu } from '../src/game/context.ts';
 import { MapValue } from '../src/game/tiles.ts';
 import { Location } from '../src/game/party.ts';
@@ -10,6 +10,7 @@ import { World } from '../src/game/world.ts';
 import { loadArena } from '../src/game/combat.ts';
 import { BASERES } from '../src/data/resources.ts';
 import { DungeonCell } from '../src/game/world.ts';
+import { repelCast, repelWhyNot, spellOption } from '../src/game/spells.ts';
 
 describe('contextual commands', () => {
   it('suggests Enter on a town and Board on a horse', () => {
@@ -196,6 +197,94 @@ describe('the combat menu reads the turn', () => {
     world.member(1).mana = 0;
     const quick = commandMenu(world, 'combat', COMMAND_MENUS.combat).find((o) => o.key === '!');
     expect(quick?.disabled).toBe(true);
+  });
+});
+
+describe('the Repel spells', () => {
+  /** A fight against foes of `shape` (0x30 orcs, 0x32 undead), on `member`'s turn: Tatiana a thief, Roderic a ranger, Norric a cleric, Ghiselle a wizard. */
+  function fight(member: number, shape: number) {
+    const world = newWorld();
+    const c = loadArena(world, BASERES + 4);
+    world.combat = c;
+    world.party.location = Location.Combat;
+    c.monsterShape = shape;
+    c.activeMember = member;
+    c.members[member].x = 5;
+    c.members[member].y = 5;
+    for (const m of c.monsters) m.hp = 0;
+    return world;
+  }
+  const keys = (world: World) => commandMenu(world, 'combat', COMMAND_MENUS.combat).map((o) => o.key + ':' + o.label);
+
+  it("say why they would fail: out of a fight, foes not their type, the fight's try spent", () => {
+    const world = fight(1, 0x30);
+    expect(repelWhyNot(world, 0)).toBe(null);
+    expect(repelWhyNot(world, 16)).toBe('No undead here.');
+    world.spellFlags.repond = true;
+    expect(repelWhyNot(world, 0)).toBe('Tried already this fight.');
+    world.party.location = Location.Sosaria;
+    expect(repelWhyNot(world, 0)).toBe('Only in a fight.');
+    expect(repelWhyNot(world, 1)).toBe(null); // any other spell
+  });
+
+  it('lead the combat menu where one would work, for a class that casts it', () => {
+    expect(keys(fight(1, 0x30))[0]).toBe('%:Cast (Repel orcs)'); // the ranger, either book
+    expect(keys(fight(1, 0x32))[0]).toBe('%:Cast (Repel undead)');
+    expect(keys(fight(3, 0x30))[0]).toBe('%:Cast (Repel orcs)'); // the wizard
+    expect(keys(fight(2, 0x32))[0]).toBe('%:Cast (Repel undead)'); // the cleric
+  });
+
+  it('are left off the menu where they would not work', () => {
+    const none = (world: World) => expect(keys(world).some((k) => k.startsWith('%'))).toBe(false);
+    none(fight(0, 0x30)); // a thief casts nothing
+    none(fight(3, 0x32)); // a wizard has no Repel undead
+    none(fight(2, 0x30)); // nor a cleric Repel orcs
+    none(fight(1, 0x34)); // giants: neither
+    const spent = fight(1, 0x30);
+    spent.spellFlags.repond = true;
+    none(spent);
+  });
+
+  it('keep the quick spell off a Repel spell that would not work, and do not repeat one that would', () => {
+    const giants = fight(1, 0x34);
+    giants.lastSpell[1] = 0; // Repel orcs, last cast
+    expect(keys(giants)[0]).toBe('!:Cast (Magic bolt)');
+    const orcs = fight(1, 0x30);
+    orcs.lastSpell[1] = 0;
+    expect(keys(orcs).slice(0, 2)).toEqual(['%:Cast (Repel orcs)', 'C:Cast spell']);
+  });
+
+  it('are greyed in the spell lists where they would not work, the card saying why', () => {
+    const world = fight(1, 0x34);
+    const option = spellOption(world, 0, 'A', 1);
+    expect(option.disabled).toBe(true);
+    expect(option.card!.lines.slice(-1)).toEqual([{ text: 'No orcs here.', tone: 'worse' }]);
+    world.combat!.monsterShape = 0x30;
+    expect(spellOption(world, 0, 'A', 1).disabled).toBe(false);
+    world.spellFlags.repond = true;
+    expect(
+      spellOption(world, 0, 'A', 1)
+        .card!.lines.slice(-2)
+        .map((l) => l.text),
+    ).toEqual(['Tried already', 'this fight.']);
+    // Every spell's card still fits the panel, a Repel spell's reason with it.
+    for (const state of [
+      { shape: 0x30, spent: true },
+      { shape: 0x34, spent: false },
+    ]) {
+      const w = fight(1, state.shape);
+      w.spellFlags = { repond: state.spent, pontori: state.spent };
+      for (let spell = 0; spell < 35; spell++) expect(spellOption(w, spell, 'A', 1).card!.lines.length).toBeLessThanOrEqual(11);
+    }
+  });
+
+  it("cast from the menu's line spends the fight's try and becomes the last spell", async () => {
+    const world = fight(1, 0x30);
+    const io = new FakeIO(world.resources);
+    expect(await repelCast(world, io, 1)).toBe(true);
+    expect(world.spellFlags.repond).toBe(true);
+    expect(world.lastSpell[1]).toBe(0);
+    expect(await repelCast(world, io, 1)).toBe(false); // nothing left to cast
   });
 });
 

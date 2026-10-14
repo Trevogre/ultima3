@@ -19,8 +19,8 @@ import { MapValue, Shape, classTile } from './tiles.ts';
 import { type GameIO, Key, Sound, Music, deathSound } from './io.ts';
 import { getDirection, moveForKey, moveDelta, what2, cancelled, DIAGONAL_KEYS, Msg as CmdMsg } from './commands.ts';
 import { ageChars } from './turn.ts';
-import { cast, quickCast } from './spells.ts';
-import { QUICK_CAST_KEY } from './context.ts';
+import { cast, quickCast, repelCast } from './spells.ts';
+import { QUICK_CAST_KEY, REPEL_KEY } from './context.ts';
 import { negateTime, readyWeapon, stats, volume, addExperience } from './actions.ts';
 import { BASERES } from '../data/resources.ts';
 import { checkAllDead } from './death.ts';
@@ -518,6 +518,15 @@ async function memberTurn(world: World, io: GameIO, member: number): Promise<voi
           continue;
         }
         if (world.takeCancelled()) continue; // backed out at the spell's direction, the mana given back
+        return;
+      case REPEL_KEY:
+        // The Repel spell that would work now, as the menu's first line offers it.
+        io.printMessage(Msg.CastSpell);
+        if (!(await repelCast(world, io, member))) {
+          io.printMessage(Msg.NotUsable);
+          io.sound(Sound.Error2);
+          continue;
+        }
         return;
       case 'N':
         await negateTime(world, io);
