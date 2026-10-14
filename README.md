@@ -589,6 +589,34 @@ Every release, with the desktop and Android downloads, is on the
 web version is updated with each release, so it runs the same game as the
 apps.
 
+### v1.0.59, October 14, 2026
+
+- The journal is rebuilt, after the Ultima V port's: the main quest,
+  towns, rumours, dungeons, Ambrosia, equipment and words, each opening
+  to more, with a card over the party panel saying where the highlighted
+  line stands and a hint on H (Y on a controller).
+- The main quest lists the steps to Exodus, in any order after the king,
+  each shown once something has told of it and opening to every clue
+  heard about it - townsfolk, pub rumours and the oracle's verses alike.
+- Towns count each town's clues heard; Dawn and the towns on isles are a
+  mystery until found or told of. Rumours lists the pubs' nine rumours,
+  and the oracle's rhyme once the party has met him, in order as heard.
+  Dungeons count what each holds for the quest found, and Ambrosia its
+  shrines' cards.
+- Equipment tracks a guild's supplies, the magic weapons and armour, a
+  ship, and the moongates come out of, with how the moons choose the way.
+- Words for Other are learnt by hearing them said. On a controller, Other
+  offers only the words learnt; a keyboard may type any word, as before.
+- A new cheat, Add word, learns a word for Other early, typed on the
+  on-screen keyboard on a controller.
+- The on-screen keyboard's last row reads DEL and DONE, DONE in the
+  lower-right corner for a pad without a Y button, and the hint line
+  under it is gone.
+- The map calls the town beside Lord British's castle Britain, as the
+  Tips and the journal do.
+- A game saved before this release keeps its journal: the words already
+  heard are learnt, and the dungeons' marks already taken are found.
+
 ### v1.0.57, October 13, 2026
 
 - In a fight, "Cast (Repel orcs)" or "Cast (Repel undead)" heads the
