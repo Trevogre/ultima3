@@ -1861,14 +1861,10 @@ export class Screen implements GameIO {
     }
     // On-screen keyboard.
     const keys = OSK_KEYS;
-    const hints = keys.map((k) =>
-      k === OSK_DELETE ? 'A or B: delete the last letter' : k === OSK_DONE ? 'A or Y: done' : 'A: type   B: delete   Y: done',
-    );
     let text = '';
     let cursor = 0; // the window is made again for each key, the cursor kept where it was
     for (;;) {
       const menu = layoutKeyboard(text || 'Type');
-      menu.hints = hints;
       if (row !== undefined) this.placeMenu(menu, { row, title: menu.title });
       menu.cursor = cursor;
       this.openMenu(menu);
