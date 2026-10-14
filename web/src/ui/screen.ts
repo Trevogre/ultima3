@@ -1518,7 +1518,7 @@ export class Screen implements GameIO {
     // Placed on the whole screen, so the longest ("Go home (Lord British)") is not cut to the map's width.
     const picked = await this.runMenu('Cheats', options, 1, { row: 8, title: 'Cheats' });
     if (picked < 0 || picked >= cheats.length) return '';
-    return cheats[picked].apply(this.world, this);
+    return await cheats[picked].apply(this.world, this);
   }
 
   async chooseFromList(options: MenuOption[], place?: MenuPlacement): Promise<string> {

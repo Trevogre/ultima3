@@ -430,8 +430,10 @@ These apply whatever tile set and sound set are chosen.
   Lord British as the Apple II did.
 - The game pauses, music included, while the window is not focused.
 - Cheats, in the Pause menu: full restore, raise every level, go home,
-  exit dungeon, gold, food, gems, keys and torches. None of it existed in
-  the original; it is there for testing and for anyone who wants it.
+  exit dungeon, gold, food, gems, keys and torches, and Add word, which
+  learns a word for Other early (on a controller, typed on the on-screen
+  keyboard). None of it existed in the original; it is there for testing
+  and for anyone who wants it.
 
 #### Bug fixes
 

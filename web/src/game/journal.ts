@@ -844,6 +844,18 @@ export function knownWords(world: World): string[] {
   return WORDS.map((w) => w.word).filter((w) => world.journal.words.includes(w));
 }
 
+/**
+ * A word learnt without being heard (Cheats' Add word): one of WORDS, made known as if heard said, so a controller's
+ * Other offers it and the journal's Words shows it. Says whether it was added, known already, or no word Other offers.
+ */
+export function learnWord(world: World, typed: string): 'added' | 'known' | 'unknown' {
+  const word = typed.trim().toUpperCase();
+  if (!WORDS.some((w) => w.word === word)) return 'unknown';
+  if (world.journal.words.includes(word)) return 'known';
+  world.journal.words.push(word);
+  return 'added';
+}
+
 /** Record a clue heard, and the word it teaches. Returns true if it was new. */
 export function hearClue(world: World, id: string): boolean {
   const clue = CLUES[id];

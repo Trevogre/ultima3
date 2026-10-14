@@ -11,14 +11,15 @@ import { World } from './world.ts';
 import { Location } from './party.ts';
 import { exitToSurface } from './turn.ts';
 import type { GameIO } from './io.ts';
+import { journalCheck, learnWord } from './journal.ts';
 
 export interface Cheat {
   key: string;
   label: string;
   /** Whether the cheat makes sense right now (e.g. Exit dungeon only in a dungeon). */
   available(world: World): boolean;
-  /** Apply it; returns a one-line confirmation. */
-  apply(world: World, io: GameIO): string;
+  /** Apply it; returns a one-line confirmation (in time, where it asks for something first). */
+  apply(world: World, io: GameIO): string | Promise<string>;
 }
 
 /** Lord British's doorstep, where a new party starts. */
@@ -143,6 +144,25 @@ export const CHEATS: Cheat[] = [
     apply(world) {
       world.party.torches += 5;
       return `Torches: ${world.party.torches}.`;
+    },
+  },
+  {
+    key: 'W',
+    label: 'Add word',
+    available: () => true,
+    async apply(world, io) {
+      // A word for Other learnt early, as if heard said (journal.ts learnWord), so a controller's Other offers it: typed
+      // on the on-screen keyboard (a keyboard types it in the message area). Only a word Other offers is kept, and the
+      // player is told so.
+      io.print('\nWord: ');
+      const typed = (await io.inputText(8, false)).trim().toUpperCase();
+      io.print('\n');
+      if (!typed) return 'No word added.';
+      const result = learnWord(world, typed);
+      if (result === 'unknown') return `Other offers no word ${typed}.`;
+      if (result === 'known') return `${typed} is known already.`;
+      journalCheck(world, io);
+      return `Known now: ${typed}. Other offers it from now on.`;
     },
   },
 ];
