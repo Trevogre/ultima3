@@ -1,317 +1,680 @@
 /**
  * journal.ts
  *
- * The quest journal (this port; the Apple II had none). It records what
- * the world has told the party and what the party has done along the
- * main line, so a newcomer can play without a walkthrough, and stays out
- * of the way of anyone who never opens it.
+ * The quest journal (this port; the Apple II had none), after the Ultima V port's: a list of what the quest asks
+ * for, and of the places it asks the party to go, each with how far it has got there. It records what the world has
+ * told the party and what the party has done, so a newcomer can play without a walkthrough, and stays out of the way
+ * of anyone who never opens it.
  *
- * Entries are revealed one at a time: the first, "Speak to the King",
- * is there from the start, and each later one appears once all before it
- * are done. An entry is open or done; the clues heard about it, kept as
- * spoken, are shown beneath it while it is the one in hand. Every entry
- * also has a hint, a plain line written for this port that the game
- * itself never speaks; it is printed to the message area only when asked
- * for, and nothing remembers the asking. Hints are kept short enough for
- * that area: sixteen columns, nine lines.
+ * The top of the journal is five lines, each opening to more:
  *
- * Done is computed from the party where it can be (marks, cards, exotics,
- * the ending); the rest are events flagged as they happen. The whole
- * state lives in the save file.
+ * - Main quest: the nine steps to Exodus. After the first, an audience with Lord British, they may be taken in any
+ *   order, so all are listed - each a mystery until something has told of it (a clue tagged with it, or a start
+ *   made on it).
+ * - Towns: Lord British's castle and the ten towns - undiscovered, seen, or entered with so many of their clues
+ *   heard (CLUES: the townsfolk's lines that bear on the quest).
+ * - Dungeons: the seven - undiscovered, seen, or entered with so many of their goals found (a mark's rod stood on,
+ *   the Time Lord met).
+ * - Ambrosia: its four shrines, and the cards found in them.
+ * - Words: the words Other answers to, each learnt by being heard said (CLUES' `word`). A controller's Other offers
+ *   only these (interact.ts); a keyboard may type anything, as on the Apple II.
+ *
+ * Every line has a card (what the party knows of it, shown over the party panel while it is highlighted) and a
+ * hint, a plain line written for this port that the game itself never speaks: printed to the message area only when
+ * asked for, and nothing remembers the asking. Hints are kept short enough for that area: sixteen columns, nine
+ * lines.
+ *
+ * What can be read from the party, the auto-map and the flags is; the rest (clues heard, words learnt, dungeon goals
+ * found) is recorded as it happens. The whole state lives in the save file.
  */
 
 import type { World } from './world.ts';
 import { Location } from './party.ts';
-import type { GameIO } from './io.ts';
-
-export type EntryState = 'open' | 'done';
+import { MapValue } from './tiles.ts';
+import { MapId } from '../data/resources.ts';
+import type { Card, GameIO } from './io.ts';
+import { cardWrap } from './cards.ts';
+import { beenIn, shrines } from './worldMap.ts';
+import { speech } from './talk.ts';
 
 export interface JournalState {
   lordBritish: boolean;
   ambrosia: boolean;
   timeLord: boolean;
-  wordKnown: boolean;
   serpentParted: boolean;
-  /** Clue ids heard, e.g. "Moon#6" or "LB:mark". */
+  /** Clue ids heard (CLUES), e.g. "Moon#6" or "Yew:pray". */
   clues: string[];
-  /** The revealed entries as last shown to the player (id, state, clues heard), to notice a change ("Journal updated"). */
+  /** The words Other answers to that have been heard said (WORDS), e.g. "DIG". */
+  words: string[];
+  /** Dungeon goals found: a mark's rod stood on, as "<dungeon's map id>:<mark>" ("416:kings"). */
+  goals: string[];
+  /** What the journal showed when last noted (journalSnapshot), to notice a change ("Journal updated"). */
   seen: string[];
 }
 
 export function emptyJournal(): JournalState {
-  // `seen` starts as the opening page, so the first clue heard does not announce an update of nothing.
-  return {
-    lordBritish: false,
-    ambrosia: false,
-    timeLord: false,
-    wordKnown: false,
-    serpentParted: false,
-    clues: [],
-    seen: ['king:open:0'],
-  };
+  return { lordBritish: false, ambrosia: false, timeLord: false, serpentParted: false, clues: [], words: [], goals: [], seen: [] };
 }
 
-export interface Entry {
-  id: string;
-  title: string;
-  hint: string;
+/** The steps of the main quest, in the journal's order. */
+type Step = 'king' | 'kings' | 'cards' | 'exotics' | 'fire' | 'force' | 'snake' | 'order' | 'exodus';
+
+/**
+ * A clue: a line the party may hear that bears on the quest, and what hearing it does - the Other word it teaches,
+ * the steps of the main quest it tells of, the place it makes known. A townsperson's is "<the town's name in the
+ * game's files>#<their number in its talk>", its words read from the talk at the time; the others carry theirs.
+ */
+interface Clue {
+  word?: string;
+  quest?: Step[];
+  reveals?: 'dawn' | 'ambrosia';
+  /** Who says it, and what, where it is not a townsperson's line. */
+  from?: string;
+  text?: string;
 }
 
-/** The main line, in the order the journal reveals it. */
-export const ENTRIES: Entry[] = [
-  { id: 'king', title: 'Speak to the King', hint: "Lord British sits in his castle north of Britain's town. Walk into him." },
+export const CLUES: Record<string, Clue> = {
+  'LB:mark': { quest: ['kings'], from: 'Lord British', text: 'SEEK YE, THE MARK OF KINGS!' },
+  'Lord British Castle#1': { reveals: 'dawn' },
+  'Lord British Castle#6': { quest: ['cards', 'order'] },
+  'LCB Towne#2': { reveals: 'ambrosia' },
+  'LCB Towne#3': { quest: ['exotics'] },
+  'LCB Towne#4': { quest: ['snake'] },
+  'LCB Towne#5': { reveals: 'dawn' },
+  'Moon#2': { quest: ['cards'] },
+  'Moon#3': { word: 'BRIBE' },
+  'Moon#6': { reveals: 'ambrosia' },
+  'Moon#7': { reveals: 'dawn' },
+  'Yew#1': { word: 'SEARCH', quest: ['cards'] },
+  'Yew#2': {},
+  'Yew:pray': { word: 'EVOCARE', quest: ['snake'], from: 'The circle of light', text: "YELL 'EVOCARE'" },
+  'East Montor#1': { word: 'INSERT', quest: ['order'] },
+  'East Montor#2': { quest: ['cards', 'order'] },
+  'East Montor#5': { quest: ['cards'] },
+  'East Montor#6': { quest: ['kings'] },
+  'East Montor#7': { quest: ['exotics'] },
+  'West Montor#5': { word: 'SEARCH', quest: ['cards'] },
+  'West Montor#6': { word: 'SEARCH', quest: ['cards'] },
+  'Grey#3': { quest: ['exotics'] },
+  'Grey#4': { quest: ['exotics'], reveals: 'dawn' },
+  'Grey#5': { quest: ['exotics'] },
+  'Dawn#2': { word: 'DIG', quest: ['exotics'] },
+  'Dawn#3': { word: 'DIG', quest: ['exotics'] },
+  'Dawn#4': { word: 'DIG' },
+  'Dawn#6': {},
+  'Dawn#7': { reveals: 'ambrosia' },
+  'Devil Guard#1': { quest: ['kings'] },
+  'Devil Guard#2': { quest: ['kings'] },
+  'Devil Guard#3': { quest: ['kings'] },
+  'Devil Guard#4': { quest: ['snake'] },
+  'Devil Guard#5': { quest: ['kings', 'fire', 'force', 'snake'] },
+  'Devil Guard#6': { quest: ['fire'] },
+  'Devil Guard#7': { quest: ['kings'] },
+  'Fawn#1': { word: 'PRAY', quest: ['snake'] },
+  'Fawn#2': { word: 'PRAY', quest: ['snake'] },
+  'Fawn#3': { quest: ['snake'] },
+  'Fawn#4': { quest: ['snake'] },
+  'Death Gulch#2': { word: 'BRIBE' },
+  'Death Gulch#3': { quest: ['order', 'exodus'] },
+  'Death Gulch#4': { quest: ['snake'] },
+  'Death Gulch#5': { quest: ['snake'] },
+  TimeLord: { quest: ['order', 'exodus'], from: 'The Time Lord', text: 'THE ONE WAY IS LOVE, SOL, MOONS & DEATH, ALL ELSE FAILS.' },
+  // The misty writing on a dungeon's level: "<the dungeon's map id>:<level>", its words read from the dungeon's talk.
+  '415:2': { word: 'INSERT', quest: ['order'] },
+  '415:3': { word: 'SEARCH', quest: ['cards'] },
+};
+
+/** Lord British's audience, counted among his castle's clues: heard once the party has spoken with him. */
+const AUDIENCE = 'LB:audience';
+
+/** A main-quest step: its name on its line (fifteen letters at most, for its status beside it) and its hint. */
+const STEPS: { id: Step; name: string; hint: string }[] = [
+  { id: 'king', name: 'Lord British', hint: "Lord British sits in his castle north of Britain's town. Walk into him." },
   {
     id: 'kings',
-    title: 'The Mark of Kings',
-    hint: 'Level 1 of the Perinian Depths, north of Britain: step on the rod. Light: Lorum, Luminae, or torches from a guild.',
-  },
-  {
-    id: 'ambrosia',
-    title: 'Lost Ambrosia',
-    hint: "Sail a frigate into the whirlpool; the ship is lost. Home from Ambrosia is a pirate's ship into the lake's whirlpool.",
+    name: 'Mark of Kings',
+    hint: 'Level 1 of the Perinian Depths, north-east of Britain: step on the rod. Light: Lorum, Luminae, or torches from a guild.',
   },
   {
     id: 'cards',
-    title: 'The Four Cards',
-    hint: "At the four shrines, Other and say SEARCH. Two lie past locked doors: bring keys and take a pirate's ship.",
+    name: 'The four cards',
+    hint: "In Ambrosia's four shrines, Other and say SEARCH. Two lie past locked doors: bring keys and take a pirate's ship.",
   },
   {
     id: 'exotics',
-    title: 'Exotic Arms',
+    name: 'Exotic arms',
     hint: 'Both moons new, Dawn shows west of the Montors and tells of them. Other, DIG on the far north isle and the western isle, once per member.',
   },
   {
     id: 'fire',
-    title: 'The Mark of Fire',
+    name: 'Mark of Fire',
     hint: 'Level 8 of the Perinian Depths, the Fires of Hell or Morinia. Each member needs it to cross lava.',
   },
   {
     id: 'force',
-    title: 'The Mark of Force',
+    name: 'Mark of Force',
     hint: "Level 8 of Doom or the Fires of Hell. Each member, for the force fields in Exodus' castle.",
   },
   {
     id: 'snake',
-    title: 'The Silver Snake',
-    hint: 'Mark of Snake: level 8 of Clues. PRAY in the circle of light in Yew for the word. Yell it beside the serpent.',
+    name: 'Silver Snake',
+    hint: "Mark of Snake: level 8 of Clues. PRAY in Yew's circle of light for the word. Yell it from a ship just south of the serpent.",
   },
   {
     id: 'order',
-    title: 'Order of the Cards',
-    hint: 'The Time Lord waits on level 8 of Time Awaits, near Death Gulch. He names the order of the cards.',
+    name: "Cards' order",
+    hint: 'The Time Lord waits on level 8 of Time Awaits, beside Death Gulch. He names the order of the cards.',
   },
   {
     id: 'exodus',
-    title: 'Exodus',
+    name: 'Exodus',
     hint: "Exodus' castle: the south-west isle, past the serpent. Only exotics bite. INSERT the cards left to right in the Time Lord's order.",
   },
 ];
 
+/** A town or castle: its map id, its name in the journal, its clues (CLUES ids, AUDIENCE) and its hint. */
+const TOWNS: { id: number; name: string; clues: string[]; hint: string }[] = [
+  {
+    id: MapId.LordBritishCastle,
+    name: 'Lord British',
+    clues: [AUDIENCE, 'Lord British Castle#1', 'Lord British Castle#6'],
+    hint: "Lord British's castle, where the party starts. Walk into the king to speak with him.",
+  },
+  {
+    id: 402,
+    name: 'Britain',
+    clues: ['LCB Towne#2', 'LCB Towne#3', 'LCB Towne#4', 'LCB Towne#5'],
+    hint: "Beside Lord British's castle, where the party starts.",
+  },
+  { id: 403, name: 'Moon', clues: ['Moon#2', 'Moon#3', 'Moon#6', 'Moon#7'], hint: 'In the far north-west. On foot.' },
+  {
+    id: 404,
+    name: 'Yew',
+    clues: ['Yew#1', 'Yew#2', 'Yew:pray'],
+    hint: 'West of Britain, on foot. Its circle of light: the ring of fire in the woods south-east of the town. PRAY at its centre.',
+  },
+  {
+    id: 405,
+    name: 'East Montor',
+    clues: ['East Montor#1', 'East Montor#2', 'East Montor#5', 'East Montor#6', 'East Montor#7'],
+    hint: 'In the far south, beside West Montor. On foot.',
+  },
+  {
+    id: 406,
+    name: 'West Montor',
+    clues: ['West Montor#5', 'West Montor#6'],
+    hint: 'In the far south, beside East Montor. On foot.',
+  },
+  { id: 407, name: 'Grey', clues: ['Grey#3', 'Grey#4', 'Grey#5'], hint: 'In the south-west. On foot.' },
+  {
+    id: 408,
+    name: 'Dawn',
+    clues: ['Dawn#2', 'Dawn#3', 'Dawn#4', 'Dawn#6', 'Dawn#7'],
+    hint: "In the forest west of the Montors, 8 west and 35 south of Lord British's castle. It stands only while both moons are new.",
+  },
+  {
+    id: 409,
+    name: 'Devil Guard',
+    clues: ['Devil Guard#1', 'Devil Guard#2', 'Devil Guard#3', 'Devil Guard#4', 'Devil Guard#5', 'Devil Guard#6', 'Devil Guard#7'],
+    hint: 'An isle in the west: a ship is needed. Take one from pirates.',
+  },
+  {
+    id: 410,
+    name: 'Fawn',
+    clues: ['Fawn#1', 'Fawn#2', 'Fawn#3', 'Fawn#4'],
+    hint: 'A small isle in the far north: a ship is needed. Take one from pirates.',
+  },
+  {
+    id: 411,
+    name: 'Death Gulch',
+    clues: ['Death Gulch#2', 'Death Gulch#3', 'Death Gulch#4', 'Death Gulch#5'],
+    hint: 'An isle in the east: a ship is needed. Take one from pirates.',
+  },
+];
+
+const DAWN = 408;
+
+/** A mark's rod in a dungeon level's cells (world.ts DungeonCell.Mark: world.ts imports this module). */
+const ROD = 0x05;
+
+/** A dungeon's goal: a mark (its rod's, by the rod's column: dungeon.ts), or the Time Lord. */
+type Goal = 'force' | 'fire' | 'snake' | 'kings' | 'timeLord';
+
+/** The mark a rod gives, by its column (x & 3), as dungeon.ts sets it (bit 4 + x & 3 of the marks). */
+export const ROD_MARKS: Goal[] = ['force', 'fire', 'snake', 'kings'];
+
+const GOAL_NAMES: Record<Goal, string> = {
+  force: 'the Mark of Force',
+  fire: 'the Mark of Fire',
+  snake: 'the Mark of Snake',
+  kings: 'the Mark of Kings',
+  timeLord: 'the Time Lord',
+};
+
 /**
- * Townsfolk lines that bear on the main line: town name and speaker
- * number in the talk table, and the entries each speaks to. The words
- * themselves come from the talk table at the time, so they are shown as
- * spoken.
+ * The dungeons, in the order the quest tends to want them: each one's goals - what it is there for, not every rod
+ * in it (the Mark of Kings is in six of the seven) - and its hint.
  */
-const TOWN_CLUES: Record<string, string[]> = {
-  'LCB Towne#2': ['ambrosia'],
-  'LCB Towne#3': ['exotics'],
-  'LCB Towne#4': ['snake'],
-  'LCB Towne#5': ['exotics'],
-  'Moon#2': ['cards'],
-  'Moon#3': ['order'],
-  'Moon#6': ['ambrosia'],
-  'Moon#7': ['exotics'],
-  'Yew#1': ['cards'],
-  'East Montor#1': ['order'],
-  'East Montor#2': ['order'],
-  'East Montor#5': ['cards'],
-  'East Montor#6': ['kings'],
-  'East Montor#7': ['exotics'],
-  'West Montor#5': ['cards'],
-  'West Montor#6': ['cards'],
-  'Grey#3': ['exotics'],
-  'Grey#4': ['exotics'],
-  'Grey#5': ['exotics'],
-  'Dawn#2': ['exotics'],
-  'Dawn#3': ['exotics'],
-  'Dawn#4': ['exotics'],
-  'Dawn#6': ['exotics'],
-  'Dawn#7': ['ambrosia'],
-  'Devil Guard#1': ['kings'],
-  'Devil Guard#2': ['kings'],
-  'Devil Guard#3': ['kings'],
-  'Devil Guard#4': ['snake'],
-  'Devil Guard#5': ['kings', 'fire', 'force', 'snake'],
-  'Devil Guard#7': ['kings'],
-  'Fawn#1': ['snake'],
-  'Fawn#2': ['snake'],
-  'Fawn#3': ['snake'],
-  'Fawn#4': ['snake'],
-  'Death Gulch#2': ['order'],
-  'Death Gulch#3': ['order', 'exodus'],
-  'Death Gulch#4': ['snake'],
-  'Death Gulch#5': ['snake'],
-};
+const DUNGEONS: { id: number; name: string; goals: Goal[]; hint: string }[] = [
+  {
+    id: 416,
+    name: 'Perinian Depths',
+    goals: ['kings', 'fire'],
+    hint: 'North-east of Britain, on foot. Level 1: the Mark of Kings. Level 8: the Mark of Fire.',
+  },
+  { id: 418, name: "Dardin's Pit", goals: ['kings'], hint: 'North of Britain, on foot. Level 2: the Mark of Kings.' },
+  { id: 417, name: 'Morinia', goals: ['fire'], hint: 'The Mines of Morinia, in the west. On foot. Level 8: the Mark of Fire.' },
+  {
+    id: 413,
+    name: 'Fires of Hell',
+    goals: ['fire', 'force'],
+    hint: 'South of Britain, on foot. Level 8: the Marks of Fire and Force.',
+  },
+  { id: 412, name: 'Doom', goals: ['force'], hint: 'In the far south-west. On foot. Level 8: the Mark of Force.' },
+  { id: 415, name: 'Clues', goals: ['snake'], hint: 'An isle in the east: a ship is needed. Level 8: the Mark of Snake.' },
+  {
+    id: 414,
+    name: 'Time Awaits',
+    goals: ['timeLord'],
+    hint: 'Ringed by mountains beside Death Gulch: the moongate at its door is the only way in. Level 8: the Time Lord.',
+  },
+];
 
-/** Clues that are not townsfolk lines: the id, who said it, the words, and the entries. */
-const OTHER_CLUES: Record<string, { from: string; text: string; entries: string[] }> = {
-  'LB:mark': { from: 'Lord British', text: 'SEEK YE, THE MARK OF KINGS!', entries: ['kings'] },
-  'Yew:pray': { from: 'Yew, the circle of light', text: "YELL 'EVOCARE'", entries: ['snake'] },
-  TimeLord: { from: 'The Time Lord', text: 'THE ONE WAY IS LOVE, SOL, MOONS & DEATH, ALL ELSE FAILS.', entries: ['order', 'exodus'] },
-};
+/** The cards, by the shrine's column (x & 3) and the bit SEARCH sets (interact.ts). */
+const CARDS = ['Love', 'Sol', 'Moons', 'Death'];
 
+/**
+ * The words Other answers to that someone says, in the order Other offers them: what each does, and where it is
+ * learnt. PAXUM, SCREAM and PISSOFF nobody says, so they are never offered (a keyboard may still type them).
+ */
+export const WORDS: { word: string; about: string; hint: string }[] = [
+  {
+    word: 'SEARCH',
+    about: "Standing in one of Ambrosia's shrines, finds its card.",
+    hint: 'Taught in Yew and West Montor.',
+  },
+  { word: 'BRIBE', about: 'Pays a guard 100 gold to leave his post.', hint: 'Taught in Moon and Death Gulch.' },
+  {
+    word: 'PRAY',
+    about: 'In the right place, a prayer is answered with a word.',
+    hint: "Taught in Fawn. The place: Yew's circle of light.",
+  },
+  {
+    word: 'EVOCARE',
+    about: 'Yelled beside the Silver Snake by one with the Mark of Snake: the serpent parts.',
+    hint: "Other, PRAY at the centre of Yew's circle of light.",
+  },
+  { word: 'INSERT', about: "In Exodus' castle, sets a card in its slot.", hint: 'Taught in East Montor.' },
+  { word: 'DIG', about: 'Digs where something lies buried.', hint: 'Taught in Dawn, which stands only while both moons are new.' },
+];
+
+/** A line of the journal. */
 export interface JournalLine {
-  id: string;
-  title: string;
-  state: EntryState;
-  /** A short progress note ("2 of 4"). */
-  note: string;
-  /** Clues heard about it, as spoken, with the speaker's town. */
-  clues: { from: string; text: string }[];
+  /** The row: its name at the left and, at the right, where it stands (row). */
+  label: string;
+  /** Its name alone, for its card's title. */
+  name: string;
+  /** What the party knows of it, for its card. */
+  about: string;
+  /** The hint, printed to the message area when asked for. */
   hint: string;
+  /** What it opens to: more lines, or text to read. */
+  open?: JournalSection;
 }
 
-/** The living members' names, for a holder list. */
-function holders(world: World, has: (m: number) => boolean): string {
-  return [0, 1, 2, 3]
-    .filter((m) => world.party.memberSlot(m) >= 0 && has(m))
-    .map((m) => world.member(m).name)
-    .join(', ');
+export interface JournalSection {
+  title: string;
+  lines?: JournalLine[];
+  /** Paragraphs, each wrapped to the page. */
+  text?: string[];
 }
 
-function markHolders(world: World, bit: number): string {
-  return holders(world, (m) => (world.member(m).marks & bit) !== 0);
+/** The journal's page width (help.ts PAGE_WIDTH). */
+const WIDTH = 20;
+const MYSTERY = 'Mystery...';
+
+/** `name` at the left, `right` at the right, in the page's width; the name cut short should both not fit. */
+function row(name: string, right = ''): string {
+  if (!right) return name.slice(0, WIDTH);
+  return name.slice(0, WIDTH - right.length - 1).padEnd(WIDTH - right.length) + right;
 }
 
-/** Whether an entry is done, and its progress note, from the party and the flags. */
-function progress(world: World, id: string): { done: boolean; note: string } {
+/** A line not yet known of: its hint is still there for the asking. */
+function mystery(hint: string, about = 'Not yet heard of.'): JournalLine {
+  return { label: MYSTERY, name: MYSTERY, about, hint };
+}
+
+/** The members in the party. */
+function inParty(world: World): number[] {
+  return [0, 1, 2, 3].filter((m) => world.party.memberSlot(m) >= 0);
+}
+
+/** The party's members with marks bit `bit`, by name. */
+function holders(world: World, bit: number): string[] {
+  return inParty(world)
+    .filter((m) => (world.member(m).marks & bit) !== 0)
+    .map((m) => world.member(m).name);
+}
+
+function heldBy(world: World, bit: number): string {
+  const who = holders(world, bit);
+  if (!who.length) return 'Held by no one.';
+  return who.length === inParty(world).length && who.length > 1 ? 'Held by all.' : `Held by ${who.join(', ')}.`;
+}
+
+const MARK_BITS: Record<string, number> = { force: 0x10, fire: 0x20, snake: 0x40, kings: 0x80 };
+
+function heard(world: World, id: string): boolean {
+  return id === AUDIENCE ? world.journal.lordBritish : world.journal.clues.includes(id);
+}
+
+/** A clue's words, as spoken: a townsperson's from their town's talk, a dungeon's writing from its own. */
+function clueText(world: World, id: string): string {
+  const clue = CLUES[id];
+  if (clue?.text) return clue.text;
+  const writing = /^(\d+):(\d+)$/.exec(id);
+  if (writing) {
+    const talk = world.resources.talk.get(Number(writing[1]));
+    return talk ? speech(talk, Number(writing[2])).replace(/\n/g, ' ').trim() : '';
+  }
+  const [town, n] = id.split('#');
+  return world.townLine(town, Number(n));
+}
+
+/** Who said a clue, for a step's list of them. */
+function clueFrom(world: World, id: string): string {
+  const clue = CLUES[id];
+  if (clue?.from) return clue.from;
+  const writing = /^(\d+):(\d+)$/.exec(id);
+  if (writing) return `${DUNGEONS.find((d) => d.id === Number(writing[1]))?.name ?? 'A dungeon'}, level ${writing[2]}`;
+  const town = id.split('#')[0];
+  return TOWNS.find((t) => world.resources.mapNames.get(t.id) === town)?.name ?? town;
+}
+
+function heardOf(world: World, test: (clue: Clue) => boolean): boolean {
+  return world.journal.clues.some((id) => CLUES[id] && test(CLUES[id]));
+}
+
+/** How a main-quest step stands: done, its status at the right of its line, its card, and whether it is known of. */
+function stepState(world: World, id: Step): { done: boolean; right: string; about: string; started: boolean } {
   const j = world.journal;
-  const inParty = [0, 1, 2, 3].filter((m) => world.party.memberSlot(m) >= 0);
+  const members = inParty(world).length;
+  const marks = (bit: number, why: string) => {
+    const n = holders(world, bit).length;
+    return {
+      done: members > 0 && n === members,
+      right: members ? `${n}/${members}` : '',
+      about: `${heldBy(world, bit)} ${why}`,
+      started: n > 0,
+    };
+  };
   switch (id) {
     case 'king':
-      return { done: j.lordBritish, note: '' };
-    case 'kings': {
-      const who = markHolders(world, 0x80);
-      return { done: who !== '', note: who };
-    }
-    case 'ambrosia':
-      return { done: j.ambrosia || world.party.location === Location.Ambrosia, note: '' };
+      return j.lordBritish
+        ? { done: true, right: 'done', about: 'Audience had. He raises a level for any with the experience.', started: true }
+        : { done: false, right: '', about: "He awaits in his castle, beside Britain's town.", started: false };
+    case 'kings':
+      return marks(0x80, 'Lord British raises no one past level 5 without it.');
     case 'cards': {
-      const union = inParty.reduce((bits, m) => bits | (world.member(m).marks & 0x0f), 0);
-      const n = [1, 2, 4, 8].filter((b) => union & b).length;
-      return { done: n === 4, note: n ? `${n} of 4` : '' };
+      const union = inParty(world).reduce((bits, m) => bits | (world.member(m).marks & 0x0f), 0);
+      const held = CARDS.filter((_, i) => union & (1 << i));
+      const about = held.length ? `Held: ${held.join(', ')}.` : 'None held yet.';
+      return {
+        done: held.length === 4,
+        right: `${held.length}/4`,
+        about: `${about} All four are set in Exodus' castle.`,
+        started: held.length > 0,
+      };
     }
     case 'exotics': {
-      const weapons = world.party.weapons(15) + inParty.filter((m) => world.member(m).bytes[48] === 15).length;
-      const armour = world.party.armour(7) + inParty.filter((m) => world.member(m).bytes[40] === 7).length;
-      const note = weapons || armour ? `weapons ${weapons}, armour ${armour}` : '';
-      return { done: weapons > 0 && armour > 0, note };
+      const weapons = world.party.weapons(15) + inParty(world).filter((m) => world.member(m).bytes[48] === 15).length;
+      const armour = world.party.armour(7) + inParty(world).filter((m) => world.member(m).bytes[40] === 7).length;
+      const kinds = (weapons > 0 ? 1 : 0) + (armour > 0 ? 1 : 0);
+      return {
+        done: kinds === 2,
+        right: `${kinds}/2`,
+        about: `Exotic weapons ${weapons}, armour ${armour}, in the pack or in use.`,
+        started: kinds > 0,
+      };
     }
-    case 'fire': {
-      const who = markHolders(world, 0x20);
-      return { done: who !== '', note: who };
-    }
-    case 'force': {
-      const who = markHolders(world, 0x10);
-      return { done: who !== '', note: who };
-    }
+    case 'fire':
+      return marks(0x20, 'Each member needs it to cross lava.');
+    case 'force':
+      return marks(0x10, "Each member needs it for the force fields in Exodus' castle.");
     case 'snake': {
-      const who = markHolders(world, 0x40);
-      const note = [who && `mark: ${who}`, j.wordKnown && 'the word is known'].filter(Boolean).join('; ');
-      return { done: j.serpentParted, note };
+      const who = holders(world, 0x40);
+      const word = j.words.includes('EVOCARE');
+      if (j.serpentParted) return { done: true, right: 'done', about: 'Passed: the serpent parted at the word.', started: true };
+      const about = `The mark: ${who.length ? who.join(', ') : 'not held'}. The word: ${word ? 'EVOCARE' : 'not known'}.`;
+      const parts = (who.length ? 1 : 0) + (word ? 1 : 0);
+      return { done: false, right: `${parts}/3`, about, started: parts > 0 };
     }
     case 'order':
-      return { done: j.timeLord, note: '' };
+      return j.timeLord
+        ? { done: true, right: 'done', about: 'The Time Lord: LOVE, SOL, MOONS & DEATH, all else fails.', started: true }
+        : { done: false, right: '', about: 'Four cards, four slots, and one order. Not yet known.', started: false };
     case 'exodus':
-      return { done: world.party.exodusDestroyed, note: '' };
-    default:
-      return { done: false, note: '' };
+      return world.party.exodusDestroyed
+        ? { done: true, right: 'done', about: 'Destroyed. Sosaria is saved.', started: true }
+        : { done: false, right: '', about: 'Exodus waits in its castle, on an isle in the south-west.', started: false };
   }
 }
 
-/** The clues heard for an entry, as spoken. */
-function cluesFor(world: World, id: string): { from: string; text: string }[] {
-  const out: { from: string; text: string }[] = [];
-  for (const clue of world.journal.clues) {
-    const other = OTHER_CLUES[clue];
-    if (other) {
-      if (other.entries.includes(id)) out.push({ from: other.from, text: other.text });
-      continue;
-    }
-    const entries = TOWN_CLUES[clue];
-    if (!entries || !entries.includes(id)) continue;
-    const [town, n] = clue.split('#');
-    out.push({ from: town, text: world.townLine(town, Number(n)) });
+/** The main quest's lines. */
+function mainQuest(world: World): JournalLine[] {
+  return STEPS.map((step) => {
+    const state = stepState(world, step.id);
+    const told = world.journal.clues.filter((id) => CLUES[id]?.quest?.includes(step.id));
+    const known = step.id === 'king' || step.id === 'exodus' || state.started || state.done || told.length > 0;
+    if (!known) return mystery(step.hint);
+    const line: JournalLine = { label: row(step.name, state.right), name: step.name, about: state.about, hint: step.hint };
+    if (told.length) line.open = { title: step.name, text: told.map((id) => `${clueFrom(world, id)}: ${clueText(world, id)}`) };
+    return line;
+  });
+}
+
+/** Whether a place's square on Sosaria has been seen. */
+function seenOnSosaria(world: World, id: number): boolean {
+  const { locationX, locationY } = world.resources.misc;
+  return world.autoMap.squareSeen(MapId.Sosaria, locationX[id - 400], locationY[id - 400]);
+}
+
+/** A town's clues heard, of all. */
+function townCount(world: World, town: (typeof TOWNS)[number]): { heard: number; all: number } {
+  return { heard: town.clues.filter((id) => heard(world, id)).length, all: town.clues.length };
+}
+
+function townLine(world: World, town: (typeof TOWNS)[number]): JournalLine {
+  const { heard: n, all } = townCount(world, town);
+  const entered = beenIn(world, town.id) || n > 0;
+  let seen = seenOnSosaria(world, town.id);
+  if (town.id === DAWN) {
+    // Dawn stands only while both moons are new: seen is seen standing, now; known of, once entered or told of.
+    const { locationX, locationY } = world.resources.misc;
+    seen = seen && world.surface.tiles[locationY[DAWN - 400] * 64 + locationX[DAWN - 400]] === MapValue.Town;
+    if (!entered && !seen && !heardOf(world, (c) => c.reveals === 'dawn')) return mystery(town.hint);
   }
+  if (!entered) {
+    return {
+      label: row(town.name, seen ? 'seen' : ''),
+      name: town.name,
+      about: seen ? 'Found, not yet entered.' : town.id === DAWN ? 'Heard of. It stands only while both moons are new.' : 'Undiscovered.',
+      hint: town.hint,
+    };
+  }
+  const text = town.clues.map((id) => {
+    if (!heard(world, id)) return MYSTERY;
+    if (id === AUDIENCE) return 'An audience with Lord British.';
+    if (id === 'Yew:pray') return `In the circle of light: ${clueText(world, id)}`;
+    return clueText(world, id);
+  });
+  return {
+    label: row(town.name, `${n}/${all}`),
+    name: town.name,
+    about: n === all ? 'Entered. All its clues found.' : `Entered. ${n} of its ${all} clues found.`,
+    hint: town.hint,
+    open: { title: town.name, text },
+  };
+}
+
+/** Whether a dungeon's goal has been found. */
+function goalFound(world: World, dungeon: number, goal: Goal): boolean {
+  return goal === 'timeLord' ? world.journal.timeLord : world.journal.goals.includes(`${dungeon}:${goal}`);
+}
+
+function dungeonLine(world: World, dungeon: (typeof DUNGEONS)[number]): JournalLine {
+  const found = dungeon.goals.filter((g) => goalFound(world, dungeon.id, g));
+  const entered = beenIn(world, dungeon.id) || found.length > 0;
+  const seen = seenOnSosaria(world, dungeon.id);
+  const base = { name: dungeon.name, hint: dungeon.hint };
+  if (!entered) return { ...base, label: row(dungeon.name, seen ? 'seen' : ''), about: seen ? 'Found, not yet entered.' : 'Undiscovered.' };
+  const all = found.length === dungeon.goals.length;
+  const what = found.map((g) => GOAL_NAMES[g]).join(' and ');
+  const about = !found.length
+    ? 'Entered. What it holds for the quest is yet to be found.'
+    : `Entered. Found here: ${what}.${all ? '' : ' More lies within.'}`;
+  return { ...base, label: row(dungeon.name, `${found.length}/${dungeon.goals.length}`), about };
+}
+
+/** Ambrosia's shrines, one to a card (x & 3), each with its squares. */
+function shrineSquares(world: World): [number, number][][] {
+  const out: [number, number][][] = [[], [], [], []];
+  for (const [x, y] of shrines(world)) out[x & 3].push([x, y]);
   return out;
 }
 
-/** The journal as the player sees it: revealed entries only, in order. */
-export function journalLines(world: World): JournalLine[] {
-  const out: JournalLine[] = [];
-  for (const entry of ENTRIES) {
-    const { done, note } = progress(world, entry.id);
-    const clues = cluesFor(world, entry.id);
-    out.push({ id: entry.id, title: entry.title, state: done ? 'done' : 'open', note, clues, hint: entry.hint });
-    if (!done) break; // the next entry stays hidden until this one is done
-  }
-  return out;
-}
-
-/** The journal page: every entry's title, the selected one expanded with its note and clues. */
-export interface JournalPage {
-  lines: string[];
-  /** The line of the selected entry's title. */
-  cursorLine: number;
+function ambrosiaLines(world: World): JournalLine[] {
+  const stats = world.resources.strings.Messages;
+  return shrineSquares(world).map((squares, i) => {
+    const stat = (stats[173 + i] ?? '').trim();
+    const name = stat.charAt(0).toUpperCase() + stat.slice(1).toLowerCase();
+    const seen = squares.some(([x, y]) => world.autoMap.squareSeen(MapId.Ambrosia, x, y));
+    const entered = squares.some(([x, y]) => world.autoMap.visited(`shrine:${x},${y}`));
+    const who = holders(world, 1 << i);
+    const hint = `Stand in the shrine: Other, SEARCH for the Card of ${CARDS[i]}. Offer gold there to raise ${name}.`;
+    let about = 'Undiscovered.';
+    if (entered) {
+      const card = who.length ? `The Card of ${CARDS[i]}: held by ${who.join(', ')}.` : 'Its card is not yet found.';
+      about = `Entered. Gold offered here raises ${name}. ${card}`;
+    } else if (seen) about = 'Found, not yet entered.';
+    return { label: row(name, who.length ? CARDS[i] : seen || entered ? 'seen' : ''), name, about, hint };
+  });
 }
 
 /**
- * Lay out the journal page for `entries`, expanding the entry at `selected`
- * (clamped to the list) with its progress note and every clue heard.
- * `width` is the page's width in characters; `wrap` wraps a paragraph to it.
+ * The top of the journal: the main quest, the towns, the dungeons, Ambrosia and the words, each with its count
+ * and opening to its lines.
  */
-export function journalPage(
-  entries: JournalLine[],
-  selected: number,
-  width: number,
-  wrap: (text: string, width: number, max: number) => string[],
-): JournalPage {
-  const lines: string[] = [];
-  let cursorLine = 0;
-  const pick = Math.max(0, Math.min(entries.length - 1, selected));
-  entries.forEach((e, i) => {
-    if (lines.length) lines.push('');
-    if (i === pick) cursorLine = lines.length;
-    lines.push(`${e.state === 'done' ? '*' : '-'} ${e.title}`);
-    if (i !== pick) return;
-    if (e.note) lines.push(...wrap(e.note, width, 4));
-    for (const clue of e.clues) {
-      lines.push('');
-      lines.push(...wrap(`${clue.from}: ${clue.text}`, width, 12));
-    }
-  });
-  return { lines, cursorLine };
+export function journalTop(world: World): JournalLine[] {
+  const j = world.journal;
+  const steps = mainQuest(world);
+  const stepsDone = STEPS.filter((s) => stepState(world, s.id).done).length;
+  const towns = TOWNS.map((t) => townLine(world, t));
+  const townsDone = TOWNS.filter((t) => {
+    const { heard: n, all } = townCount(world, t);
+    return n === all;
+  }).length;
+  const dungeons = DUNGEONS.map((d) => dungeonLine(world, d));
+  const dungeonsDone = DUNGEONS.filter((d) => d.goals.every((g) => goalFound(world, d.id, g))).length;
+  const ambrosiaHint =
+    "Sail a frigate into the whirlpool; the ship is lost. Home from Ambrosia is a pirate's ship into the lake's whirlpool.";
+  const ambrosiaKnown =
+    j.ambrosia ||
+    world.party.location === Location.Ambrosia ||
+    world.autoMap.hasMap(MapId.Ambrosia) ||
+    heardOf(world, (c) => c.reveals === 'ambrosia');
+  const shrineLines = ambrosiaLines(world);
+  const cards = shrineLines.filter((_, i) => holders(world, 1 << i).length > 0).length;
+  const words = WORDS.map((w) =>
+    j.words.includes(w.word) ? { label: w.word, name: w.word, about: w.about, hint: w.hint } : mystery(w.hint, 'Not yet heard said.'),
+  );
+  const reached = j.ambrosia || world.autoMap.hasMap(MapId.Ambrosia);
+  return [
+    {
+      label: row('Main quest', `${stepsDone}/${STEPS.length}`),
+      name: 'Main quest',
+      about: 'All that stands between you and Exodus. After the king, in any order.',
+      hint: 'Talk to everyone: the townsfolk tell what the quest needs. Each step has its own hint.',
+      open: { title: 'Main quest', lines: steps },
+    },
+    {
+      label: row('Towns', `${townsDone}/${TOWNS.length}`),
+      name: 'Towns',
+      about: "Lord British's castle and the ten towns, and the clues to be heard in each.",
+      hint: 'Walk into townsfolk to talk. The isles need a ship: take one from pirates.',
+      open: { title: 'Towns', lines: towns },
+    },
+    {
+      label: row('Dungeons', `${dungeonsDone}/${DUNGEONS.length}`),
+      name: 'Dungeons',
+      about: 'Seven dungeons, each holding something the quest needs.',
+      hint: 'Bring light: torches, or the spells Lorum and Luminae. What the quest needs is mostly on level 8.',
+      open: { title: 'Dungeons', lines: dungeons },
+    },
+    ambrosiaKnown
+      ? {
+          label: row('Ambrosia', `${cards}/4`),
+          name: 'Ambrosia',
+          about: reached ? `The lost land. ${cards} of its four shrines' cards held.` : 'The lost land. Heard of, not yet reached.',
+          hint: ambrosiaHint,
+          open: { title: 'Ambrosia', lines: shrineLines },
+        }
+      : mystery(ambrosiaHint),
+    {
+      label: row('Words', `${words.filter((w) => w.label !== MYSTERY).length}/${WORDS.length}`),
+      name: 'Words',
+      about: 'Words to say with Other (O), learnt from those who say them.',
+      hint: 'Other: choose who speaks, then the word. On a controller, the words learnt are offered.',
+      open: { title: 'Words', lines: words },
+    },
+  ];
+}
+
+/** A line's card: its name, and what the party knows of it. */
+export function journalCard(line: JournalLine): Card {
+  return { title: line.name, lines: cardWrap(line.about).map((text) => ({ text })) };
+}
+
+/** A word's card, for Other's list on a controller: what it does. */
+export function wordCard(word: string): Card | undefined {
+  const w = WORDS.find((x) => x.word === word);
+  return w && { title: w.word, lines: cardWrap(w.about).map((text) => ({ text })) };
+}
+
+/** The words learnt, in Other's order: what a controller's Other offers. */
+export function knownWords(world: World): string[] {
+  return WORDS.map((w) => w.word).filter((w) => world.journal.words.includes(w));
+}
+
+/** Record a clue heard, and the word it teaches. Returns true if it was new. */
+export function hearClue(world: World, id: string): boolean {
+  const clue = CLUES[id];
+  if (!clue || world.journal.clues.includes(id)) return false;
+  world.journal.clues.push(id);
+  if (clue.word && !world.journal.words.includes(clue.word)) world.journal.words.push(clue.word);
+  return true;
 }
 
 /** Record a townsperson's line. Returns true if it was a new clue. */
 export function hearTownLine(world: World, town: string, speaker: number): boolean {
-  const id = `${town}#${speaker}`;
-  if (!TOWN_CLUES[id] || world.journal.clues.includes(id)) return false;
-  world.journal.clues.push(id);
-  return true;
+  return hearClue(world, `${town}#${speaker}`);
 }
 
-/** Record one of the other clues (Lord British, the prayer, the Time Lord). */
-export function hearClue(world: World, id: string): void {
-  if (OTHER_CLUES[id] && !world.journal.clues.includes(id)) world.journal.clues.push(id);
+/** Record the misty writing on a dungeon's level (0-based). Returns true if it was a new clue. */
+export function readWriting(world: World, dungeon: number, level: number): boolean {
+  return hearClue(world, `${dungeon}:${level + 1}`);
+}
+
+/** Record a mark's rod stood on in a dungeon (dungeon.ts): its column (x & 3) says which mark. */
+export function rodFound(world: World, dungeon: number, x: number): void {
+  const id = `${dungeon}:${ROD_MARKS[x & 3]}`;
+  if (!world.journal.goals.includes(id)) world.journal.goals.push(id);
 }
 
 /**
- * After anything that may move the journal on: compare the revealed
- * entries (their states and the clues heard about them) with those last
- * noted and, on a change, note the new ones and print "Journal updated".
- * A clue for an entry not yet revealed changes nothing visible.
+ * After anything that may move the journal on: compare what it records with what was last noted and, on a change,
+ * note it and print "Journal updated". Only what is recorded as it happens counts, and how each main-quest step
+ * stands - not a place newly seen on the way.
  */
 export function journalCheck(world: World, io: GameIO): boolean {
   if (!journalSnapshot(world)) return false;
@@ -319,11 +682,52 @@ export function journalCheck(world: World, io: GameIO): boolean {
   return true;
 }
 
-/** Note the revealed entries' states as seen; true if they differed from the last note. */
+/**
+ * What the journal shows that comes of what happens, as a list to compare: the flags, clues, words and goals
+ * recorded, each member's marks and cards, the exotic arms held, and which main-quest steps are known and done.
+ */
+function snapshot(world: World): string[] {
+  const j = world.journal;
+  const flags = (['lordBritish', 'ambrosia', 'timeLord', 'serpentParted'] as const).filter((f) => j[f]);
+  const marks = `marks:${inParty(world)
+    .map((m) => world.member(m).marks)
+    .join(',')}`;
+  const steps = mainQuest(world).map((l, i) => `${STEPS[i].id}:${l.label === MYSTERY ? '?' : stepState(world, STEPS[i].id).right}`);
+  return [...flags, ...[...j.clues].sort(), ...[...j.words].sort(), ...[...j.goals].sort(), marks, ...steps];
+}
+
+/** Note what the journal shows as seen; true if it differed from the last note. */
 export function journalSnapshot(world: World): boolean {
-  const now = journalLines(world).map((l) => `${l.id}:${l.state}:${l.clues.length}`);
+  const now = snapshot(world);
   const before = world.journal.seen;
   if (now.length === before.length && now.every((s, i) => s === before[i])) return false;
   world.journal.seen = now;
   return true;
+}
+
+/**
+ * A journal saved before words and goals were recorded: the words from the clues heard, and each dungeon's goals
+ * from the marks held - a mark counted found in a dungeon whose rod for it the auto-map has seen. Then what it shows
+ * is noted, so loading it announces nothing.
+ */
+export function upgradeJournal(world: World): void {
+  const j = world.journal;
+  for (const id of j.clues) {
+    const word = CLUES[id]?.word;
+    if (word && !j.words.includes(word)) j.words.push(word);
+  }
+  const held = inParty(world).reduce((bits, m) => bits | world.member(m).marks, 0);
+  for (const dungeon of DUNGEONS) {
+    const raw = world.resources.maps.get(dungeon.id);
+    if (!raw) continue;
+    for (let level = 0; level < 8; level++) {
+      for (let i = 0; i < 256; i++) {
+        if (raw[level * 256 + i] !== ROD) continue;
+        const [x, y] = [i & 15, i >> 4];
+        const mark = ROD_MARKS[x & 3];
+        if (held & MARK_BITS[mark] && world.autoMap.isSeen(dungeon.id, level, x, y)) rodFound(world, dungeon.id, x);
+      }
+    }
+  }
+  journalSnapshot(world);
 }

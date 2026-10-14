@@ -13,7 +13,7 @@
 import { World, blockExodusApproach } from './world.ts';
 import { Location } from './party.ts';
 import { MapId } from '../data/resources.ts';
-import { type JournalState, emptyJournal } from './journal.ts';
+import { type JournalState, emptyJournal, upgradeJournal } from './journal.ts';
 
 /**
  * Version 2 pools gold and food in the party record, version 3 weapons and
@@ -63,8 +63,8 @@ function restoreJournal(j: unknown): JournalState {
   const out = emptyJournal();
   if (!j || typeof j !== 'object') return out;
   const r = j as Record<string, unknown>;
-  for (const flag of ['lordBritish', 'ambrosia', 'timeLord', 'wordKnown', 'serpentParted'] as const) out[flag] = r[flag] === true;
-  for (const list of ['clues', 'seen'] as const) {
+  for (const flag of ['lordBritish', 'ambrosia', 'timeLord', 'serpentParted'] as const) out[flag] = r[flag] === true;
+  for (const list of ['clues', 'words', 'goals', 'seen'] as const) {
     if (Array.isArray(r[list])) out[list] = (r[list] as unknown[]).filter((s): s is string => typeof s === 'string');
   }
   return out;
@@ -85,7 +85,13 @@ export function serialize(world: World): SaveData {
     moonPhase: [...world.moonPhase],
     moonTimer: [...world.moonTimer],
     windDirection: world.windDirection,
-    journal: { ...world.journal, clues: [...world.journal.clues], seen: [...world.journal.seen] },
+    journal: {
+      ...world.journal,
+      clues: [...world.journal.clues],
+      words: [...world.journal.words],
+      goals: [...world.journal.goals],
+      seen: [...world.journal.seen],
+    },
     moongates: [...world.gatesKnown],
     tipsNudged: world.tipsNudged,
   };
@@ -121,6 +127,8 @@ export function restore(world: World, data: SaveData): boolean {
     if (data.version < 3) world.poolGear(); // members' bags become the party's
     if (data.version < 4) world.poolSupplies(); // and their gems, keys, powders and torches
     world.journal = restoreJournal(data.journal);
+    // A journal from before words and goals were recorded has them worked out from what it has (journal.ts).
+    if (data.journal && !Array.isArray((data.journal as Partial<JournalState>).words)) upgradeJournal(world);
     world.gatesKnown = Array.isArray(data.moongates)
       ? data.moongates.filter((g): g is number => Number.isInteger(g) && g >= 0 && g < 8)
       : [];

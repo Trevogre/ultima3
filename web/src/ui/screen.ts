@@ -35,7 +35,7 @@ import { PlayerRecord, levelUpDue, statusLetter } from '../game/player.ts';
 import { commandMenu, hasMagic } from '../game/context.ts';
 import { memberShape } from '../game/combat.ts';
 import { TILE_SETS, helpPages, PAGE_ROWS, PAGE_WIDTH } from './help.ts';
-import { journalLines, journalPage, journalSnapshot } from '../game/journal.ts';
+import { journalCard, journalSnapshot, journalTop, wordCard, type JournalLine } from '../game/journal.ts';
 import { TIPS, tipsPage } from '../game/tips.ts';
 import { CHEATS } from '../game/cheats.ts';
 import { Location } from '../game/party.ts';
@@ -59,7 +59,7 @@ import {
   type MenuPlacement,
   type SpellFlash,
 } from '../game/io.ts';
-import { gearName } from '../game/cards.ts';
+import { cardWrap, gearName } from '../game/cards.ts';
 import {
   controllerKeyFor,
   COMMAND_MENUS,
@@ -1161,47 +1161,59 @@ export class Screen implements GameIO {
   }
 
   /**
-   * The quest journal (J): one page over the map. Every revealed entry is
-   * a title, done ones marked; the entry under the cursor is expanded with
-   * its progress note and every clue heard about it. Up and Down move the
-   * cursor (the page scrolls to keep it in view), H (Y) prints that entry's
-   * hint to the message area, Escape (B) closes. The cursor starts on the
-   * entry in hand. What was shown is noted on closing, so "Journal
-   * updated" only marks real change.
+   * The quest journal (J), one page over the map (journal.ts): its five lines - the main quest, the towns, the
+   * dungeons, Ambrosia, the words - each opening to its own lines, and a town or a main-quest step to what was heard
+   * there or of it. Up and Down move the cursor (the page scrolls to keep it in view), A (Enter, Right) opens, B
+   * (Backspace, Left) comes back and on the top closes, Escape closes; Y (H) prints the line's hint to the message
+   * area. The highlighted line's card - what the party knows of it - stands over the party panel. What was shown is
+   * noted on closing, so "Journal updated" only marks real change.
    */
   async showJournal(): Promise<void> {
     const controller = this.inputMode === 'controller';
     const wasCovered = this.openPage();
-    let selected = -1;
-    let top = 0;
+    // The levels open, the top first: each a list with its cursor, or text read from the line that opened it.
+    type Level = { title: string; lines?: JournalLine[]; text?: string[]; from?: JournalLine; selected: number; top: number };
+    const stack: Level[] = [{ title: 'Journal', lines: journalTop(this.world), selected: 0, top: 0 }];
     try {
       for (;;) {
-        const entries = journalLines(this.world);
-        if (selected < 0)
-          selected = Math.max(
-            0,
-            entries.findIndex((e) => e.state !== 'done'),
-          );
-        selected = Math.max(0, Math.min(entries.length - 1, selected));
-        const page = journalPage(entries, selected, PAGE_WIDTH, wrapText);
-        const maxTop = Math.max(0, page.lines.length - PAGE_ROWS);
-        // Keep the cursor's title on the page, with a line of context below it where there is one.
-        if (page.cursorLine < top) top = page.cursorLine;
-        if (page.cursorLine >= top + PAGE_ROWS) top = page.cursorLine - PAGE_ROWS + 1;
-        top = Math.max(0, Math.min(maxTop, top));
-        const footer = [controller ? 'Y hint  B close' : 'H hint  Esc close', ''];
-        this.drawPage('Journal', page.lines.slice(top), footer, entries.length > 1 ? 'Up/Down: entries' : '', page.cursorLine - top);
+        const level = stack[stack.length - 1];
+        const line = level.lines ? level.lines[level.selected] : level.from;
+        let rows: string[];
+        let cursor = -1;
+        if (level.lines) {
+          rows = level.lines.map((l) => l.label);
+          if (level.selected < level.top) level.top = level.selected;
+          if (level.selected >= level.top + PAGE_ROWS) level.top = level.selected - PAGE_ROWS + 1;
+          cursor = level.selected - level.top;
+        } else {
+          rows = (level.text ?? []).flatMap((p, i) => [...(i ? [''] : []), ...wrapText(p, PAGE_WIDTH, 12)]);
+          level.top = Math.max(0, Math.min(rows.length - PAGE_ROWS, level.top));
+        }
+        const opens = !!line?.open && !!level.lines;
+        const inner = stack.length > 1;
+        const footer = controller
+          ? [`${opens ? 'A open  ' : ''}Y hint`, inner ? 'B back' : 'B close']
+          : [`${opens ? 'Enter open  ' : ''}H hint`, inner ? 'Bksp back  Esc close' : 'Esc close'];
+        const note = !level.lines && rows.length > PAGE_ROWS ? 'Up/Down: scroll' : '';
+        this.drawPage(level.title, rows.slice(level.top), footer, note, cursor);
+        this.showCard(line ? journalCard(line) : null);
         const key = await this.readKey();
-        if (key === Key.Escape || key === Key.B) break;
-        if (key === Key.Up) {
-          if (selected > 0) selected--;
-          else top = Math.max(0, top - 1);
-        } else if (key === Key.Down) {
-          if (selected < entries.length - 1) selected++;
-          else top = Math.min(maxTop, top + 1);
-        } else if (key === Key.Y || key === 'h' || key === 'H') this.printWrapped(entries[selected].hint);
+        if (key === null) continue;
+        if (key === Key.Escape || key === 'j' || key === 'J') break;
+        if (key === Key.B || key === Key.Backspace || key === Key.Left) {
+          if (inner) stack.pop();
+          else if (key !== Key.Left) break;
+        } else if (key === Key.Up || key === Key.Down) {
+          const step = key === Key.Up ? -1 : 1;
+          if (level.lines) level.selected = (level.selected + step + level.lines.length) % level.lines.length;
+          else level.top += step;
+        } else if (key === Key.A || key === Key.Enter || key === Key.Right) {
+          const open = opens ? line?.open : undefined;
+          if (open) stack.push({ title: open.title, lines: open.lines, text: open.text, from: line, selected: 0, top: 0 });
+        } else if (line && (key === Key.Y || key === 'h' || key === 'H')) this.printWrapped(line.hint);
       }
     } finally {
+      this.showCard(null);
       journalSnapshot(this.world);
       this.closePage(wasCovered);
     }
@@ -1837,12 +1849,14 @@ export class Screen implements GameIO {
         this.closeMenu();
       }
     }
-    if (words && words.length) {
-      const picked = await this.runMenu(
-        'Word',
-        words.map((w) => ({ key: w[0], label: w })),
-      );
-      return picked < 0 ? '' : words[picked];
+    if (words) {
+      // The words learnt (journal.ts), each with its card; none yet, a line that says so (B backs out).
+      const none = cardWrap('None learnt yet. Townsfolk say them: walk into everyone.').map((text) => ({ text }));
+      const options = words.length
+        ? words.map((w) => ({ key: w[0], label: w, card: wordCard(w) }))
+        : [{ key: '-', label: 'None known', disabled: true, card: { title: 'Words', lines: none } }];
+      const picked = await this.runMenu('Word', options);
+      return picked < 0 ? '' : (words[picked] ?? '');
     }
     // On-screen keyboard.
     const keys = [...ON_SCREEN_KEYBOARD.join(''), OSK_DELETE, OSK_DONE];

@@ -4,10 +4,23 @@ import { World } from '../src/game/world.ts';
 import { Location } from '../src/game/party.ts';
 import { MapValue } from '../src/game/tiles.ts';
 import { MapId } from '../src/data/resources.ts';
-import { journalLines, journalPage, journalCheck, hearClue, emptyJournal, ENTRIES } from '../src/game/journal.ts';
+import {
+  CLUES,
+  WORDS,
+  emptyJournal,
+  hearClue,
+  journalCard,
+  journalCheck,
+  journalTop,
+  knownWords,
+  readWriting,
+  rodFound,
+  type JournalLine,
+} from '../src/game/journal.ts';
 import { wrapText } from '../src/ui/menus.ts';
 import { talkTo, transactToward, otherCommand } from '../src/game/interact.ts';
 import { restore, SAVE_VERSION, type SaveData } from '../src/game/save.ts';
+import { CARD_ROWS } from '../src/game/io.ts';
 
 /** A world standing in a town map (id) on an empty floor with no townsfolk. */
 function inTown(id: number): { world: World; io: FakeIO } {
@@ -33,18 +46,98 @@ function personEast(world: World, n: number): void {
   m.setHp(0, n); // the low nibble of the hp byte is the talk index
 }
 
+/** A section of the journal's top, by name. */
+function section(world: World, name: string): JournalLine {
+  const line = journalTop(world).find((l) => l.name === name);
+  if (!line) throw new Error(`no ${name}`);
+  return line;
+}
+
+/** A line of a section, by name. */
+function lineOf(world: World, sectionName: string, name: string): JournalLine {
+  const line = section(world, sectionName).open?.lines?.find((l) => l.name === name);
+  if (!line) throw new Error(`no ${name} in ${sectionName}`);
+  return line;
+}
+
+const labels = (world: World, name: string) => section(world, name).open!.lines!.map((l) => l.label.trim());
+
+/** Every line in the journal, opened all the way down. */
+function everyLine(world: World): JournalLine[] {
+  const out: JournalLine[] = [];
+  const walk = (lines: JournalLine[]) => {
+    for (const l of lines) {
+      out.push(l);
+      if (l.open?.lines) walk(l.open.lines);
+    }
+  };
+  walk(journalTop(world));
+  return out;
+}
+
 describe('the journal', () => {
-  it('starts with "Speak to the King" alone and reveals the next entry only when the last is done', () => {
+  it('opens on the main quest, the towns, the dungeons, Ambrosia (a mystery) and the words', () => {
     const world = newWorld();
-    expect(journalLines(world).map((l) => `${l.id}:${l.state}`)).toEqual(['king:open']);
-    world.journal.lordBritish = true;
-    expect(journalLines(world).map((l) => `${l.id}:${l.state}`)).toEqual(['king:done', 'kings:open']);
-    world.member(0).bytes[14] |= 0x80; // the Mark of Kings
-    expect(journalLines(world).map((l) => l.id)).toEqual(['king', 'kings', 'ambrosia']);
-    expect(ENTRIES.map((e) => e.title.length).every((n) => n <= 18)).toBe(true); // "- " and the title fit 20 columns
+    expect(journalTop(world).map((l) => l.label)).toEqual([
+      'Main quest       0/9',
+      'Towns           0/11',
+      'Dungeons         0/7',
+      'Mystery...',
+      'Words            0/6',
+    ]);
+    // Lord British and Exodus are known from the start; the rest wait to be heard of.
+    expect(labels(world, 'Main quest')).toEqual([
+      'Lord British',
+      'Mystery...',
+      'Mystery...',
+      'Mystery...',
+      'Mystery...',
+      'Mystery...',
+      'Mystery...',
+      'Mystery...',
+      'Exodus',
+    ]);
+    expect(labels(world, 'Words')).toEqual(Array(6).fill('Mystery...'));
   });
 
-  it('an audience with Lord British completes the first entry and prints "Journal updated" once', async () => {
+  it('a clue makes its main-quest steps known, and the step opens to it as spoken', async () => {
+    const { world, io } = inTown(MapId.FirstTown);
+    personEast(world, 3); // "only with exotic arms can you win"
+    await talkTo(world, io, 0, 0);
+    expect(world.journal.clues).toEqual(['LCB Towne#3']);
+    expect(io.output).toContain('Journal updated');
+    const exotics = lineOf(world, 'Main quest', 'Exotic arms');
+    expect(exotics.label).toBe('Exotic arms      0/2');
+    expect(exotics.open?.text).toEqual([`Britain: ${world.townLine('LCB Towne', 3)}`]);
+    // A line that is no clue is not recorded, and one heard twice is recorded once, announced once.
+    io.output = '';
+    personEast(world, 1);
+    await talkTo(world, io, 0, 0);
+    personEast(world, 3);
+    await talkTo(world, io, 0, 0);
+    expect(world.journal.clues).toEqual(['LCB Towne#3']);
+    expect(io.output).not.toContain('Journal updated');
+  });
+
+  it('a town counts its clues heard, and opens to them as spoken, the rest mysteries', async () => {
+    const { world, io } = inTown(MapId.FirstTown);
+    expect(lineOf(world, 'Towns', 'Britain').about).toBe('Undiscovered.');
+    const { locationX, locationY } = world.resources.misc;
+    world.autoMap.markSquares(MapId.Sosaria, [[locationX[2], locationY[2]]]);
+    expect(lineOf(world, 'Towns', 'Britain').label).toBe('Britain         seen');
+    world.autoMap.markSquares(MapId.FirstTown, [[20, 20]]);
+    expect(lineOf(world, 'Towns', 'Britain').label).toBe('Britain          0/4');
+    personEast(world, 2);
+    await talkTo(world, io, 0, 0);
+    const britain = lineOf(world, 'Towns', 'Britain');
+    expect(britain.label).toBe('Britain          1/4');
+    expect(britain.about).toBe('Entered. 1 of its 4 clues found.');
+    expect(britain.open?.text).toEqual([world.townLine('LCB Towne', 2), 'Mystery...', 'Mystery...', 'Mystery...']);
+    // "Quest ye unto lost Ambrosia" makes Ambrosia known.
+    expect(section(world, 'Ambrosia').label).toBe('Ambrosia         0/4');
+  });
+
+  it("an audience with Lord British is a step done and one of his castle's clues, announced once", async () => {
     const { world, io } = inTown(MapId.LordBritishCastle);
     const m = world.monsters;
     m.setType(0, MapValue.LordBritish);
@@ -55,13 +148,15 @@ describe('the journal', () => {
     await transactToward(world, io, 1, 0);
     expect(world.journal.lordBritish).toBe(true);
     expect(io.output).toContain('Journal updated');
+    expect(lineOf(world, 'Main quest', 'Lord British').label).toBe('Lord British    done');
+    expect(lineOf(world, 'Towns', 'Lord British').label).toBe('Lord British     1/3');
     io.output = '';
     io.keys = ['1'];
     await transactToward(world, io, 1, 0);
     expect(io.output).not.toContain('Journal updated'); // nothing changed the second time
   });
 
-  it('"seek ye the Mark of Kings" is a clue from Lord British, kept under the entry', async () => {
+  it('"seek ye the Mark of Kings" is a clue from Lord British, kept under the step', async () => {
     const { world, io } = inTown(MapId.LordBritishCastle);
     const m = world.monsters;
     m.setType(0, MapValue.LordBritish);
@@ -74,59 +169,34 @@ describe('the journal', () => {
     io.keys = ['1'];
     await transactToward(world, io, 1, 0);
     expect(io.output).toContain('SEEK YE');
-    const kings = journalLines(world)[1];
-    expect(kings.state).toBe('open');
-    expect(kings.clues).toEqual([{ from: 'Lord British', text: 'SEEK YE, THE MARK OF KINGS!' }]);
+    const kings = lineOf(world, 'Main quest', 'Mark of Kings');
+    expect(kings.label).toBe('Mark of Kings    0/4');
+    expect(kings.open?.text).toEqual(['Lord British: SEEK YE, THE MARK OF KINGS!']);
   });
 
-  it("records a townsperson's clue as spoken, shown only once its entry is revealed", async () => {
-    const { world, io } = inTown(MapId.FirstTown);
-    personEast(world, 3); // "only with exotic arms can you win"
-    await talkTo(world, io, 0, 0);
-    expect(world.journal.clues).toEqual(['LCB Towne#3']);
-    expect(io.output).not.toContain('Journal updated'); // the entry is still hidden
-    expect(journalLines(world).some((l) => l.id === 'exotics')).toBe(false);
-    // A line that is no clue is not recorded, and one heard twice is recorded once.
-    personEast(world, 1);
-    await talkTo(world, io, 0, 0);
-    personEast(world, 3);
-    await talkTo(world, io, 0, 0);
-    expect(world.journal.clues).toEqual(['LCB Towne#3']);
-    // Reveal it: the earlier entries done.
-    world.journal.lordBritish = world.journal.ambrosia = true;
-    world.member(0).bytes[14] |= 0x8f;
-    const exotics = journalLines(world).find((l) => l.id === 'exotics')!;
-    expect(exotics.state).toBe('open');
-    expect(exotics.clues).toEqual([{ from: 'LCB Towne', text: world.townLine('LCB Towne', 3) }]);
-    expect(exotics.clues[0].text.toUpperCase()).toContain('EXOTIC');
-    expect(exotics.clues[0].text).not.toContain('\n');
-  });
-
-  it('marks, cards and exotics are read from the party, with a progress note', () => {
+  it('marks, cards and exotics are read from the party', () => {
     const world = newWorld();
-    world.journal.lordBritish = true;
     world.member(1).bytes[14] |= 0x80;
-    let lines = journalLines(world);
-    expect(lines[1].state).toBe('done');
-    expect(lines[1].note).toBe(world.member(1).name);
-    world.journal.ambrosia = true;
+    let kings = lineOf(world, 'Main quest', 'Mark of Kings');
+    expect(kings.label).toBe('Mark of Kings    1/4');
+    expect(kings.about).toContain(`Held by ${world.member(1).name}.`);
+    for (const m of [0, 2, 3]) world.member(m).bytes[14] |= 0x80;
+    kings = lineOf(world, 'Main quest', 'Mark of Kings');
+    expect(kings.label).toBe('Mark of Kings    4/4');
+    expect(kings.about).toContain('Held by all.');
     world.member(0).bytes[14] |= 0x01;
     world.member(2).bytes[14] |= 0x04;
-    lines = journalLines(world);
-    expect(lines[3].id).toBe('cards');
-    expect(lines[3].state).toBe('open');
-    expect(lines[3].note).toBe('2 of 4');
-    world.member(0).bytes[14] |= 0x0f;
+    const cards = lineOf(world, 'Main quest', 'The four cards');
+    expect(cards.label).toBe('The four cards   2/4');
+    expect(cards.about).toContain('Held: Love, Moons.');
     world.addGear(true, 15); // an exotic weapon
-    lines = journalLines(world);
-    expect(lines[4].id).toBe('exotics');
-    expect(lines[4].state).toBe('open');
-    expect(lines[4].note).toBe('weapons 1, armour 0');
+    expect(lineOf(world, 'Main quest', 'Exotic arms').about).toBe('Exotic weapons 1, armour 0, in the pack or in use.');
     world.addGear(false, 7);
-    expect(journalLines(world)[4].state).toBe('done');
+    expect(lineOf(world, 'Main quest', 'Exotic arms').label).toBe('Exotic arms      2/2');
+    expect(section(world, 'Main quest').label).toBe('Main quest       2/9'); // the Mark of Kings and the exotics
   });
 
-  it('praying in the circle of light in Yew teaches the word and notes it', async () => {
+  it('praying in the circle of light in Yew teaches EVOCARE, a clue of Yew and of the snake', async () => {
     const { world, io } = inTown(404); // Yew
     world.x = 0x30;
     world.y = 0x30;
@@ -134,41 +204,123 @@ describe('the journal', () => {
     io.inputs = ['PRAY'];
     await otherCommand(world, io);
     expect(io.output).toContain('EVOCARE');
-    expect(world.journal.wordKnown).toBe(true);
-    expect(world.journal.clues).toContain('Yew:pray');
+    expect(world.journal.words).toEqual(['EVOCARE']);
+    expect(lineOf(world, 'Towns', 'Yew').label).toBe('Yew              1/3');
+    expect(lineOf(world, 'Main quest', 'Silver Snake').about).toBe('The mark: not held. The word: EVOCARE.');
+    expect(lineOf(world, 'Words', 'EVOCARE').about).toContain('Silver Snake');
     // Elsewhere in Yew it does nothing.
     world.journal = emptyJournal();
     world.x = 20;
     io.keys = ['1'];
     io.inputs = ['PRAY'];
     await otherCommand(world, io);
-    expect(world.journal.wordKnown).toBe(false);
+    expect(world.journal.words).toEqual([]);
   });
 
-  it('journalCheck prints only when a revealed entry changes state', () => {
+  it('a word is learnt from those who say it, and Other offers a controller only those learnt', async () => {
+    const { world, io } = inTown(408); // Dawn
+    personEast(world, 2); // "<DIG> ON ISLES"
+    await talkTo(world, io, 0, 0);
+    expect(knownWords(world)).toEqual(['DIG']);
+    hearClue(world, 'Moon#3'); // "<BRIBE> GUARDS! THEY WILL LEAVE!"
+    expect(knownWords(world)).toEqual(['BRIBE', 'DIG']); // in Other's order
+    expect(labels(world, 'Words')).toEqual(['Mystery...', 'BRIBE', 'Mystery...', 'Mystery...', 'Mystery...', 'DIG']);
+    io.keys = ['1'];
+    io.inputs = ['SCREAM']; // a keyboard may still type any word
+    await otherCommand(world, io);
+    expect(io.wordsOffered).toEqual(['BRIBE', 'DIG']);
+    expect(io.output).toContain('AIEEEEE');
+  });
+
+  it('the writing on the walls of Clues teaches INSERT and SEARCH', () => {
+    const world = newWorld();
+    expect(readWriting(world, 415, 1)).toBe(true);
+    expect(readWriting(world, 415, 1)).toBe(false);
+    expect(readWriting(world, 415, 0)).toBe(false); // "CLUES TO FOLLOW!" teaches nothing
+    readWriting(world, 415, 2);
+    expect(knownWords(world)).toEqual(['SEARCH', 'INSERT']);
+    expect(lineOf(world, 'Main quest', "Cards' order").open?.text).toEqual(['Clues, level 2: <INSERT> CARDS INTO EXODUS!']);
+  });
+
+  it('a dungeon is undiscovered, seen, then entered with its goals found counted', () => {
+    const world = newWorld();
+    const { locationX, locationY } = world.resources.misc;
+    expect(lineOf(world, 'Dungeons', 'Perinian Depths').about).toBe('Undiscovered.');
+    world.autoMap.markSquares(MapId.Sosaria, [[locationX[16], locationY[16]]]);
+    expect(lineOf(world, 'Dungeons', 'Perinian Depths').label).toBe('Perinian Depths seen');
+    world.autoMap.mark(416, 0, 1, 1);
+    let depths = lineOf(world, 'Dungeons', 'Perinian Depths');
+    expect(depths.label).toBe('Perinian Depths  0/2');
+    expect(depths.about).toBe('Entered. What it holds for the quest is yet to be found.');
+    rodFound(world, 416, 15); // a Mark of Kings' rod (column 15: 15 & 3 is 3)
+    depths = lineOf(world, 'Dungeons', 'Perinian Depths');
+    expect(depths.label).toBe('Perinian Depths  1/2');
+    expect(depths.about).toBe('Entered. Found here: the Mark of Kings. More lies within.');
+    rodFound(world, 416, 5); // the Mark of Fire
+    expect(lineOf(world, 'Dungeons', 'Perinian Depths').label).toBe('Perinian Depths  2/2');
+    expect(section(world, 'Dungeons').label).toBe('Dungeons         1/7');
+    world.journal.timeLord = true;
+    expect(lineOf(world, 'Dungeons', 'Time Awaits').label).toBe('Time Awaits      1/1');
+  });
+
+  it('Dawn is a mystery till it is told of or seen standing', () => {
+    const world = newWorld();
+    expect(labels(world, 'Towns')).toContain('Mystery...');
+    hearClue(world, 'Lord British Castle#1'); // "WEST-8, SOUTH-35, AND AWAIT DAWN!"
+    expect(lineOf(world, 'Towns', 'Dawn').about).toBe('Heard of. It stands only while both moons are new.');
+  });
+
+  it("Ambrosia's shrines are named by the stat each raises, with the card found there", () => {
+    const world = newWorld();
+    world.journal.ambrosia = true;
+    expect(labels(world, 'Ambrosia')).toEqual(['Strength', 'Dexterity', 'Intelligence', 'Wisdom']);
+    world.member(3).bytes[14] |= 0x08;
+    expect(lineOf(world, 'Ambrosia', 'Wisdom').label).toBe('Wisdom         Death');
+    expect(section(world, 'Ambrosia').label).toBe('Ambrosia         1/4');
+  });
+
+  it('journalCheck prints only when what happens changes it, not a place newly seen', () => {
     const world = newWorld();
     const io = new FakeIO(world.resources);
-    expect(journalCheck(world, io)).toBe(false); // the opening state is already noted
-    hearClue(world, 'TimeLord'); // a clue for a hidden entry changes nothing visible
+    journalCheck(world, io);
+    io.output = '';
     expect(journalCheck(world, io)).toBe(false);
-    world.journal.lordBritish = true;
+    world.autoMap.markSquares(MapId.Sosaria, [[46, 19]]);
+    expect(journalCheck(world, io)).toBe(false);
+    hearClue(world, 'TimeLord');
     expect(journalCheck(world, io)).toBe(true);
-    expect(io.output.match(/Journal updated/g)).toHaveLength(1);
+    world.member(0).bytes[14] |= 0x20; // a mark taken
+    expect(journalCheck(world, io)).toBe(true);
+    expect(io.output.match(/Journal updated/g)).toHaveLength(2);
   });
 
-  it('keeps every hint short enough for the message area: sixteen columns, nine lines', () => {
-    for (const entry of ENTRIES) {
-      const lines = wrapText(entry.hint, 16, 20);
-      expect(lines.length, entry.id).toBeLessThanOrEqual(9);
-      expect(lines.join(' ').length, entry.id).toBe(entry.hint.length); // nothing cut off
+  it('every clue is a line the game has, and every line fits: the page, the card, the message area', () => {
+    const world = newWorld();
+    for (const id of Object.keys(CLUES)) {
+      const [town, n] = id.split('#');
+      if (n !== undefined) expect(world.townLine(town, Number(n)), id).not.toBe('');
     }
-    expect(journalLines(newWorld())[0].hint).toContain('Lord British');
+    // Everything known, so every line is drawn as itself, not a mystery.
+    for (const id of Object.keys(CLUES)) hearClue(world, id);
+    world.journal.lordBritish = world.journal.ambrosia = world.journal.timeLord = true;
+    for (const m of [0, 1, 2, 3]) world.member(m).bytes[14] = 0xff;
+    const lines = everyLine(world);
+    expect(lines.some((l) => l.label === 'Mystery...')).toBe(false);
+    expect(knownWords(world)).toEqual(WORDS.map((w) => w.word));
+    for (const l of lines) {
+      expect(l.label.length, l.label).toBeLessThanOrEqual(20);
+      expect(journalCard(l).lines.length, l.name).toBeLessThanOrEqual(CARD_ROWS);
+      const hint = wrapText(l.hint, 16, 20);
+      expect(hint.length, l.name).toBeLessThanOrEqual(9);
+      expect(hint.join(' ').length, l.name).toBe(l.hint.length); // nothing cut off
+    }
   });
 
   it('is saved with the game, and an older save starts it empty', () => {
     const a = newWorld();
     a.journal.lordBritish = true;
-    a.journal.clues.push('LB:mark', 'Moon#6');
+    hearClue(a, 'Moon#3');
+    rodFound(a, 416, 15);
     journalCheck(a, new FakeIO(a.resources));
     const data = savedCopy(a);
     expect(data.version).toBe(SAVE_VERSION);
@@ -183,10 +335,32 @@ describe('the journal', () => {
     expect(restore(c, old)).toBe(true);
     expect(c.journal).toEqual(emptyJournal());
 
-    const odd = { ...data, journal: { lordBritish: 'yes', clues: [1, 'Moon#6'], seen: null } } as unknown as SaveData;
+    const odd = { ...data, journal: { lordBritish: 'yes', clues: [1, 'Moon#6'], words: [], seen: null } } as unknown as SaveData;
     const d = new World(a.resources);
     expect(restore(d, odd)).toBe(true);
     expect(d.journal).toEqual({ ...emptyJournal(), clues: ['Moon#6'] });
+  });
+
+  it('a journal saved before words and goals has them worked out, and announces nothing', () => {
+    const a = newWorld();
+    a.member(0).bytes[14] |= 0x80; // the Mark of Kings
+    const data = savedCopy(a);
+    data.journal = {
+      lordBritish: true,
+      ambrosia: false,
+      timeLord: false,
+      wordKnown: true,
+      serpentParted: false,
+      clues: ['Yew:pray', 'Dawn#2'],
+      seen: ['king:done:0', 'kings:open:0'],
+    } as unknown as SaveData['journal'];
+    const b = new World(a.resources);
+    b.autoMap.mark(416, 0, 15, 11); // its rod on the Perinian Depths' first level seen
+    b.autoMap.mark(413, 7, 5, 14); // and the Fires of Hell's Mark of Fire, which no one holds
+    expect(restore(b, data)).toBe(true);
+    expect(b.journal.words.sort()).toEqual(['DIG', 'EVOCARE']);
+    expect(b.journal.goals).toEqual(['416:kings']);
+    expect(journalCheck(b, new FakeIO(b.resources))).toBe(false);
   });
 
   it('a new game starts the journal afresh', () => {
@@ -194,34 +368,5 @@ describe('the journal', () => {
     world.journal.lordBritish = true;
     world.newGame();
     expect(world.journal).toEqual(emptyJournal());
-  });
-});
-
-describe('journalPage', () => {
-  const wrap = (text: string, width: number) => [text.slice(0, width)];
-  const entries = [
-    { id: 'king', title: 'Speak to the King', state: 'done' as const, note: '', clues: [], hint: 'h1' },
-    {
-      id: 'kings',
-      title: 'The Mark of Kings',
-      state: 'open' as const,
-      note: 'Not yet',
-      clues: [{ from: 'Yew', text: 'Dig deep' }],
-      hint: 'h2',
-    },
-  ];
-
-  it('expands the selected entry and reports its title line', () => {
-    const page = journalPage(entries, 1, 20, wrap);
-    expect(page.lines).toEqual(['* Speak to the King', '', '- The Mark of Kings', 'Not yet', '', 'Yew: Dig deep']);
-    expect(page.cursorLine).toBe(2);
-    const first = journalPage(entries, 0, 20, wrap);
-    expect(first.lines).toEqual(['* Speak to the King', '', '- The Mark of Kings']);
-    expect(first.cursorLine).toBe(0);
-  });
-
-  it('clamps the selection to the list', () => {
-    expect(journalPage(entries, 7, 20, wrap).cursorLine).toBe(2);
-    expect(journalPage(entries, -3, 20, wrap).cursorLine).toBe(0);
   });
 });

@@ -94,7 +94,7 @@ function plain(word: string): string {
 }
 
 /** The squares of Ambrosia's shrines, from its map. */
-function shrines(world: World): [number, number][] {
+export function shrines(world: World): [number, number][] {
   const raw = world.resources.maps.get(MapId.Ambrosia);
   const out: [number, number][] = [];
   if (!raw) return out;

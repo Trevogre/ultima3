@@ -134,7 +134,10 @@ export class FakeIO implements GameIO {
     if (values.length !== labels.length) throw new Error(`FakeIO: expected ${labels.length} values`);
     return values;
   }
-  async inputText(): Promise<string> {
+  /** The words the last inputText offered a controller (Other's, those learnt). */
+  wordsOffered: string[] | undefined;
+  async inputText(_max?: number, _numbersOnly?: boolean, words?: string[]): Promise<string> {
+    this.wordsOffered = words;
     const t = this.inputs.shift();
     if (t === undefined) throw new Error('FakeIO: no more inputs');
     this.output += t;

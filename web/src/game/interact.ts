@@ -70,7 +70,7 @@ const Msg = {
 // ---------------------------------------------------------------------------
 
 import { speech } from './talk.ts';
-import { hearTownLine, hearClue, journalCheck } from './journal.ts';
+import { hearTownLine, hearClue, journalCheck, knownWords } from './journal.ts';
 export { speech };
 
 /**
@@ -359,7 +359,7 @@ async function evocare(world: World, io: GameIO, member: number): Promise<void> 
 // O: Other command
 // ---------------------------------------------------------------------------
 
-/** Words the Other command understands, offered as a menu to controller users. */
+/** Every word Other answers to but PISSOFF (tools/sim/fuzz.ts says them all; a controller is offered those learnt). */
 export const OTHER_WORDS = ['SEARCH', 'BRIBE', 'PRAY', 'EVOCARE', 'INSERT', 'DIG', 'PAXUM', 'SCREAM'];
 
 /**
@@ -377,7 +377,8 @@ export async function otherCommand(world: World, io: GameIO, fromYell = false): 
   if (!world.memberAlive(member)) return incapacitated(io);
   const p = world.member(member);
   io.printMessage(Msg.Cmd);
-  const word = (await io.inputText(8, false, OTHER_WORDS)).toUpperCase();
+  // A controller is offered the words learnt (journal.ts); a keyboard types any, as on the Apple II.
+  const word = (await io.inputText(8, false, knownWords(world))).toUpperCase();
   io.print('\n');
   if (!word) return cancelled(world, io);
 
@@ -439,8 +440,7 @@ export async function otherCommand(world: World, io: GameIO, fromYell = false): 
       if (world.party.surfaceX !== world.resources.misc.locationX[4]) return io.printMessage(Msg.NoEffect);
       if (world.x !== 0x30 || world.y !== 0x30) return io.printMessage(Msg.NoEffect);
       io.printMessage(Msg.YellEvocare);
-      world.journal.wordKnown = true;
-      hearClue(world, 'Yew:pray');
+      hearClue(world, 'Yew:pray'); // the word learnt
       journalCheck(world, io);
       return;
     }

@@ -23,7 +23,7 @@ import { QUICK_CAST_KEY, SAFE_CHEST_KEY, LIGHT_KEY, VIEW_MAP_KEY } from './conte
 import { ageChars } from './turn.ts';
 import { checkAllDead } from './death.ts';
 import { speech, otherCommand, yell } from './interact.ts';
-import { hearClue, journalCheck } from './journal.ts';
+import { hearClue, journalCheck, readWriting, rodFound } from './journal.ts';
 import {
   getChest,
   igniteTorch,
@@ -408,6 +408,7 @@ async function encounter(world: World, io: GameIO, cell: number, arrived = true)
       if (n >= 1 && n <= 4) {
         const p = world.member(n - 1);
         p.bytes[14] |= 1 << ((world.x & 3) + 4);
+        rodFound(world, world.current.id, world.x);
         await io.flashMember(n - 1);
         io.sound(Sound.Hit);
         if (p.subtractHitPoints(50)) io.sound(deathSound(p.sex));
@@ -434,6 +435,7 @@ async function encounter(world: World, io: GameIO, cell: number, arrived = true)
       io.printMessage(Msg.MistyWriting);
       io.print(speech(world.current.talk, d.level + 1));
       io.print('\n');
+      if (readWriting(world, world.current.id, d.level)) journalCheck(world, io);
       return;
 
     default:
