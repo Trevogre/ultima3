@@ -888,7 +888,13 @@ export class Screen implements GameIO {
           break;
         case 'C': {
           const done = await this.cheatMenu();
-          if (done) this.printWrapped(done); // to the message area beside the menu, as any other event
+          if (done) {
+            // What the cheat changed shown at once, beside the menu still open: the party's boxes, the gold and food
+            // on the top border, and the map (Go home moves the party).
+            this.updateStats(true);
+            this.redrawMap();
+            this.printWrapped(done); // to the message area beside the menu, as any other event
+          }
           break;
         }
         default:
