@@ -267,6 +267,8 @@ async function equipmentShop(world: World, io: GameIO, p: PlayerRecord, isWeapon
   // up to the +4 weapons and +2 plate. Exotics are never for sale. (`opnum`)
   const fullStock = world.party.surfaceX === 37;
   const last = isWeapon ? (fullStock ? 15 : 8) : fullStock ? 7 : 5; // exclusive letter index
+  // Dawn's shops are the journal's magic arms, found (interact.ts notes it after).
+  if (fullStock) world.journal[isWeapon ? 'magicWeapons' : 'magicArmour'] = true;
 
   // Menu of what the shop stocks (letters B..), with prices; what this member cannot use is greyed but still for sale.
   // To buy, each is weighed against what they have, on a card over the party panel: made afresh each time the list is
@@ -380,6 +382,7 @@ async function armourShop(world: World, io: GameIO, p: PlayerRecord): Promise<vo
 
 /** The guild: keys, torches (five at a time), powders and gems, into the party's supply (this port). */
 async function guild(world: World, io: GameIO): Promise<void> {
+  world.journal.guild = true; // the journal's Supplies, found (interact.ts notes it after)
   io.printMessage(Msg.Guild);
   for (;;) {
     io.printMessage(Msg.GuildPrices);

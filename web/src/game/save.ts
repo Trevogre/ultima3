@@ -13,7 +13,7 @@
 import { World, blockExodusApproach } from './world.ts';
 import { Location } from './party.ts';
 import { MapId } from '../data/resources.ts';
-import { type JournalState, emptyJournal, upgradeJournal } from './journal.ts';
+import { type JournalState, JOURNAL_FLAGS, emptyJournal, upgradeJournal } from './journal.ts';
 
 /**
  * Version 2 pools gold and food in the party record, version 3 weapons and
@@ -63,7 +63,7 @@ function restoreJournal(j: unknown): JournalState {
   const out = emptyJournal();
   if (!j || typeof j !== 'object') return out;
   const r = j as Record<string, unknown>;
-  for (const flag of ['lordBritish', 'ambrosia', 'timeLord', 'serpentParted'] as const) out[flag] = r[flag] === true;
+  for (const flag of JOURNAL_FLAGS) out[flag] = r[flag] === true;
   for (const list of ['clues', 'words', 'goals', 'seen'] as const) {
     if (Array.isArray(r[list])) out[list] = (r[list] as unknown[]).filter((s): s is string => typeof s === 'string');
   }

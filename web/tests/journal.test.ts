@@ -19,8 +19,10 @@ import {
 } from '../src/game/journal.ts';
 import { wrapText } from '../src/ui/menus.ts';
 import { talkTo, transactToward, otherCommand } from '../src/game/interact.ts';
+import { shop } from '../src/game/shops.ts';
+import { board } from '../src/game/commands.ts';
 import { restore, SAVE_VERSION, type SaveData } from '../src/game/save.ts';
-import { CARD_ROWS } from '../src/game/io.ts';
+import { CARD_ROWS, Key } from '../src/game/io.ts';
 
 /** A world standing in a town map (id) on an empty floor with no townsfolk. */
 function inTown(id: number): { world: World; io: FakeIO } {
@@ -83,6 +85,7 @@ describe('the journal', () => {
       'Towns           0/11',
       'Dungeons         0/7',
       'Mystery...',
+      'Equipment        0/4',
       'Words            0/7',
     ]);
     // Lord British and Exodus are known from the start; the rest wait to be heard of.
@@ -296,6 +299,36 @@ describe('the journal', () => {
     expect(lineOf(world, 'Towns', 'Death Gulch').label).toBe('Death Gulch      0/4');
   });
 
+  it("Equipment: a guild, Dawn's magic weapons and armour, and a ship, each done once found", async () => {
+    const { world, io } = inTown(407); // Grey
+    expect(labels(world, 'Equipment')).toEqual(['Supplies', 'Magic Weapons', 'Magic Armour', 'Ships']);
+    expect(lineOf(world, 'Equipment', 'Supplies').about).toBe('Find a guild to get adventuring supplies.');
+    io.keys = ['N'];
+    await shop(world, io, 5, 0); // the guild: nothing bought
+    expect(lineOf(world, 'Equipment', 'Supplies').label).toBe('Supplies        done');
+    // Grey's weapon shop is an ordinary one; Dawn's sells the magic arms.
+    io.keys = ['N', 'B', Key.Escape];
+    await shop(world, io, 3, 0);
+    expect(world.journal.magicWeapons).toBe(false);
+    world.party.surfaceX = 37; // Dawn
+    io.keys = ['N', 'B', Key.Escape];
+    await shop(world, io, 3, 0);
+    io.keys = ['N', 'B', Key.Escape];
+    await shop(world, io, 4, 0);
+    expect(labels(world, 'Equipment')).toEqual(['Supplies        done', 'Magic Weapons   done', 'Magic Armour    done', 'Ships']);
+    expect(section(world, 'Equipment').label).toBe('Equipment        3/4');
+  });
+
+  it('boarding a ship marks Ships done and updates the journal', () => {
+    const world = newWorld();
+    const io = new FakeIO(world.resources);
+    journalCheck(world, io);
+    world.putXYVal(MapValue.Frigate, world.x, world.y);
+    board(world, io);
+    expect(lineOf(world, 'Equipment', 'Ships').label).toBe('Ships           done');
+    expect(io.output).toContain('Journal updated');
+  });
+
   it("Ambrosia's shrines are named by the stat each raises, with the card found there", () => {
     const world = newWorld();
     world.journal.ambrosia = true;
@@ -329,6 +362,7 @@ describe('the journal', () => {
     // Everything known, so every line is drawn as itself, not a mystery.
     for (const id of Object.keys(CLUES)) hearClue(world, id);
     world.journal.lordBritish = world.journal.ambrosia = world.journal.timeLord = true;
+    world.journal.guild = world.journal.magicWeapons = world.journal.magicArmour = world.journal.ship = true;
     for (const m of [0, 1, 2, 3]) world.member(m).bytes[14] = 0xff;
     const lines = everyLine(world);
     expect(lines.some((l) => l.label === 'Mystery...')).toBe(false);

@@ -6,7 +6,7 @@
  * told the party and what the party has done, so a newcomer can play without a walkthrough, and stays out of the way
  * of anyone who never opens it.
  *
- * The top of the journal is five lines, each opening to more:
+ * The top of the journal is six lines, each opening to more:
  *
  * - Main quest: the nine steps to Exodus. After the first, an audience with Lord British, they may be taken in any
  *   order, so all are listed - each a mystery until something has told of it (a clue tagged with it, or a start
@@ -17,6 +17,8 @@
  * - Dungeons: the seven - undiscovered, seen, or entered with so many of their goals found (a mark's rod stood on,
  *   the Time Lord met).
  * - Ambrosia: its four shrines, and the cards found in them.
+ * - Equipment: what the party can go and get - a guild's supplies, Dawn's magic weapons and armour, a ship - each
+ *   done once found. (The exotic arms are a main-quest step.)
  * - Words: the words Other answers to, each learnt by being heard said (CLUES' `word`). A controller's Other offers
  *   only these (interact.ts); a keyboard may type anything, as on the Apple II.
  *
@@ -43,6 +45,11 @@ export interface JournalState {
   ambrosia: boolean;
   timeLord: boolean;
   serpentParted: boolean;
+  /** Equipment found (equipment): a guild visited, Dawn's weapon and armour shops visited, a ship boarded. */
+  guild: boolean;
+  magicWeapons: boolean;
+  magicArmour: boolean;
+  ship: boolean;
   /** Clue ids heard (CLUES), e.g. "Moon#6" or "Yew:pray". */
   clues: string[];
   /** The words Other answers to that have been heard said (WORDS), e.g. "DIG". */
@@ -54,8 +61,33 @@ export interface JournalState {
 }
 
 export function emptyJournal(): JournalState {
-  return { lordBritish: false, ambrosia: false, timeLord: false, serpentParted: false, clues: [], words: [], goals: [], seen: [] };
+  return {
+    lordBritish: false,
+    ambrosia: false,
+    timeLord: false,
+    serpentParted: false,
+    guild: false,
+    magicWeapons: false,
+    magicArmour: false,
+    ship: false,
+    clues: [],
+    words: [],
+    goals: [],
+    seen: [],
+  };
 }
+
+/** The journal's flags, each set once as it happens: saved, restored and compared (journalCheck) alike. */
+export const JOURNAL_FLAGS = [
+  'lordBritish',
+  'ambrosia',
+  'timeLord',
+  'serpentParted',
+  'guild',
+  'magicWeapons',
+  'magicArmour',
+  'ship',
+] as const;
 
 /** The steps of the main quest, in the journal's order. */
 type Step = 'king' | 'kings' | 'cards' | 'exotics' | 'fire' | 'force' | 'snake' | 'order' | 'exodus';
@@ -587,8 +619,48 @@ function ambrosiaLines(world: World): JournalLine[] {
   });
 }
 
+/** Where the guilds are, for Supplies' hint. */
+const GUILDS = 'Guilds sell keys, torches, powders and gems: in Grey, a walk south-west; Devil Guard and Fawn, on isles; and Dawn.';
+/** Dawn, for the magic arms' hints. */
+const DAWN_SHOPS = "One town's shops sell them: Dawn, in the forest west of the Montors, standing only while both moons are new.";
+
+/** The equipment the party can go and get, beyond what it starts with: each line done once found. */
+function equipment(world: World): JournalLine[] {
+  const j = world.journal;
+  const line = (name: string, done: boolean, before: string, after: string, hint: string): JournalLine => ({
+    label: row(name, done ? 'done' : ''),
+    name,
+    about: done ? after : before,
+    hint,
+  });
+  return [
+    line('Supplies', j.guild, 'Find a guild to get adventuring supplies.', 'Found a guild: keys, torches, powders and gems.', GUILDS),
+    line(
+      'Magic Weapons',
+      j.magicWeapons,
+      'Find the shop that sells magic weapons.',
+      'Found, in Dawn: the +2 and +4 weapons. Ordinary shops stop at the 2-H sword.',
+      DAWN_SHOPS,
+    ),
+    line(
+      'Magic Armour',
+      j.magicArmour,
+      'Find the shop that sells magic armour.',
+      'Found, in Dawn: +2 chain and +2 plate. Ordinary shops stop at plate.',
+      DAWN_SHOPS,
+    ),
+    line(
+      'Ships',
+      j.ship,
+      'Acquire a ship...',
+      'Boarded. A ship reaches the isles, and through the whirlpool, Ambrosia.',
+      'No one sells ships. Attack a pirate ship from the shore, then board (B) the frigate it leaves.',
+    ),
+  ];
+}
+
 /**
- * The top of the journal: the main quest, the towns, the dungeons, Ambrosia and the words, each with its count
+ * The top of the journal: the main quest, the towns, the dungeons, Ambrosia, the equipment and the words, each with its count
  * and opening to its lines.
  */
 export function journalTop(world: World): JournalLine[] {
@@ -615,6 +687,7 @@ export function journalTop(world: World): JournalLine[] {
     j.words.includes(w.word) ? { label: w.word, name: w.word, about: w.about, hint: w.hint } : mystery(w.hint, 'Not yet heard said.'),
   );
   const reached = j.ambrosia || world.autoMap.hasMap(MapId.Ambrosia);
+  const gear = equipment(world);
   return [
     {
       label: row('Main quest', `${stepsDone}/${STEPS.length}`),
@@ -646,6 +719,13 @@ export function journalTop(world: World): JournalLine[] {
           open: { title: 'Ambrosia', lines: shrineLines },
         }
       : mystery(ambrosiaHint),
+    {
+      label: row('Equipment', `${gear.filter((l) => l.label.endsWith('done')).length}/${gear.length}`),
+      name: 'Equipment',
+      about: 'What the party can go and get, beyond what it sets out with.',
+      hint: 'Each line has its own hint.',
+      open: { title: 'Equipment', lines: gear },
+    },
     {
       label: row('Words', `${words.filter((w) => w.label !== MYSTERY).length}/${WORDS.length}`),
       name: 'Words',
@@ -714,7 +794,7 @@ export function journalCheck(world: World, io: GameIO): boolean {
  */
 function snapshot(world: World): string[] {
   const j = world.journal;
-  const flags = (['lordBritish', 'ambrosia', 'timeLord', 'serpentParted'] as const).filter((f) => j[f]);
+  const flags = JOURNAL_FLAGS.filter((f) => j[f]);
   const marks = `marks:${inParty(world)
     .map((m) => world.member(m).marks)
     .join(',')}`;

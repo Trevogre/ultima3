@@ -12,6 +12,7 @@ import { World } from './world.ts';
 import { Location } from './party.ts';
 import { MapValue, Shape, MapValue as MV } from './tiles.ts';
 import { type GameIO, Key, Sound } from './io.ts';
+import { journalCheck } from './journal.ts';
 
 /** 1-based indices into the Messages string table. Names match the text. */
 export const Msg = {
@@ -331,6 +332,8 @@ export function board(world: World, io: GameIO): void {
     world.putXYVal(MapValue.Water, world.x, world.y);
     world.party.shape = PartyShape.Frigate;
     io.printMessage(Msg.BoardFrigate);
+    world.journal.ship = true;
+    journalCheck(world, io);
   } else {
     io.printMessage(Msg.Board);
     what2(io);
