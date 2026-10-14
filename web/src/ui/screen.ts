@@ -1192,9 +1192,8 @@ export class Screen implements GameIO {
         }
         const opens = !!line?.open && !!level.lines;
         const inner = stack.length > 1;
-        const footer = controller
-          ? [`${opens ? 'A open  ' : ''}Y hint`, inner ? 'B back' : 'B close']
-          : [`${opens ? 'Enter open  ' : ''}H hint`, inner ? 'Bksp back  Esc close' : 'Esc close'];
+        // Only the hint's key: opening and backing out are as in every list.
+        const footer = [controller ? 'Y hint' : 'H hint', ''];
         const note = !level.lines && rows.length > PAGE_ROWS ? 'Up/Down: scroll' : '';
         this.drawPage(level.title, rows.slice(level.top), footer, note, cursor);
         this.showCard(line ? journalCard(line) : null);
