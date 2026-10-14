@@ -283,6 +283,19 @@ describe('the journal', () => {
     expect(lineOf(world, 'Towns', 'Dawn').about).toBe('Heard of. It stands only while both moons are new.');
   });
 
+  it('Devil Guard, Fawn and Death Gulch, on their isles, are mysteries till seen, entered or told of', () => {
+    const world = newWorld();
+    expect(labels(world, 'Towns').slice(-3)).toEqual(['Mystery...', 'Mystery...', 'Mystery...']);
+    const { locationX, locationY } = world.resources.misc;
+    world.autoMap.markSquares(MapId.Sosaria, [[locationX[9], locationY[9]]]);
+    expect(lineOf(world, 'Towns', 'Devil Guard').label).toBe('Devil Guard     seen');
+    hearClue(world, 'Death Gulch#6'); // "FAUN IS A NICE PLACE!"
+    expect(lineOf(world, 'Towns', 'Fawn').about).toBe('Heard of, not yet found.');
+    expect(labels(world, 'Towns').at(-1)).toBe('Mystery...'); // Death Gulch: nothing names it
+    world.autoMap.markSquares(411, [[20, 20]]);
+    expect(lineOf(world, 'Towns', 'Death Gulch').label).toBe('Death Gulch      0/4');
+  });
+
   it("Ambrosia's shrines are named by the stat each raises, with the card found there", () => {
     const world = newWorld();
     world.journal.ambrosia = true;

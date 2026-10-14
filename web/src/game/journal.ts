@@ -12,7 +12,8 @@
  *   order, so all are listed - each a mystery until something has told of it (a clue tagged with it, or a start
  *   made on it).
  * - Towns: Lord British's castle and the ten towns - undiscovered, seen, or entered with so many of their clues
- *   heard (CLUES: the townsfolk's lines that bear on the quest).
+ *   heard (CLUES: the townsfolk's lines that bear on the quest). Dawn and the three towns on isles are mysteries
+ *   till seen, entered or told of.
  * - Dungeons: the seven - undiscovered, seen, or entered with so many of their goals found (a mark's rod stood on,
  *   the Time Lord met).
  * - Ambrosia: its four shrines, and the cards found in them.
@@ -59,6 +60,13 @@ export function emptyJournal(): JournalState {
 /** The steps of the main quest, in the journal's order. */
 type Step = 'king' | 'kings' | 'cards' | 'exotics' | 'fire' | 'force' | 'snake' | 'order' | 'exodus';
 
+/** Towns the journal keeps a mystery till seen, entered or told of: Dawn, and the three on isles. */
+const DAWN = 408;
+const DEVIL_GUARD = 409;
+const FAWN = 410;
+const DEATH_GULCH = 411;
+const HIDDEN_TOWNS = [DAWN, DEVIL_GUARD, FAWN, DEATH_GULCH];
+
 /**
  * A clue: a line the party may hear that bears on the quest, and what hearing it does - the Other word it teaches,
  * the steps of the main quest it tells of, the place it makes known. A townsperson's is "<the town's name in the
@@ -67,7 +75,8 @@ type Step = 'king' | 'kings' | 'cards' | 'exotics' | 'fire' | 'force' | 'snake' 
 interface Clue {
   word?: string;
   quest?: Step[];
-  reveals?: 'dawn' | 'ambrosia';
+  /** What it makes known: Ambrosia, or a hidden town (HIDDEN_TOWNS) by its map id. */
+  reveals?: 'ambrosia' | number;
   /** Who says it, and what, where it is not a townsperson's line. */
   from?: string;
   text?: string;
@@ -75,18 +84,18 @@ interface Clue {
 
 export const CLUES: Record<string, Clue> = {
   'LB:mark': { quest: ['kings'], from: 'Lord British', text: 'SEEK YE, THE MARK OF KINGS!' },
-  'Lord British Castle#1': { reveals: 'dawn' },
+  'Lord British Castle#1': { reveals: DAWN },
   'Lord British Castle#6': { quest: ['cards', 'order'] },
   'LCB Towne#2': { reveals: 'ambrosia' },
   'LCB Towne#3': { quest: ['exotics'] },
   'LCB Towne#4': { quest: ['snake'] },
-  'LCB Towne#5': { reveals: 'dawn' },
+  'LCB Towne#5': { reveals: DAWN },
   'Moon#2': { quest: ['cards'] },
   'Moon#3': { word: 'BRIBE' },
   // "Peace be with you": pax, peace - the word that calms, though the line never says it.
   'Moon#5': { word: 'PAXUM' },
   'Moon#6': { reveals: 'ambrosia' },
-  'Moon#7': { reveals: 'dawn' },
+  'Moon#7': { reveals: DAWN },
   'Yew#1': { word: 'SEARCH', quest: ['cards'] },
   'Yew#2': {},
   'Yew:pray': { word: 'EVOCARE', quest: ['snake'], from: 'The circle of light', text: "YELL 'EVOCARE'" },
@@ -98,7 +107,7 @@ export const CLUES: Record<string, Clue> = {
   'West Montor#5': { word: 'SEARCH', quest: ['cards'] },
   'West Montor#6': { word: 'SEARCH', quest: ['cards'] },
   'Grey#3': { quest: ['exotics'] },
-  'Grey#4': { quest: ['exotics'], reveals: 'dawn' },
+  'Grey#4': { quest: ['exotics'], reveals: DAWN },
   'Grey#5': { quest: ['exotics'] },
   'Dawn#2': { word: 'DIG', quest: ['exotics'] },
   'Dawn#3': { word: 'DIG', quest: ['exotics'] },
@@ -120,6 +129,9 @@ export const CLUES: Record<string, Clue> = {
   'Death Gulch#3': { quest: ['order', 'exodus'] },
   'Death Gulch#4': { quest: ['snake'] },
   'Death Gulch#5': { quest: ['snake'] },
+  // Fawn, misspelt: not counted, but the only lines outside Fawn to name it.
+  'Death Gulch#6': { reveals: FAWN },
+  'Death Gulch#7': { reveals: FAWN },
   TimeLord: { quest: ['order', 'exodus'], from: 'The Time Lord', text: 'THE ONE WAY IS LOVE, SOL, MOONS & DEATH, ALL ELSE FAILS.' },
   // The misty writing on a dungeon's level: "<the dungeon's map id>:<level>", its words read from the dungeon's talk.
   '415:2': { word: 'INSERT', quest: ['order'] },
@@ -209,32 +221,30 @@ const TOWNS: { id: number; name: string; clues: string[]; hint: string }[] = [
   },
   { id: 407, name: 'Grey', clues: ['Grey#3', 'Grey#4', 'Grey#5'], hint: 'In the south-west. On foot.' },
   {
-    id: 408,
+    id: DAWN,
     name: 'Dawn',
     clues: ['Dawn#2', 'Dawn#3', 'Dawn#4', 'Dawn#6', 'Dawn#7'],
     hint: "In the forest west of the Montors, 8 west and 35 south of Lord British's castle. It stands only while both moons are new.",
   },
   {
-    id: 409,
+    id: DEVIL_GUARD,
     name: 'Devil Guard',
     clues: ['Devil Guard#1', 'Devil Guard#2', 'Devil Guard#3', 'Devil Guard#4', 'Devil Guard#5', 'Devil Guard#6', 'Devil Guard#7'],
     hint: 'An isle in the west: a ship is needed. Take one from pirates.',
   },
   {
-    id: 410,
+    id: FAWN,
     name: 'Fawn',
     clues: ['Fawn#1', 'Fawn#2', 'Fawn#3', 'Fawn#4'],
     hint: 'A small isle in the far north: a ship is needed. Take one from pirates.',
   },
   {
-    id: 411,
+    id: DEATH_GULCH,
     name: 'Death Gulch',
     clues: ['Death Gulch#2', 'Death Gulch#3', 'Death Gulch#4', 'Death Gulch#5'],
     hint: 'An isle in the east: a ship is needed. Take one from pirates.',
   },
 ];
-
-const DAWN = 408;
 
 /** A mark's rod in a dungeon level's cells (world.ts DungeonCell.Mark: world.ts imports this module). */
 const ROD = 0x05;
@@ -495,17 +505,26 @@ function townLine(world: World, town: (typeof TOWNS)[number]): JournalLine {
   const { heard: n, all } = townCount(world, town);
   const entered = beenIn(world, town.id) || n > 0;
   let seen = seenOnSosaria(world, town.id);
+  // Dawn stands only while both moons are new: seen is seen standing, now.
   if (town.id === DAWN) {
-    // Dawn stands only while both moons are new: seen is seen standing, now; known of, once entered or told of.
     const { locationX, locationY } = world.resources.misc;
     seen = seen && world.surface.tiles[locationY[DAWN - 400] * 64 + locationX[DAWN - 400]] === MapValue.Town;
-    if (!entered && !seen && !heardOf(world, (c) => c.reveals === 'dawn')) return mystery(town.hint);
+  }
+  // Dawn and the isles' towns are mysteries till seen, entered or told of; the rest are named from the start.
+  if (HIDDEN_TOWNS.includes(town.id) && !entered && !seen && !heardOf(world, (c) => c.reveals === town.id)) {
+    return mystery(town.hint);
   }
   if (!entered) {
     return {
       label: row(town.name, seen ? 'seen' : ''),
       name: town.name,
-      about: seen ? 'Found, not yet entered.' : town.id === DAWN ? 'Heard of. It stands only while both moons are new.' : 'Undiscovered.',
+      about: seen
+        ? 'Found, not yet entered.'
+        : town.id === DAWN
+          ? 'Heard of. It stands only while both moons are new.'
+          : HIDDEN_TOWNS.includes(town.id)
+            ? 'Heard of, not yet found.'
+            : 'Undiscovered.',
       hint: town.hint,
     };
   }
