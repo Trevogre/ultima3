@@ -86,7 +86,7 @@ describe('the journal', () => {
       'Dungeons         0/7',
       'Mystery...',
       'Equipment        0/5',
-      'Words            0/7',
+      'Words            0/6',
     ]);
     // Lord British and Exodus are known from the start; the rest wait to be heard of.
     expect(labels(world, 'Main quest')).toEqual([
@@ -100,7 +100,7 @@ describe('the journal', () => {
       'Mystery...',
       'Exodus',
     ]);
-    expect(labels(world, 'Words')).toEqual(Array(7).fill('Mystery...'));
+    expect(labels(world, 'Words')).toEqual(Array(6).fill('Mystery...'));
   });
 
   it('a clue makes its main-quest steps known, and the step opens to it as spoken', async () => {
@@ -227,7 +227,7 @@ describe('the journal', () => {
     expect(knownWords(world)).toEqual(['DIG']);
     hearClue(world, 'Moon#3'); // "<BRIBE> GUARDS! THEY WILL LEAVE!"
     expect(knownWords(world)).toEqual(['BRIBE', 'DIG']); // in Other's order
-    expect(labels(world, 'Words')).toEqual(['Mystery...', 'BRIBE', 'Mystery...', 'Mystery...', 'Mystery...', 'DIG', 'Mystery...']);
+    expect(labels(world, 'Words')).toEqual(['Mystery...', 'BRIBE', 'Mystery...', 'Mystery...', 'Mystery...', 'DIG']);
     io.keys = ['1'];
     io.inputs = ['SCREAM']; // a keyboard may still type any word
     await otherCommand(world, io);
@@ -235,17 +235,18 @@ describe('the journal', () => {
     expect(io.output).toContain('AIEEEEE');
   });
 
-  it('"Peace be with you" in Moon teaches PAXUM: pax, peace', async () => {
+  it('"Peace be with you" in Moon teaches PAXUM for Other, but the journal keeps no note of it', async () => {
     const { world, io } = inTown(403); // Moon
     world.autoMap.markSquares(403, [[20, 20]]);
-    expect(lineOf(world, 'Towns', 'Moon').label).toBe('Moon             0/5');
+    journalCheck(world, io);
+    io.output = '';
     personEast(world, 5);
     await talkTo(world, io, 0, 0);
     expect(io.output.replace(/\s+/g, ' ')).toContain('PEACE BE WITH YOU');
     expect(knownWords(world)).toEqual(['PAXUM']);
-    expect(lineOf(world, 'Towns', 'Moon').label).toBe('Moon             1/5');
-    expect(lineOf(world, 'Words', 'PAXUM').about).toContain('Pax: peace.');
-    expect(io.output).toContain('Journal updated');
+    expect(lineOf(world, 'Towns', 'Moon').label).toBe('Moon             0/4');
+    expect(labels(world, 'Words')).not.toContain('PAXUM');
+    expect(io.output).not.toContain('Journal updated');
   });
 
   it('the writing on the walls of Clues teaches INSERT and SEARCH', () => {

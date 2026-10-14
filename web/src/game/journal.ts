@@ -111,6 +111,8 @@ interface Clue {
   quest?: Step[];
   /** What it makes known: Ambrosia, the moongates, or a hidden town (HIDDEN_TOWNS) by its map id. */
   reveals?: ('ambrosia' | 'moongates' | number)[];
+  /** Teaches its word, but is kept out of the journal: shown nowhere, and not announced. */
+  untracked?: boolean;
   /** Who says it, and what, where it is not a townsperson's line. */
   from?: string;
   text?: string;
@@ -126,8 +128,9 @@ export const CLUES: Record<string, Clue> = {
   'LCB Towne#5': { reveals: [DAWN] },
   'Moon#2': { quest: ['cards'] },
   'Moon#3': { word: 'BRIBE' },
-  // "Peace be with you": pax, peace - the word that calms, though the line never says it.
-  'Moon#5': { word: 'PAXUM' },
+  // "Peace be with you": pax, peace - the word that calms, though the line never says it. Learnt, for Other's list,
+  // but kept out of the journal: counted for no town, and no line under Words.
+  'Moon#5': { word: 'PAXUM', untracked: true },
   'Moon#6': { reveals: ['ambrosia'] },
   'Moon#7': { reveals: [DAWN] },
   'Yew#1': { word: 'SEARCH', quest: ['cards'] },
@@ -252,7 +255,7 @@ const TOWNS: { id: number; name: string; clues: string[]; hint: string }[] = [
     clues: ['LCB Towne#2', 'LCB Towne#3', 'LCB Towne#4', 'LCB Towne#5'],
     hint: "Beside Lord British's castle, where the party starts.",
   },
-  { id: 403, name: 'Moon', clues: ['Moon#2', 'Moon#3', 'Moon#5', 'Moon#6', 'Moon#7'], hint: 'In the far north-west. On foot.' },
+  { id: 403, name: 'Moon', clues: ['Moon#2', 'Moon#3', 'Moon#6', 'Moon#7'], hint: 'In the far north-west. On foot.' },
   {
     id: 404,
     name: 'Yew',
@@ -349,9 +352,10 @@ const CARDS = ['Love', 'Sol', 'Moons', 'Death'];
 
 /**
  * The words Other answers to that someone says, in the order Other offers them: what each does, and where it is
- * learnt. SCREAM and PISSOFF nobody says, so they are never offered (a keyboard may still type them).
+ * learnt. SCREAM and PISSOFF nobody says, so they are never offered (a keyboard may still type them). PAXUM is
+ * offered once learnt, but has no line under the journal's Words (`untracked`).
  */
-export const WORDS: { word: string; about: string; hint: string }[] = [
+export const WORDS: { word: string; about: string; hint: string; untracked?: boolean }[] = [
   {
     word: 'SEARCH',
     about: "Standing in one of Ambrosia's shrines, finds its card.",
@@ -374,6 +378,7 @@ export const WORDS: { word: string; about: string; hint: string }[] = [
     word: 'PAXUM',
     about: 'In a town or castle, calms those nearby who have turned on the party. Pax: peace.',
     hint: 'Learnt in Moon, from one who wishes the party peace.',
+    untracked: true,
   },
 ];
 
@@ -726,7 +731,7 @@ export function journalTop(world: World): JournalLine[] {
     heardOf(world, (c) => !!c.reveals?.includes('ambrosia'));
   const shrineLines = ambrosiaLines(world);
   const cards = shrineLines.filter((_, i) => holders(world, 1 << i).length > 0).length;
-  const words = WORDS.map((w) =>
+  const words = WORDS.filter((w) => !w.untracked).map((w) =>
     j.words.includes(w.word) ? { label: w.word, name: w.word, about: w.about, hint: w.hint } : mystery(w.hint, 'Not yet heard said.'),
   );
   const reached = j.ambrosia || world.autoMap.hasMap(MapId.Ambrosia);
@@ -770,7 +775,7 @@ export function journalTop(world: World): JournalLine[] {
       open: { title: 'Equipment', lines: gear.lines },
     },
     {
-      label: row('Words', `${words.filter((w) => w.label !== MYSTERY).length}/${WORDS.length}`),
+      label: row('Words', `${words.filter((w) => w.label !== MYSTERY).length}/${words.length}`),
       name: 'Words',
       about: 'Words to say with Other (O), learnt from those who say them.',
       hint: 'Other: choose who speaks, then the word. On a controller, the words learnt are offered.',
@@ -842,7 +847,9 @@ function snapshot(world: World): string[] {
     .map((m) => world.member(m).marks)
     .join(',')}`;
   const steps = mainQuest(world).map((l, i) => `${STEPS[i].id}:${l.label === MYSTERY ? '?' : stepState(world, STEPS[i].id).right}`);
-  return [...flags, ...[...j.clues].sort(), ...[...j.words].sort(), ...[...j.goals].sort(), marks, ...steps];
+  const clues = j.clues.filter((id) => !CLUES[id]?.untracked).sort();
+  const words = j.words.filter((w) => !WORDS.find((x) => x.word === w)?.untracked).sort();
+  return [...flags, ...clues, ...words, ...[...j.goals].sort(), marks, ...steps];
 }
 
 /** Note what the journal shows as seen; true if it differed from the last note. */
