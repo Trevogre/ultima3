@@ -187,4 +187,21 @@ describe('weighing an armament for a member, on a card over the party panel', ()
     expect(rows(mace.card!)).toContain('Damage       +3 [better]');
     expect(rows(buy.find((o) => o.key === 'B')!.card!)[1]).toBe('In hand now [dim]');
   });
+
+  it("fits the guild's wares and prices whole in a menu window", async () => {
+    const world = newWorld();
+    const menus: MenuOption[][] = [];
+    const io = new FakeIO(world.resources);
+    const choose = io.chooseOption.bind(io);
+    io.chooseOption = (options, echo) => {
+      menus.push(options);
+      return choose(options, echo);
+    };
+    io.keys = ['N'];
+    await shop(world, io, 5, 0);
+    const guild = menus.find((m) => m.some((o) => o.key === 'T'))!;
+    expect(guild.find((o) => o.key === 'T')!.label).toBe('Torches x5 (30 gp)');
+    // A window over the game frame is at most 22 wide, its frame and margin taking 4.
+    for (const o of guild) expect(o.label.length, o.label).toBeLessThanOrEqual(18);
+  });
 });

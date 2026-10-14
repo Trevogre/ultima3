@@ -387,7 +387,7 @@ async function guild(world: World, io: GameIO): Promise<void> {
     const key = await io.chooseOption(
       [
         { key: 'K', label: 'Keys (50 gp)' },
-        { key: 'T', label: 'Torches, five (30 gp)' },
+        { key: 'T', label: 'Torches x5 (30 gp)' },
         { key: 'P', label: 'Powders (90 gp)' },
         { key: 'G', label: 'Gems (75 gp)' },
         { key: 'N', label: 'Nothing' },
