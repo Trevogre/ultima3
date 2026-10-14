@@ -6,7 +6,7 @@
  * told the party and what the party has done, so a newcomer can play without a walkthrough, and stays out of the way
  * of anyone who never opens it.
  *
- * The top of the journal is six lines, each opening to more:
+ * The top of the journal is seven lines, each opening to more:
  *
  * - Main quest: the nine steps to Exodus. After the first, an audience with Lord British, they may be taken in any
  *   order, so all are listed - each a mystery until something has told of it (a clue tagged with it, or a start
@@ -14,6 +14,7 @@
  * - Towns: Lord British's castle and the ten towns - undiscovered, seen, or entered with so many of their clues
  *   heard (CLUES: the townsfolk's lines that bear on the quest). Dawn and the three towns on isles are mysteries
  *   till seen, entered or told of.
+ * - Rumours: the pubs' nine rumours, and Radrion's rhyme once the party has met him, each in order as heard.
  * - Dungeons: the seven - undiscovered, seen, or entered with so many of their goals found (a mark's rod stood on,
  *   the Time Lord met).
  * - Ambrosia: its four shrines, and the cards found in them.
@@ -45,6 +46,8 @@ export interface JournalState {
   ambrosia: boolean;
   timeLord: boolean;
   serpentParted: boolean;
+  /** Radrion met: the party has been to an oracle's counter (rumours). */
+  radrion: boolean;
   /** Equipment found (equipment): a guild visited, Dawn's weapon and armour shops visited, a ship boarded. */
   guild: boolean;
   magicWeapons: boolean;
@@ -66,6 +69,7 @@ export function emptyJournal(): JournalState {
     ambrosia: false,
     timeLord: false,
     serpentParted: false,
+    radrion: false,
     guild: false,
     magicWeapons: false,
     magicArmour: false,
@@ -83,6 +87,7 @@ export const JOURNAL_FLAGS = [
   'ambrosia',
   'timeLord',
   'serpentParted',
+  'radrion',
   'guild',
   'magicWeapons',
   'magicArmour',
@@ -111,8 +116,6 @@ interface Clue {
   quest?: Step[];
   /** What it makes known: Ambrosia, the moongates, or a hidden town (HIDDEN_TOWNS) by its map id. */
   reveals?: ('ambrosia' | 'moongates' | number)[];
-  /** Teaches its word, but is kept out of the journal: shown nowhere, and not announced. */
-  untracked?: boolean;
   /** Who says it, and what, where it is not a townsperson's line. */
   from?: string;
   text?: string;
@@ -128,9 +131,8 @@ export const CLUES: Record<string, Clue> = {
   'LCB Towne#5': { reveals: [DAWN] },
   'Moon#2': { quest: ['cards'] },
   'Moon#3': { word: 'BRIBE' },
-  // "Peace be with you": pax, peace - the word that calms, though the line never says it. Learnt, for Other's list,
-  // but kept out of the journal: counted for no town, and no line under Words.
-  'Moon#5': { word: 'PAXUM', untracked: true },
+  // "Peace be with you": pax, peace - the word that calms, though the line never says it. Not one of Moon's clues.
+  'Moon#5': { word: 'PAXUM' },
   'Moon#6': { reveals: ['ambrosia'] },
   'Moon#7': { reveals: [DAWN] },
   'Yew#1': { word: 'SEARCH', quest: ['cards'] },
@@ -164,21 +166,23 @@ export const CLUES: Record<string, Clue> = {
   'Fawn#4': { quest: ['snake'] },
   'Death Gulch#2': { word: 'BRIBE' },
   'Death Gulch#3': { quest: ['order', 'exodus'] },
-  'Death Gulch#4': { quest: ['snake'] },
-  'Death Gulch#5': { quest: ['snake'] },
-  // Fawn, misspelt: not counted, but the only lines outside Fawn to name it.
-  'Death Gulch#6': { reveals: [FAWN] },
-  'Death Gulch#7': { reveals: [FAWN] },
+  // Death Gulch's people say only its first three lines: the rest of its talk, Fawn's lines with Fawn misspelt and a
+  // scrap of Devil Guard's, is never heard.
   TimeLord: { quest: ['order', 'exodus'], from: 'The Time Lord', text: 'THE ONE WAY IS LOVE, SOL, MOONS & DEATH, ALL ELSE FAILS.' },
-  // The pubs' rumours, the more paid the further down the list (shops.ts pub); "Thank you, kindly!" and the
-  // rumours of dungeons, fountains and the next Ultima tell of nothing here.
+  // The pubs' rumours, the more paid the further down the list (shops.ts pub), all kept for the journal's Rumours;
+  // "Thank you, kindly!" (#0) is no rumour. Those of dungeons, fountains and the next Ultima tell of nothing.
   'Pub:1': { reveals: ['ambrosia'] },
   'Pub:2': { reveals: [DAWN] },
   'Pub:3': { reveals: ['moongates', DAWN] },
+  'Pub:4': {},
   'Pub:5': { reveals: ['ambrosia'] },
   'Pub:6': { reveals: ['ambrosia'], quest: ['cards'] },
+  'Pub:7': {},
+  'Pub:8': {},
   'Pub:9': { quest: ['order'] },
-  // Radrion's rhyme, a verse for each hundred gold offered (shops.ts oracle); its opening line tells of nothing.
+  // Radrion's rhyme, a verse for each hundred gold offered (shops.ts oracle); its opening, offered nothing, tells of
+  // nothing itself.
+  'Radrion:0': {},
   'Radrion:1': { quest: ['kings', 'cards'] },
   'Radrion:2': { quest: ['kings', 'fire', 'force', 'snake'] },
   'Radrion:3': { quest: ['kings', 'fire', 'force', 'snake'], reveals: [DEVIL_GUARD] },
@@ -296,7 +300,7 @@ const TOWNS: { id: number; name: string; clues: string[]; hint: string }[] = [
   {
     id: DEATH_GULCH,
     name: 'Death Gulch',
-    clues: ['Death Gulch#2', 'Death Gulch#3', 'Death Gulch#4', 'Death Gulch#5'],
+    clues: ['Death Gulch#2', 'Death Gulch#3'],
     hint: 'An isle in the east: a ship is needed. Take one from pirates.',
   },
 ];
@@ -352,10 +356,9 @@ const CARDS = ['Love', 'Sol', 'Moons', 'Death'];
 
 /**
  * The words Other answers to that someone says, in the order Other offers them: what each does, and where it is
- * learnt. SCREAM and PISSOFF nobody says, so they are never offered (a keyboard may still type them). PAXUM is
- * offered once learnt, but has no line under the journal's Words (`untracked`).
+ * learnt. SCREAM and PISSOFF nobody says, so they are never offered (a keyboard may still type them).
  */
-export const WORDS: { word: string; about: string; hint: string; untracked?: boolean }[] = [
+export const WORDS: { word: string; about: string; hint: string }[] = [
   {
     word: 'SEARCH',
     about: "Standing in one of Ambrosia's shrines, finds its card.",
@@ -378,7 +381,6 @@ export const WORDS: { word: string; about: string; hint: string; untracked?: boo
     word: 'PAXUM',
     about: 'In a town or castle, calms those nearby who have turned on the party. Pax: peace.',
     hint: 'Learnt in Moon, from one who wishes the party peace.',
-    untracked: true,
   },
 ];
 
@@ -648,6 +650,40 @@ function ambrosiaLines(world: World): JournalLine[] {
   });
 }
 
+/** The pubs' rumours, #1 to #9, and Radrion's verses, the opening (#0) to #9. */
+const RUMOURS = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+const VERSES = [0, ...RUMOURS];
+const PUBS = 'Pubs: Britain, Moon, both Montors, Grey, Dawn, Devil Guard and Fawn. Pay 10 gold more for each rumour further on, up to 90.';
+const ORACLES =
+  "Radrion's counter: Lord British's castle, Britain and Dawn. Offer nothing for the opening verse, then a hundred gold for each.";
+
+/** What the pubs and Radrion tell, for gold: the pubs' nine rumours, and Radrion's rhyme once the party has met him. */
+function rumours(world: World): { lines: JournalLine[]; heard: number; all: number } {
+  const told = (id: string) => world.journal.clues.includes(id);
+  const said = (ids: string[]) => ids.map((id) => (told(id) ? clueText(world, id) : MYSTERY));
+  const pubs = RUMOURS.filter((n) => told(`Pub:${n}`)).length;
+  const verses = RUMOURS.filter((n) => told(`Radrion:${n}`)).length;
+  const lines: JournalLine[] = [
+    {
+      label: row('Pub rumours', `${pubs}/9`),
+      name: 'Pub rumours',
+      about: `Every pub tells the same nine, picked by what the drink costs. ${pubs} of 9 heard.`,
+      hint: PUBS,
+      open: { title: 'Pub rumours', text: said(RUMOURS.map((n) => `Pub:${n}`)) },
+    },
+    world.journal.radrion
+      ? {
+          label: row('Radrion', `${verses}/9`),
+          name: 'Radrion',
+          about: `The Prophet of Life sells his rhyme a verse at a time, by the hundred gold offered. ${verses} of 9 heard.`,
+          hint: ORACLES,
+          open: { title: 'Radrion', text: said(VERSES.map((n) => `Radrion:${n}`)) },
+        }
+      : mystery(ORACLES),
+  ];
+  return { lines, heard: pubs + (world.journal.radrion ? verses : 0), all: world.journal.radrion ? 18 : 9 };
+}
+
 /** Where the guilds are, for Supplies' hint. */
 const GUILDS = 'Guilds sell keys, torches, powders and gems: in Grey, a walk south-west; Devil Guard and Fawn, on isles; and Dawn.';
 /** Dawn, for the magic arms' hints. */
@@ -721,6 +757,7 @@ export function journalTop(world: World): JournalLine[] {
     return n === all;
   }).length;
   const dungeons = DUNGEONS.map((d) => dungeonLine(world, d));
+  const told = rumours(world);
   const dungeonsDone = DUNGEONS.filter((d) => d.goals.every((g) => goalFound(world, d.id, g))).length;
   const ambrosiaHint =
     "Sail a frigate into the whirlpool; the ship is lost. Home from Ambrosia is a pirate's ship into the lake's whirlpool.";
@@ -731,7 +768,7 @@ export function journalTop(world: World): JournalLine[] {
     heardOf(world, (c) => !!c.reveals?.includes('ambrosia'));
   const shrineLines = ambrosiaLines(world);
   const cards = shrineLines.filter((_, i) => holders(world, 1 << i).length > 0).length;
-  const words = WORDS.filter((w) => !w.untracked).map((w) =>
+  const words = WORDS.map((w) =>
     j.words.includes(w.word) ? { label: w.word, name: w.word, about: w.about, hint: w.hint } : mystery(w.hint, 'Not yet heard said.'),
   );
   const reached = j.ambrosia || world.autoMap.hasMap(MapId.Ambrosia);
@@ -750,6 +787,13 @@ export function journalTop(world: World): JournalLine[] {
       about: "Lord British's castle and the ten towns, and the clues to be heard in each.",
       hint: 'Walk into townsfolk to talk. The isles need a ship: take one from pirates.',
       open: { title: 'Towns', lines: towns },
+    },
+    {
+      label: row('Rumours', `${told.heard}/${told.all}`),
+      name: 'Rumours',
+      about: 'What the pubs, and an oracle, will tell for gold.',
+      hint: 'Buy a drink in a pub, or make an offering at an oracle: the more gold, the further the tale goes.',
+      open: { title: 'Rumours', lines: told.lines },
     },
     {
       label: row('Dungeons', `${dungeonsDone}/${DUNGEONS.length}`),
@@ -847,9 +891,7 @@ function snapshot(world: World): string[] {
     .map((m) => world.member(m).marks)
     .join(',')}`;
   const steps = mainQuest(world).map((l, i) => `${STEPS[i].id}:${l.label === MYSTERY ? '?' : stepState(world, STEPS[i].id).right}`);
-  const clues = j.clues.filter((id) => !CLUES[id]?.untracked).sort();
-  const words = j.words.filter((w) => !WORDS.find((x) => x.word === w)?.untracked).sort();
-  return [...flags, ...clues, ...words, ...[...j.goals].sort(), marks, ...steps];
+  return [...flags, ...[...j.clues].sort(), ...[...j.words].sort(), ...[...j.goals].sort(), marks, ...steps];
 }
 
 /** Note what the journal shows as seen; true if it differed from the last note. */

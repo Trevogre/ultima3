@@ -320,6 +320,7 @@ These apply whatever tile set and sound set are chosen.
   and the oracle's verses alike. Beside it are the places: Lord British's
   castle and the ten towns, with how many of each one's clues have been
   heard (the towns on isles, and Dawn, a mystery until found or told of);
+  the pubs' nine rumours and the oracle's rhyme, each in order as heard;
   the seven dungeons, with what each holds for the quest found; and
   Ambrosia's four shrines and their cards. Then the equipment to go and
   get: a guild's supplies, the magic weapons and armour, a ship, and the

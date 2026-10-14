@@ -432,6 +432,7 @@ async function guild(world: World, io: GameIO): Promise<void> {
 
 /** Radrion the prophet: offerings of hundreds of gold buy verses of his rhyme. */
 async function oracle(world: World, io: GameIO): Promise<void> {
+  world.journal.radrion = true; // the journal's Radrion, met (interact.ts notes it after)
   io.printMessage(Msg.Radrion);
   for (;;) {
     io.printMessage(Msg.Offering);

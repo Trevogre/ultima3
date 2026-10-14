@@ -83,10 +83,11 @@ describe('the journal', () => {
     expect(journalTop(world).map((l) => l.label)).toEqual([
       'Main quest       0/9',
       'Towns           0/11',
+      'Rumours          0/9',
       'Dungeons         0/7',
       'Mystery...',
       'Equipment        0/5',
-      'Words            0/6',
+      'Words            0/7',
     ]);
     // Lord British and Exodus are known from the start; the rest wait to be heard of.
     expect(labels(world, 'Main quest')).toEqual([
@@ -100,7 +101,7 @@ describe('the journal', () => {
       'Mystery...',
       'Exodus',
     ]);
-    expect(labels(world, 'Words')).toEqual(Array(6).fill('Mystery...'));
+    expect(labels(world, 'Words')).toEqual(Array(7).fill('Mystery...'));
   });
 
   it('a clue makes its main-quest steps known, and the step opens to it as spoken', async () => {
@@ -227,7 +228,7 @@ describe('the journal', () => {
     expect(knownWords(world)).toEqual(['DIG']);
     hearClue(world, 'Moon#3'); // "<BRIBE> GUARDS! THEY WILL LEAVE!"
     expect(knownWords(world)).toEqual(['BRIBE', 'DIG']); // in Other's order
-    expect(labels(world, 'Words')).toEqual(['Mystery...', 'BRIBE', 'Mystery...', 'Mystery...', 'Mystery...', 'DIG']);
+    expect(labels(world, 'Words')).toEqual(['Mystery...', 'BRIBE', 'Mystery...', 'Mystery...', 'Mystery...', 'DIG', 'Mystery...']);
     io.keys = ['1'];
     io.inputs = ['SCREAM']; // a keyboard may still type any word
     await otherCommand(world, io);
@@ -235,7 +236,7 @@ describe('the journal', () => {
     expect(io.output).toContain('AIEEEEE');
   });
 
-  it('"Peace be with you" in Moon teaches PAXUM for Other, but the journal keeps no note of it', async () => {
+  it('"Peace be with you" in Moon teaches PAXUM, a word under Words but not one of Moon\'s clues', async () => {
     const { world, io } = inTown(403); // Moon
     world.autoMap.markSquares(403, [[20, 20]]);
     journalCheck(world, io);
@@ -245,8 +246,8 @@ describe('the journal', () => {
     expect(io.output.replace(/\s+/g, ' ')).toContain('PEACE BE WITH YOU');
     expect(knownWords(world)).toEqual(['PAXUM']);
     expect(lineOf(world, 'Towns', 'Moon').label).toBe('Moon             0/4');
-    expect(labels(world, 'Words')).not.toContain('PAXUM');
-    expect(io.output).not.toContain('Journal updated');
+    expect(lineOf(world, 'Words', 'PAXUM').about).toContain('Pax: peace.');
+    expect(io.output).toContain('Journal updated');
   });
 
   it('the writing on the walls of Clues teaches INSERT and SEARCH', () => {
@@ -291,13 +292,29 @@ describe('the journal', () => {
     const world = newWorld();
     expect(labels(world, 'Towns').slice(-3)).toEqual(['Mystery...', 'Mystery...', 'Mystery...']);
     const { locationX, locationY } = world.resources.misc;
-    world.autoMap.markSquares(MapId.Sosaria, [[locationX[9], locationY[9]]]);
-    expect(lineOf(world, 'Towns', 'Devil Guard').label).toBe('Devil Guard     seen');
-    hearClue(world, 'Death Gulch#6'); // "FAUN IS A NICE PLACE!"
-    expect(lineOf(world, 'Towns', 'Fawn').about).toBe('Heard of, not yet found.');
+    world.autoMap.markSquares(MapId.Sosaria, [[locationX[10], locationY[10]]]);
+    expect(lineOf(world, 'Towns', 'Fawn').label).toBe('Fawn            seen');
+    hearClue(world, 'Radrion:3'); // "Learn their use in Devil Guard"
+    expect(lineOf(world, 'Towns', 'Devil Guard').about).toBe('Heard of, not yet found.');
     expect(labels(world, 'Towns').at(-1)).toBe('Mystery...'); // Death Gulch: nothing names it
     world.autoMap.markSquares(411, [[20, 20]]);
-    expect(lineOf(world, 'Towns', 'Death Gulch').label).toBe('Death Gulch      0/4');
+    expect(lineOf(world, 'Towns', 'Death Gulch').label).toBe('Death Gulch      0/2');
+  });
+
+  it("every townsperson's clue is a line someone in that town says", () => {
+    const world = newWorld();
+    for (const id of Object.keys(CLUES)) {
+      const [town, n] = id.split('#');
+      if (n === undefined) continue;
+      const map = [...world.resources.mapNames].find(([, name]) => name === town)?.[0];
+      expect(map, id).toBeDefined();
+      world.enterMap(map!);
+      const m = world.monsters;
+      const speakers = [...Array(32).keys()].filter(
+        (i) => m.type(i) !== 0 && m.type(i) !== MapValue.LordBritish && m.talkIndex(i) === Number(n),
+      );
+      expect(speakers.length, id).toBeGreaterThan(0);
+    }
   });
 
   it("Equipment: a guild, Dawn's magic weapons and armour, and a ship, each done once found", async () => {
@@ -365,6 +382,24 @@ describe('the journal', () => {
     );
   });
 
+  it("Rumours: the pubs' nine from the start, and Radrion's rhyme once he is met, each in order", async () => {
+    const { world, io } = inTown(MapId.FirstTown);
+    world.party.gold = 1000;
+    expect(labels(world, 'Rumours')).toEqual(['Pub rumours      0/9', 'Mystery...']);
+    io.inputs = ['20']; // a drink for 20 gold: the second rumour
+    io.keys = ['N'];
+    await shop(world, io, 0, 0);
+    const pubs = lineOf(world, 'Rumours', 'Pub rumours');
+    expect(pubs.label).toBe('Pub rumours      1/9');
+    expect(pubs.open?.text?.slice(0, 3)).toEqual(['Mystery...', 'Dawn, the city of myths & magic!', 'Mystery...']);
+    io.keys = ['0', 'N']; // an offering of nothing: Radrion's opening verse
+    await shop(world, io, 6, 0);
+    const radrion = lineOf(world, 'Rumours', 'Radrion');
+    expect(radrion.label).toBe('Radrion          0/9');
+    expect(radrion.open?.text?.[0]).toBe("And so the sage said unto thee 'If thou can solve my rhyme,");
+    expect(section(world, 'Rumours').label).toBe('Rumours         1/18');
+  });
+
   it("Ambrosia's shrines are named by the stat each raises, with the card found there", () => {
     const world = newWorld();
     world.journal.ambrosia = true;
@@ -399,6 +434,7 @@ describe('the journal', () => {
     for (const id of Object.keys(CLUES)) hearClue(world, id);
     world.journal.lordBritish = world.journal.ambrosia = world.journal.timeLord = true;
     world.journal.guild = world.journal.magicWeapons = world.journal.magicArmour = world.journal.ship = true;
+    world.journal.radrion = true;
     for (const m of [0, 1, 2, 3]) world.member(m).bytes[14] = 0xff;
     const lines = everyLine(world);
     expect(lines.some((l) => l.label === 'Mystery...')).toBe(false);
