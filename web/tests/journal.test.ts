@@ -178,6 +178,21 @@ describe('the journal', () => {
     expect(kings.open?.text).toEqual(['Lord British: SEEK YE, THE MARK OF KINGS!']);
   });
 
+  it('a step is known once a line names it; a line that only bears on it is listed under it then', () => {
+    const world = newWorld();
+    hearClue(world, 'Moon#2'); // "SEEK YE, THE SHRINES OF TRUTH"
+    hearClue(world, 'Yew#1'); // "SEARCH, AND YE SHALL FIND!"
+    expect(labels(world, 'Main quest')[2]).toBe('Mystery...');
+    hearClue(world, 'East Montor#5'); // "'CARDS' ARE USEFUL!"
+    expect(lineOf(world, 'Main quest', 'The four cards').open?.text).toEqual([
+      `Moon: ${world.townLine('Moon', 2)}`,
+      `Yew: ${world.townLine('Yew', 1)}`,
+      `East Montor: ${world.townLine('East Montor', 5)}`,
+    ]);
+    // Every line that names a step bears on it too, and is listed under it.
+    for (const [id, clue] of Object.entries(CLUES)) for (const step of clue.names ?? []) expect(clue.quest, id).toContain(step);
+  });
+
   it('marks, cards and exotics are read from the party', () => {
     const world = newWorld();
     world.member(1).bytes[14] |= 0x80;
@@ -257,7 +272,12 @@ describe('the journal', () => {
     expect(readWriting(world, 415, 0)).toBe(false); // "CLUES TO FOLLOW!" teaches nothing
     readWriting(world, 415, 2);
     expect(knownWords(world)).toEqual(['SEARCH', 'INSERT']);
-    expect(lineOf(world, 'Main quest', "Cards' order").open?.text).toEqual(['Clues, level 2: <INSERT> CARDS INTO EXODUS!']);
+    // "INSERT CARDS" names the cards; the order of them it only bears on.
+    expect(lineOf(world, 'Main quest', 'The four cards').open?.text).toEqual([
+      'Clues, level 2: <INSERT> CARDS INTO EXODUS!',
+      'Clues, level 3: <SEARCH> THE SHRINES!',
+    ]);
+    expect(labels(world, 'Main quest')[7]).toBe('Mystery...');
   });
 
   it('a dungeon is undiscovered, seen, then entered with its goals found counted', () => {
@@ -377,9 +397,13 @@ describe('the journal', () => {
     await shop(world, io, 6, 0);
     expect(world.journal.clues).toContain('Radrion:3');
     expect(lineOf(world, 'Towns', 'Devil Guard').about).toBe('Heard of, not yet found.');
-    expect(lineOf(world, 'Main quest', 'Mark of Fire').open?.text).toContain(
+    expect(labels(world, 'Main quest')[4]).toBe('Mystery...'); // the third verse names no mark
+    io.keys = ['2', 'N']; // the second does: "fire, force, snake & king"
+    await shop(world, io, 6, 0);
+    expect(lineOf(world, 'Main quest', 'Mark of Fire').open?.text).toEqual([
       "Radrion: Learn their use in Devil Guard, or death you'll surely bring.",
-    );
+      'Radrion: Of marks I say there are but 4 of fire, force, snake & king.',
+    ]); // in the order heard
   });
 
   it("Rumours: the pubs' nine from the start, and Radrion's rhyme once he is met, each in order", async () => {

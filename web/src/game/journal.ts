@@ -9,8 +9,8 @@
  * The top of the journal is seven lines, each opening to more:
  *
  * - Main quest: the nine steps to Exodus. After the first, an audience with Lord British, they may be taken in any
- *   order, so all are listed - each a mystery until something has told of it (a clue tagged with it, or a start
- *   made on it).
+ *   order, so all are listed - each a mystery until a line names it (CLUES' `names`) or a start is made on it, and
+ *   then opening to every clue that bears on it (`quest`).
  * - Towns: Lord British's castle and the ten towns - undiscovered, seen, or entered with so many of their clues
  *   heard (CLUES: the townsfolk's lines that bear on the quest). Dawn and the three towns on isles are mysteries
  *   till seen, entered or told of.
@@ -113,7 +113,10 @@ const HIDDEN_TOWNS = [DAWN, DEVIL_GUARD, FAWN, DEATH_GULCH];
  */
 interface Clue {
   word?: string;
+  /** The main-quest steps it bears on: listed under each once the step is known. */
   quest?: Step[];
+  /** The steps it names, which it makes known: a line that only bears on a step leaves it a mystery. */
+  names?: Step[];
   /** What it makes known: Ambrosia, the moongates, or a hidden town (HIDDEN_TOWNS) by its map id. */
   reveals?: ('ambrosia' | 'moongates' | number)[];
   /** Who says it, and what, where it is not a townsperson's line. */
@@ -122,12 +125,12 @@ interface Clue {
 }
 
 export const CLUES: Record<string, Clue> = {
-  'LB:mark': { quest: ['kings'], from: 'Lord British', text: 'SEEK YE, THE MARK OF KINGS!' },
+  'LB:mark': { quest: ['kings'], names: ['kings'], from: 'Lord British', text: 'SEEK YE, THE MARK OF KINGS!' },
   'Lord British Castle#1': { reveals: [DAWN] },
-  'Lord British Castle#6': { quest: ['cards', 'order'] },
+  'Lord British Castle#6': { quest: ['cards', 'order'], names: ['cards'] },
   'LCB Towne#2': { reveals: ['ambrosia'] },
-  'LCB Towne#3': { quest: ['exotics'] },
-  'LCB Towne#4': { quest: ['snake'] },
+  'LCB Towne#3': { quest: ['exotics'], names: ['exotics'] },
+  'LCB Towne#4': { quest: ['snake'], names: ['snake'] },
   'LCB Towne#5': { reveals: [DAWN] },
   'Moon#2': { quest: ['cards'] },
   'Moon#3': { word: 'BRIBE' },
@@ -138,31 +141,31 @@ export const CLUES: Record<string, Clue> = {
   'Yew#1': { word: 'SEARCH', quest: ['cards'] },
   'Yew#2': {},
   'Yew:pray': { word: 'EVOCARE', quest: ['snake'], from: 'The circle of light', text: "YELL 'EVOCARE'" },
-  'East Montor#1': { word: 'INSERT', quest: ['order'] },
-  'East Montor#2': { quest: ['cards', 'order'] },
-  'East Montor#5': { quest: ['cards'] },
+  'East Montor#1': { word: 'INSERT', quest: ['cards', 'order'], names: ['cards'] },
+  'East Montor#2': { quest: ['cards', 'order'], names: ['cards'] },
+  'East Montor#5': { quest: ['cards'], names: ['cards'] },
   'East Montor#6': { quest: ['kings'] },
-  'East Montor#7': { quest: ['exotics'] },
+  'East Montor#7': { quest: ['exotics'], names: ['exotics'] },
   'West Montor#5': { word: 'SEARCH', quest: ['cards'] },
-  'West Montor#6': { word: 'SEARCH', quest: ['cards'] },
-  'Grey#3': { quest: ['exotics'] },
-  'Grey#4': { quest: ['exotics'], reveals: [DAWN] },
-  'Grey#5': { quest: ['exotics'] },
+  'West Montor#6': { word: 'SEARCH', quest: ['cards'], names: ['cards'] },
+  'Grey#3': { quest: ['exotics'], names: ['exotics'] },
+  'Grey#4': { quest: ['exotics'], names: ['exotics'], reveals: [DAWN] },
+  'Grey#5': { quest: ['exotics'], names: ['exotics'] },
   'Dawn#2': { word: 'DIG', quest: ['exotics'] },
-  'Dawn#3': { word: 'DIG', quest: ['exotics'] },
+  'Dawn#3': { word: 'DIG', quest: ['exotics'], names: ['exotics'] },
   'Dawn#4': { word: 'DIG' },
   'Dawn#6': {},
   'Dawn#7': { reveals: ['ambrosia'] },
   'Devil Guard#1': { quest: ['kings'] },
   'Devil Guard#2': { quest: ['kings'] },
-  'Devil Guard#3': { quest: ['kings'] },
-  'Devil Guard#4': { quest: ['snake'] },
+  'Devil Guard#3': { quest: ['kings'], names: ['kings'] },
+  'Devil Guard#4': { quest: ['snake'], names: ['snake'] },
   'Devil Guard#5': { quest: ['kings', 'fire', 'force', 'snake'] },
   'Devil Guard#6': { quest: ['fire'] },
   'Devil Guard#7': { quest: ['kings'] },
   'Fawn#1': { word: 'PRAY', quest: ['snake'] },
   'Fawn#2': { word: 'PRAY', quest: ['snake'] },
-  'Fawn#3': { quest: ['snake'] },
+  'Fawn#3': { quest: ['snake'], names: ['snake'] },
   'Fawn#4': { quest: ['snake'] },
   'Death Gulch#2': { word: 'BRIBE' },
   'Death Gulch#3': { quest: ['order', 'exodus'] },
@@ -179,21 +182,21 @@ export const CLUES: Record<string, Clue> = {
   'Pub:6': { reveals: ['ambrosia'], quest: ['cards'] },
   'Pub:7': {},
   'Pub:8': {},
-  'Pub:9': { quest: ['order'] },
+  'Pub:9': { quest: ['order'], names: ['order'] },
   // Radrion's rhyme, a verse for each hundred gold offered (shops.ts oracle); its opening, offered nothing, tells of
   // nothing itself.
   'Radrion:0': {},
-  'Radrion:1': { quest: ['kings', 'cards'] },
-  'Radrion:2': { quest: ['kings', 'fire', 'force', 'snake'] },
+  'Radrion:1': { quest: ['kings', 'cards'], names: ['cards'] },
+  'Radrion:2': { quest: ['kings', 'fire', 'force', 'snake'], names: ['kings', 'fire', 'force', 'snake'] },
   'Radrion:3': { quest: ['kings', 'fire', 'force', 'snake'], reveals: [DEVIL_GUARD] },
   'Radrion:4': { quest: ['cards'] },
   'Radrion:5': { quest: ['cards'] },
-  'Radrion:6': { quest: ['cards'] },
+  'Radrion:6': { quest: ['cards'], names: ['cards'] },
   'Radrion:7': { quest: ['cards', 'order'] },
   'Radrion:8': { quest: ['order'] },
-  'Radrion:9': { quest: ['order'] },
+  'Radrion:9': { quest: ['order'], names: ['order'] },
   // The misty writing on a dungeon's level: "<the dungeon's map id>:<level>", its words read from the dungeon's talk.
-  '415:2': { word: 'INSERT', quest: ['order'] },
+  '415:2': { word: 'INSERT', quest: ['cards', 'order'], names: ['cards'] },
   '415:3': { word: 'SEARCH', quest: ['cards'] },
 };
 
@@ -545,7 +548,9 @@ function mainQuest(world: World): JournalLine[] {
   return STEPS.map((step) => {
     const state = stepState(world, step.id);
     const told = world.journal.clues.filter((id) => CLUES[id]?.quest?.includes(step.id));
-    const known = step.id === 'king' || step.id === 'exodus' || state.started || state.done || told.length > 0;
+    // Known once a line names it, or the party has made a start on it; a line that only bears on it waits for that.
+    const named = world.journal.clues.some((id) => CLUES[id]?.names?.includes(step.id));
+    const known = step.id === 'king' || step.id === 'exodus' || state.started || state.done || named;
     if (!known) return mystery(step.hint);
     const line: JournalLine = { label: row(step.name, state.right), name: step.name, about: state.about, hint: step.hint };
     if (told.length) line.open = { title: step.name, text: told.map((id) => `${clueFrom(world, id)}: ${clueText(world, id)}`) };
