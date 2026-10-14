@@ -280,10 +280,12 @@ describe('the journal', () => {
     expect(labels(world, 'Main quest')[7]).toBe('Mystery...');
   });
 
-  it('a dungeon is undiscovered, seen, then entered with its goals found counted', () => {
+  it('a dungeon is a mystery till seen or told of, then seen, then entered with its goals found counted', () => {
     const world = newWorld();
     const { locationX, locationY } = world.resources.misc;
-    expect(lineOf(world, 'Dungeons', 'Perinian Depths').about).toBe('Undiscovered.');
+    expect(labels(world, 'Dungeons')).toEqual(Array(7).fill('Mystery...'));
+    hearClue(world, 'Devil Guard#6'); // "SEEK YE THE DUNGEON OF FIRE!"
+    expect(lineOf(world, 'Dungeons', 'Fires of Hell').about).toBe('Heard of, not yet found.');
     world.autoMap.markSquares(MapId.Sosaria, [[locationX[16], locationY[16]]]);
     expect(lineOf(world, 'Dungeons', 'Perinian Depths').label).toBe('Perinian Depths seen');
     world.autoMap.mark(416, 0, 1, 1);
@@ -459,6 +461,7 @@ describe('the journal', () => {
     world.journal.lordBritish = world.journal.ambrosia = world.journal.timeLord = true;
     world.journal.guild = world.journal.magicWeapons = world.journal.magicArmour = world.journal.ship = true;
     world.journal.radrion = true;
+    for (let id = 412; id <= 418; id++) world.autoMap.mark(id, 0, 1, 1); // every dungeon entered
     for (const m of [0, 1, 2, 3]) world.member(m).bytes[14] = 0xff;
     const lines = everyLine(world);
     expect(lines.some((l) => l.label === 'Mystery...')).toBe(false);

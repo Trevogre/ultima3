@@ -321,13 +321,13 @@ These apply whatever tile set and sound set are chosen.
   castle and the ten towns, with how many of each one's clues have been
   heard (the towns on isles, and Dawn, a mystery until found or told of);
   the pubs' nine rumours and the oracle's rhyme, each in order as heard;
-  the seven dungeons, with what each holds for the quest found; and
-  Ambrosia's four shrines and their cards. Then the equipment to go and
-  get: a guild's supplies, the magic weapons and armour, a ship, and the
-  moongates come out of; and the words Other answers to. A card over the
-  party panel says where the highlighted line stands, and H (Y on a
-  controller) prints a hint written for this port. "Journal updated"
-  prints when something real changes.
+  the seven dungeons, a mystery until found or told of, with what each
+  holds for the quest found; and Ambrosia's four shrines and their cards.
+  Then the equipment to go and get: a guild's supplies, the magic weapons
+  and armour, a ship, and the moongates come out of; and the words Other
+  answers to. A card over the party panel says where the highlighted line
+  stands, and H (Y on a controller) prints a hint written for this port.
+  "Journal updated" prints when something real changes.
 - Words for Other are learnt by hearing them said. On a controller, Other
   offers only the words learnt; a keyboard may type any word, as on the
   Apple II.

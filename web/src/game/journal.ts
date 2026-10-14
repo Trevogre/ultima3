@@ -15,8 +15,8 @@
  *   heard (CLUES: the townsfolk's lines that bear on the quest). Dawn and the three towns on isles are mysteries
  *   till seen, entered or told of.
  * - Rumours: the pubs' nine rumours, and Radrion's rhyme once the party has met him, each in order as heard.
- * - Dungeons: the seven - undiscovered, seen, or entered with so many of their goals found (a mark's rod stood on,
- *   the Time Lord met).
+ * - Dungeons: the seven - a mystery till seen or told of, then seen, or entered with so many of their goals found
+ *   (a mark's rod stood on, the Time Lord met).
  * - Ambrosia: its four shrines, and the cards found in them.
  * - Equipment: what the party can go and get - a guild's supplies, Dawn's magic weapons and armour, a ship - each
  *   done once found, and the moongates come out of. (The exotic arms are a main-quest step.)
@@ -117,7 +117,7 @@ interface Clue {
   quest?: Step[];
   /** The steps it names, which it makes known: a line that only bears on a step leaves it a mystery. */
   names?: Step[];
-  /** What it makes known: Ambrosia, the moongates, or a hidden town (HIDDEN_TOWNS) by its map id. */
+  /** What it makes known: Ambrosia, the moongates, or a hidden town (HIDDEN_TOWNS) or dungeon by its map id. */
   reveals?: ('ambrosia' | 'moongates' | number)[];
   /** Who says it, and what, where it is not a townsperson's line. */
   from?: string;
@@ -161,7 +161,7 @@ export const CLUES: Record<string, Clue> = {
   'Devil Guard#3': { quest: ['kings'], names: ['kings'] },
   'Devil Guard#4': { quest: ['snake'], names: ['snake'] },
   'Devil Guard#5': { quest: ['kings', 'fire', 'force', 'snake'] },
-  'Devil Guard#6': { quest: ['fire'] },
+  'Devil Guard#6': { quest: ['fire'], reveals: [413] }, // the Fires of Hell, the only dungeon a line names
   'Devil Guard#7': { quest: ['kings'] },
   'Fawn#1': { word: 'PRAY', quest: ['snake'] },
   'Fawn#2': { word: 'PRAY', quest: ['snake'] },
@@ -620,8 +620,11 @@ function dungeonLine(world: World, dungeon: (typeof DUNGEONS)[number]): JournalL
   const found = dungeon.goals.filter((g) => goalFound(world, dungeon.id, g));
   const entered = beenIn(world, dungeon.id) || found.length > 0;
   const seen = seenOnSosaria(world, dungeon.id);
+  // A mystery till its entrance is seen, the party has been in, or a line names it, as the towns on isles are.
+  if (!entered && !seen && !heardOf(world, (c) => !!c.reveals?.includes(dungeon.id))) return mystery(dungeon.hint);
   const base = { name: dungeon.name, hint: dungeon.hint };
-  if (!entered) return { ...base, label: row(dungeon.name, seen ? 'seen' : ''), about: seen ? 'Found, not yet entered.' : 'Undiscovered.' };
+  if (!entered)
+    return { ...base, label: row(dungeon.name, seen ? 'seen' : ''), about: seen ? 'Found, not yet entered.' : 'Heard of, not yet found.' };
   const all = found.length === dungeon.goals.length;
   const what = found.map((g) => GOAL_NAMES[g]).join(' and ');
   const about = !found.length
