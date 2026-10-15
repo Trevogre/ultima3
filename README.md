@@ -592,6 +592,18 @@ Every release, with the desktop and Android downloads, is on the
 web version is updated with each release, so it runs the same game as the
 apps.
 
+### v1.0.63, October 15, 2026
+
+- Tips is a list of topics, as the journal and the menus are: A opens a
+  topic to its text, and B comes back to the list.
+- The maps are saved with the game. A party loaded from its save, after a
+  wipe or in place of another party's game, sees on them only what it had
+  seen when it was saved. A save from before keeps the map the browser
+  kept, until it is next saved.
+- Organize a party has a new Clear notes, which forgets the maps, the
+  journal and the moongates, to begin a new adventure. Forming a new
+  party keeps them, so members can come and go in one adventure.
+
 ### v1.0.61, October 14, 2026
 
 - A step of the journal's main quest is made known only by a line that
