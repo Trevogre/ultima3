@@ -1,6 +1,17 @@
 import { describe, it, expect } from 'vitest';
 import { newWorld, savedCopy } from './helpers.ts';
-import { serialize, restore, exportGame, parseExport, EXPORT_FORMAT } from '../src/game/save.ts';
+import {
+  serialize,
+  restore,
+  exportGame,
+  parseExport,
+  restoreExported,
+  localSave,
+  LEGACY_AUTOMAP_KEY,
+  SAVE_KEY,
+  EXPORT_FORMAT,
+} from '../src/game/save.ts';
+import { MapId } from '../src/data/resources.ts';
 import { MapValue } from '../src/game/tiles.ts';
 import { Location } from '../src/game/party.ts';
 import { World } from '../src/game/world.ts';
@@ -85,20 +96,80 @@ describe('save migration', () => {
   });
 });
 
+describe('the map, saved with the game', () => {
+  it('is what the saved party had seen: restored with it, in place of the map the world had', () => {
+    const world = newWorld();
+    world.autoMap.markSquares(MapId.Sosaria, [[10, 10]]);
+    world.autoMap.mark(412, 0, 3, 3);
+    world.autoMap.visit('shrine:1,2');
+    const data = savedCopy(world);
+    world.autoMap.markSquares(MapId.Sosaria, [[40, 40]]); // seen after the save
+    const other = newWorld();
+    other.autoMap.markSquares(MapId.Sosaria, [[1, 1]]); // another game's
+    expect(restore(other, data)).toBe(true);
+    expect(other.autoMap.squareSeen(MapId.Sosaria, 10, 10)).toBe(true);
+    expect(other.autoMap.isSeen(412, 0, 3, 3)).toBe(true);
+    expect(other.autoMap.visited('shrine:1,2')).toBe(true);
+    expect(other.autoMap.squareSeen(MapId.Sosaria, 40, 40)).toBe(false);
+    expect(other.autoMap.squareSeen(MapId.Sosaria, 1, 1)).toBe(false);
+  });
+
+  it('comes from where the browser kept it apart, for a save from before, until the next save takes it in', () => {
+    const store = new Map<string, string>();
+    const was = (globalThis as { localStorage?: Storage }).localStorage;
+    (globalThis as { localStorage?: unknown }).localStorage = {
+      getItem: (k: string) => store.get(k) ?? null,
+      setItem: (k: string, v: string) => void store.set(k, v),
+      removeItem: (k: string) => void store.delete(k),
+    };
+    try {
+      const old = newWorld();
+      old.autoMap.markSquares(MapId.Sosaria, [[7, 8]]);
+      const data = savedCopy(old);
+      store.set(LEGACY_AUTOMAP_KEY, data.automap!);
+      delete data.automap;
+      store.set(SAVE_KEY, JSON.stringify(data));
+      const world = newWorld();
+      expect(localSave.read(world)).toBe(true);
+      expect(world.autoMap.squareSeen(MapId.Sosaria, 7, 8)).toBe(true);
+      expect(localSave.write(world)).toBe(true);
+      expect(store.has(LEGACY_AUTOMAP_KEY)).toBe(false);
+      expect((JSON.parse(store.get(SAVE_KEY)!) as { automap?: string }).automap).toContain('map:420');
+    } finally {
+      (globalThis as { localStorage?: unknown }).localStorage = was;
+    }
+  });
+});
+
 describe('export and import', () => {
-  it('carries the save and the auto-map through text and back', () => {
+  it('carries the save, the map within it, through text and back', () => {
     const world = newWorld();
     world.party.gold = 4321;
     world.x = 12;
     world.y = 34;
-    const text = exportGame(world, 'automap-text');
-    const parsed = parseExport(text);
-    expect(parsed.automap).toBe('automap-text');
+    world.autoMap.markSquares(MapId.Sosaria, [[12, 34]]);
+    const parsed = parseExport(exportGame(world));
+    expect(parsed.automap).toBe(parsed.save.automap); // beside the save too, for a version from before it held it
     const other = newWorld();
-    expect(restore(other, parsed.save)).toBe(true);
+    other.autoMap.markSquares(MapId.Sosaria, [[1, 1]]);
+    expect(restoreExported(other, parsed)).toBe(true);
     expect(other.party.gold).toBe(4321);
     expect([other.x, other.y]).toEqual([12, 34]);
-    expect(parseExport(exportGame(world, null)).automap).toBeNull();
+    expect(other.autoMap.squareSeen(MapId.Sosaria, 12, 34)).toBe(true);
+    expect(other.autoMap.squareSeen(MapId.Sosaria, 1, 1)).toBe(false);
+  });
+
+  it('takes the map from beside the save in an older export, and none where there is neither', () => {
+    const world = newWorld();
+    world.autoMap.markSquares(MapId.Sosaria, [[5, 6]]);
+    const map = world.autoMap.toText();
+    const save = savedCopy(world);
+    delete save.automap;
+    const other = newWorld();
+    expect(restoreExported(other, { save, automap: map })).toBe(true);
+    expect(other.autoMap.squareSeen(MapId.Sosaria, 5, 6)).toBe(true);
+    expect(restoreExported(other, { save, automap: null })).toBe(true);
+    expect(other.autoMap.squareSeen(MapId.Sosaria, 5, 6)).toBe(false);
   });
 
   it('refuses text that is not an exported game, with a short reason', () => {

@@ -4,12 +4,13 @@ import { speech, transact, unlock, steal, otherCommand, fire, unlockToward, tran
 import { shop } from '../src/game/shops.ts';
 import { cast } from '../src/game/spells.ts';
 import { getChest, readyWeapon, wearArmour, stats } from '../src/game/actions.ts';
-import { mainMenu, createCharacter, formParty, terminateCharacter, TITLE_MENU_LAST_ROW } from '../src/game/menu.ts';
+import { mainMenu, createCharacter, formParty, terminateCharacter, clearNotes, TITLE_MENU_LAST_ROW } from '../src/game/menu.ts';
 import { MapValue } from '../src/game/tiles.ts';
 import { Location } from '../src/game/party.ts';
 import { Key, type MenuOption, type MenuPlacement } from '../src/game/io.ts';
 import { MapId } from '../src/data/resources.ts';
 import { World } from '../src/game/world.ts';
+import { emptyJournal } from '../src/game/journal.ts';
 
 function townWorld(): { world: World; io: FakeIO } {
   const world = newWorld(99);
@@ -345,6 +346,30 @@ describe('menus', () => {
     expect(world.party.memberSlot(0)).toBe(4);
     expect(p.inParty).toBe(true);
     expect(world.x).toBe(42);
+  });
+
+  it('Clear notes forgets the maps, the journal and the moongates, once asked; forming a party keeps them', async () => {
+    const world = newWorld();
+    const io = new FakeIO(world.resources);
+    world.autoMap.markSquares(MapId.Sosaria, [[42, 20]]);
+    world.autoMap.mark(412, 0, 1, 1);
+    world.journal.lordBritish = true;
+    world.journal.clues.push('Moon#3');
+    world.gatesKnown.push(3);
+    io.keys = ['Y', '1', 'D', ' ', 'M']; // the party dispersed and a new one formed: the notes stay
+    await formParty(world, io);
+    expect(world.autoMap.squareSeen(MapId.Sosaria, 42, 20)).toBe(true);
+    expect(world.journal.clues).toEqual(['Moon#3']);
+    io.keys = ['N']; // asked, and declined
+    await clearNotes(world, io);
+    expect(world.gatesKnown).toEqual([3]);
+    io.keys = ['Y', ' '];
+    await clearNotes(world, io);
+    expect(world.autoMap.squareSeen(MapId.Sosaria, 42, 20)).toBe(false);
+    expect(world.autoMap.hasDungeon(412)).toBe(false);
+    expect(world.journal).toEqual(emptyJournal());
+    expect(world.gatesKnown).toEqual([]);
+    expect(io.output).toContain('(Notes cleared!)');
   });
 
   it('refuses to journey without a party', async () => {

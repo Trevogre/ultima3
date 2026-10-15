@@ -13,9 +13,9 @@
  *
  * What is "seen" is only a mask. The map itself is drawn from the live
  * level data under that mask, so an opened chest or a new one shows as it
- * is now. The mask lives in its own browser store (see `main.ts`), not in
- * the save file: reloading the last save keeps what the player learned,
- * and a new game starts blank.
+ * is now. The mask is saved with the game (save.ts, as `toText`), so a
+ * save's map is what that party had seen when it was saved; a new game, or
+ * Clear notes in the Organize menu, starts it blank.
  *
  * In the dark nothing is recorded, but the 3x3 around the party is still
  * shown (`cellVisible`) so a party without torches can feel its way back.
@@ -82,6 +82,24 @@ export class AutoMap {
 
   constructor(private readonly store: AutoMapStore | null = null) {
     this.load();
+  }
+
+  /** The mask as text, for the save (save.ts): see `load` for its form. */
+  toText(): string {
+    const data: Record<string, string> = {};
+    for (const [key, mask] of this.seen) data[key] = Array.from(mask, (v) => (v ? '1' : '0')).join('');
+    for (const [id, flags] of this.squares) data[`${MAP_PREFIX}${id}`] = packFlags(flags);
+    if (this.visits.size) data[VISITS_KEY] = [...this.visits].join('|');
+    return JSON.stringify(data);
+  }
+
+  /** Replace the mask with one from text (`toText`'s); none, or text that is not one, is a blank map. */
+  fromText(text: string | null): void {
+    this.seen.clear();
+    this.squares.clear();
+    this.visits.clear();
+    this.parse(text);
+    this.save();
   }
 
   private levelKey(dungeon: number, level: number): string {
@@ -192,7 +210,14 @@ export class AutoMap {
   private load(): void {
     if (!this.store) return;
     try {
-      const raw = this.store.read();
+      this.parse(this.store.read());
+    } catch {
+      /* an unreadable store is an empty map */
+    }
+  }
+
+  private parse(raw: string | null): void {
+    try {
       if (!raw) return;
       const data = JSON.parse(raw) as Record<string, string>;
       for (const [key, flags] of Object.entries(data)) {
@@ -220,12 +245,8 @@ export class AutoMap {
 
   private save(): void {
     if (!this.store) return;
-    const data: Record<string, string> = {};
-    for (const [key, mask] of this.seen) data[key] = Array.from(mask, (v) => (v ? '1' : '0')).join('');
-    for (const [id, flags] of this.squares) data[`${MAP_PREFIX}${id}`] = packFlags(flags);
-    if (this.visits.size) data[VISITS_KEY] = [...this.visits].join('|');
     try {
-      this.store.write(JSON.stringify(data));
+      this.store.write(this.toText());
     } catch {
       /* storage unavailable */
     }

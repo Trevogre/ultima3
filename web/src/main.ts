@@ -12,7 +12,7 @@
 import { loadResources } from './data/resources.ts';
 import { World, STARVATION_MODES, TIMER_MODES, type Starvation, type Timer } from './game/world.ts';
 import { Game } from './game/game.ts';
-import { localSave, exportGame, parseExport, restore } from './game/save.ts';
+import { localSave, exportGame, parseExport, restoreExported } from './game/save.ts';
 import { registerSW } from 'virtual:pwa-register';
 import type { Transfer, Update } from './game/menu.ts';
 import { appQuit, launchWarning, warningDue, type NativeQuit } from './ui/platform.ts';
@@ -41,7 +41,6 @@ import { Screen } from './ui/screen.ts';
 import { TILE_SETS } from './ui/help.ts';
 
 const PREFS_KEY = 'ultima3.settings';
-const AUTOMAP_KEY = 'ultima3.automap';
 
 /** What the Settings menu can change, as remembered between visits. */
 interface Prefs {
@@ -233,13 +232,8 @@ async function start(): Promise<void> {
   world.timer = prefs.timer;
   world.soundEnabled = prefs.sound;
   world.mapMode = prefs.dungeonMap;
-  // The dungeon auto-map keeps its own store; a new game starts it blank.
-  world.autoMap = new AutoMap({
-    read: () => localStorage.getItem(AUTOMAP_KEY),
-    write: (text) => {
-      if (!peek) localStorage.setItem(AUTOMAP_KEY, text);
-    },
-  });
+  // What the party has seen goes with the save (save.ts); a new game starts it blank.
+  world.autoMap = new AutoMap();
 
   // Resume the saved game unless the URL asks for a new one (?new).
   if (params.has('new') || !localSave.read(world)) {
@@ -338,13 +332,9 @@ async function start(): Promise<void> {
   const game = new Game(world, screen, { save: (w) => localSave.write(w), load: (w) => localSave.read(w) });
   // Debug hook: lets the console (and the browser tests) inspect and poke the game.
   (window as unknown as { u3: unknown }).u3 = { world, screen, game, keyboard, update };
-  // Export and import: the save and the auto-map as text, through the clipboard.
-  const automapStore = () => ({
-    read: () => localStorage.getItem(AUTOMAP_KEY),
-    write: (text: string) => localStorage.setItem(AUTOMAP_KEY, text),
-  });
+  // Export and import: the save, with the map in it, as text, through the clipboard or a file.
   const transfer: Transfer = {
-    export: () => (world.party.formed ? exportGame(world, localStorage.getItem(AUTOMAP_KEY)) : null),
+    export: () => (world.party.formed ? exportGame(world) : null),
     import: (text) => {
       let parsed: ReturnType<typeof parseExport>;
       try {
@@ -352,11 +342,8 @@ async function start(): Promise<void> {
       } catch (e) {
         return (e as Error).message;
       }
-      if (!restore(world, parsed.save)) return 'the save does not fit';
+      if (!restoreExported(world, parsed)) return 'the save does not fit';
       localSave.write(world);
-      if (parsed.automap) localStorage.setItem(AUTOMAP_KEY, parsed.automap);
-      else localStorage.removeItem(AUTOMAP_KEY);
-      world.autoMap = new AutoMap(automapStore());
       return null;
     },
     clipboard: { write: (text) => navigator.clipboard.writeText(text), read: () => navigator.clipboard.readText() },

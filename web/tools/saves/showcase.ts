@@ -270,7 +270,7 @@ const rows: string[] = [];
 for (const s of SHOWCASES) {
   const world = newWorld();
   s.make(world);
-  const exported = JSON.parse(exportGame(world, null)) as { exported: string };
+  const exported = JSON.parse(exportGame(world)) as { exported: string };
   exported.exported = EXPORTED;
   writeFileSync(join(OUT, `${s.file}.json`), JSON.stringify(exported) + '\n');
   rows.push(`| [${s.file}](${s.file}.json) | ${s.where} | ${s.party} |`);

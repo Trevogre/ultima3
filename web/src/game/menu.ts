@@ -18,6 +18,7 @@ import { Location } from './party.ts';
 import { PlayerRecord, ROSTER_SIZE } from './player.ts';
 import { type GameIO, type MenuOption } from './io.ts';
 import { randomName } from './names.ts';
+import { emptyJournal } from './journal.ts';
 
 /** 1-based indices into the MoreMessages table. */
 const MM = {
@@ -255,6 +256,7 @@ export async function organize(world: World, io: GameIO): Promise<void> {
       { key: 'C', label: mm(world, MM.CreateACharacter) },
       { key: 'F', label: mm(world, MM.FormThePartyOption) },
       { key: 'D', label: mm(world, MM.DisperseThePartyOption) },
+      { key: 'N', label: 'Clear notes' },
       { key: 'T', label: mm(world, MM.TerminateACharacter) },
       { key: 'M', label: mm(world, MM.MainMenu) },
     ];
@@ -272,6 +274,9 @@ export async function organize(world: World, io: GameIO): Promise<void> {
         break;
       case 'D':
         await disperseParty(world, io);
+        break;
+      case 'N':
+        await clearNotes(world, io);
         break;
       case 'T':
         await terminateCharacter(world, io);
@@ -573,6 +578,28 @@ export async function disperseParty(world: World, io: GameIO): Promise<void> {
   if (answer !== 'Y') return;
   disperse(world);
   await notice(io, mm(world, MM.Dispersed));
+}
+
+/**
+ * Clear notes (this port): forget what the party has seen and learnt - the maps, the journal, the moongates come
+ * out of - after asking, the Yes saying what goes. Forming a party keeps them, so members may come and go in one adventure; this
+ * starts a new one's. The Organize menu's caller saves the game after.
+ */
+export async function clearNotes(world: World, io: GameIO): Promise<void> {
+  io.clearBottom();
+  io.centreText(11, 'CLEAR NOTES');
+  const answer = await io.chooseFromList(
+    [
+      { key: 'Y', label: 'Yes, clear map, journal, moongates' },
+      { key: 'N', label: 'No' },
+    ],
+    { row: MENU_ROW, title: 'Clear notes?' },
+  );
+  if (answer !== 'Y') return;
+  world.autoMap.clear();
+  world.journal = emptyJournal();
+  world.gatesKnown = [];
+  await notice(io, '(Notes cleared!)');
 }
 
 /** Mirrors `KillChar()`: erase a roster entry that is not in a party, after confirming. */

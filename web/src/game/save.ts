@@ -43,7 +43,15 @@ export interface SaveData {
   moongates?: number[];
   /** Whether the game has pointed to Tips; a save without it (from before Tips) has. */
   tipsNudged?: boolean;
+  /**
+   * What the party has seen, for the maps (automap.ts `toText`). A save without it, from before the map was saved
+   * with the game, keeps the map the browser kept apart (localSave.read).
+   */
+  automap?: string;
 }
+
+/** Where the map was kept, apart from the save, before it went into it: read once into a save without one. */
+export const LEGACY_AUTOMAP_KEY = 'ultima3.automap';
 
 function toBase64(bytes: Uint8Array): string {
   let s = '';
@@ -94,6 +102,7 @@ export function serialize(world: World): SaveData {
     },
     moongates: [...world.gatesKnown],
     tipsNudged: world.tipsNudged,
+    automap: world.autoMap.toText(),
   };
 }
 
@@ -133,6 +142,7 @@ export function restore(world: World, data: SaveData): boolean {
       ? data.moongates.filter((g): g is number => Number.isInteger(g) && g >= 0 && g < 8)
       : [];
     world.tipsNudged = data.tipsNudged !== false;
+    if (typeof data.automap === 'string') world.autoMap.fromText(data.automap);
     return true;
   } catch {
     return false;
@@ -147,6 +157,7 @@ export const localSave = {
     if (this.off) return false;
     try {
       localStorage.setItem(SAVE_KEY, JSON.stringify(serialize(world)));
+      localStorage.removeItem(LEGACY_AUTOMAP_KEY); // the save holds the map now
       return true;
     } catch {
       return false;
@@ -156,7 +167,10 @@ export const localSave = {
     try {
       const raw = localStorage.getItem(SAVE_KEY);
       if (!raw) return false;
-      return restore(world, JSON.parse(raw) as SaveData);
+      const data = JSON.parse(raw) as SaveData;
+      // A save from before the map went into it: the map the browser kept apart, until the next save takes it in.
+      if (typeof data.automap !== 'string') data.automap = localStorage.getItem(LEGACY_AUTOMAP_KEY) ?? undefined;
+      return restore(world, data);
     } catch {
       return false;
     }
@@ -171,8 +185,8 @@ export const localSave = {
 };
 
 // ---------------------------------------------------------------------------
-// Export and import (this port): the save and the dungeon auto-map as one
-// piece of JSON text, carried through the clipboard between browsers.
+// Export and import (this port): the save, the map within it, as one piece
+// of JSON text, carried through the clipboard or a file between browsers.
 // ---------------------------------------------------------------------------
 
 export const EXPORT_FORMAT = 1;
@@ -183,14 +197,31 @@ export interface ExportedGame {
   /** When it was exported, ISO 8601. */
   exported: string;
   save: SaveData;
-  /** The dungeon auto-map store as text, or null when there is none. */
+  /** The map as text, as in the save too: for a version from before the save held it. */
   automap: string | null;
 }
 
 /** The current game as text for the clipboard. */
-export function exportGame(world: World, automap: string | null): string {
-  const out: ExportedGame = { game: 'ultima3', format: EXPORT_FORMAT, exported: new Date().toISOString(), save: serialize(world), automap };
+export function exportGame(world: World): string {
+  const save = serialize(world);
+  const out: ExportedGame = {
+    game: 'ultima3',
+    format: EXPORT_FORMAT,
+    exported: new Date().toISOString(),
+    save,
+    automap: save.automap ?? null,
+  };
   return JSON.stringify(out);
+}
+
+/**
+ * Put an exported game in place of the world's (parseExport's): the save, and its map - beside the save, in an
+ * export from before the save held it; none, where it has neither. False if the save does not fit.
+ */
+export function restoreExported(world: World, parsed: { save: SaveData; automap: string | null }): boolean {
+  if (!restore(world, parsed.save)) return false;
+  if (typeof parsed.save.automap !== 'string') world.autoMap.fromText(parsed.automap);
+  return true;
 }
 
 /**

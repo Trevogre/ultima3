@@ -115,13 +115,13 @@ Updates download in the background, and the title menu then offers
 "Update: restart".
 
 The game saves itself at every town, castle and dungeon door and at Quit,
-in the browser's local storage, and resumes on the next visit. The title
-menu's Export game copies the saved game as text to the clipboard or a
-file, and Import game reads it back, which is how a game moves between
-devices. The [showcase saves](showcase/README.md) are games ready at some
-of Sosaria's sights, from the opening to the castle of Exodus, to import
-and try (importing one replaces the game in progress, so export yours
-first).
+in the browser's local storage, and resumes on the next visit; the maps
+and the journal are saved with it. The title menu's Export game copies
+the saved game as text to the clipboard or a file, and Import game reads
+it back, which is how a game moves between devices. The [showcase
+saves](showcase/README.md) are games ready at some of Sosaria's sights,
+from the opening to the castle of Exodus, to import and try (importing
+one replaces the game in progress, so export yours first).
 
 **Back up your saved game.** Browsers can clear a site's storage on their
 own: Safari and every other iOS browser delete it after seven days without
@@ -337,15 +337,18 @@ These apply whatever tile set and sound set are chosen.
   the tile set's own tiles, and in a dungeon its level's auto-map.
   Sosaria's unexplored land and sea are a chart of its coasts in ink on
   paper; elsewhere the unexplored is dark. Places are marked once seen and
-  named once the party has been inside ("Towne?" till then); the towns
-  and Lord British's castle are marked from the start, as the box's map
-  had them, inked on the chart as "Undiscovered" until seen. The d-pad
-  steps between them, A opens the map of a town or castle the party has
-  been in, Y comes back to the party and X turns to the next map. Every
-  moongate the party has come out of is marked with the moon that opens
-  it, so the gate table writes itself one trip at a time. What is on it is
-  what the party has had in its line of sight: whatever forest, mountains
-  or walls hide stays unknown. It replaces the cloth map from the box.
+  named once the party has been inside ("Towne?" till then); the towns and
+  Lord British's castle are marked from the start, as the box's map had
+  them, inked on the chart as "Undiscovered" until seen. The d-pad steps
+  between them, A opens the map of a town or castle the party has been in,
+  Y comes back to the party and X turns to the next map. Every moongate
+  the party has come out of is marked with the moon that opens it, so the
+  gate table writes itself one trip at a time. What is on it is what the
+  party has had in its line of sight: whatever forest, mountains or walls
+  hide stays unknown. It replaces the cloth map from the box. The maps go
+  with the saved game. Forming a new party keeps them, so members can come
+  and go in one adventure; Clear notes, in Organize a party, forgets them,
+  with the journal and the moongates, to begin a new one.
 - A dungeon auto-map, the graph paper of old: cells seen by torchlight are
   recorded. L changes the dungeon's view between First person, 1st person
   + map (a 5x5 piece of the level beside the view) and Top down (the level
