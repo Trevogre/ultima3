@@ -22,6 +22,7 @@ import { DEFAULT_3D_SETTINGS, type View3DSettings } from './view3DSettings.ts';
 import { buildingGround, isBuilding } from './billboardArt.ts';
 import { BuildingBillboards } from './buildingBillboards.ts';
 import { TerrainCubes } from './terrainCubes.ts';
+import { cardGroundLift } from './cardGroundLift.ts';
 
 export interface ScreenRect {
   x: number;
@@ -330,7 +331,7 @@ export class TileMapScene {
 
   private faceActors(): void {
     for (const card of [...this.actorCards, ...this.partyCards]) {
-      card.mesh.position.set(card.x, card.y, 0);
+      card.mesh.position.set(card.x, card.y, cardGroundLift(card.size, this.options.characters ? this.tilt : 0));
       if (this.options.characters) {
         card.mesh.quaternion.copy(this.camera.quaternion);
         card.mesh.position.addScaledVector(this.camera.up, (card.size * Math.sin(this.tilt)) / 2);

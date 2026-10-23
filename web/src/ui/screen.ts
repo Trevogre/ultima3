@@ -2131,7 +2131,10 @@ export class Screen implements GameIO {
     }
     if (c.party && this.partyStyle !== 'symbol') this.drawParty(dx, dy, tile, this.partyStyle, ctx);
     else if (c.overlay !== undefined) {
-      if (ctx === this.presentation.map.actorContext && isBuilding(c.overlay)) {
+      if (ctx === this.presentation.map.actorContext && c.overlay === Shape.Whirlpool) {
+        // The whirlpool belongs to the water surface, not the standing sprite cards.
+        this.gfx.drawShape(this.presentation.map.terrainContext, c.overlay, dx, dy, tile, { masked: true });
+      } else if (ctx === this.presentation.map.actorContext && isBuilding(c.overlay)) {
         if (!this.view3D.buildings) this.gfx.drawShape(effectContext, c.overlay, dx, dy, tile, { masked: true });
       } else this.gfx.drawShape(ctx, c.overlay, dx, dy, tile, { masked: true, flip: c.flip, altFrame: c.altFrame });
     }

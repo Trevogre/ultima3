@@ -16,6 +16,7 @@ import type { ViewCell } from '../game/viewport.ts';
 import { Shape } from '../game/tiles.ts';
 import type { GraphicsSet } from './graphics.ts';
 import { buildingArt, isBuilding } from './billboardArt.ts';
+import { cardGroundLift } from './cardGroundLift.ts';
 
 const SHAPES = [Shape.Town, Shape.Castle, Shape.Dungeon, Shape.Shrine] as number[];
 
@@ -104,7 +105,7 @@ export class BuildingBillboards {
   faceCamera(camera: OrthographicCamera, tilt: number): void {
     const lift = Math.sin(tilt) / 2;
     this.positions.forEach(({ x, y }, i) => {
-      this.position.set(x, y, 0).addScaledVector(camera.up, lift);
+      this.position.set(x, y, cardGroundLift(1, tilt)).addScaledVector(camera.up, lift);
       this.mesh.setMatrixAt(i, this.matrix.compose(this.position, camera.quaternion, this.scale));
     });
     this.mesh.instanceMatrix.needsUpdate = true;

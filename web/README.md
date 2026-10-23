@@ -51,6 +51,8 @@ Character and building billboarding start enabled: cards face the camera,
 lie flat overhead, and rise toward a foot anchor as the view tilts. The four
 party members use separate cards. Building backgrounds are separated from
 the existing art at runtime; combat markers and effects stay on the ground.
+Character and building cards stay above the flat ground at every camera angle,
+while extruded walls and mountains still occlude cards behind them.
 
 Wall and mountain cubes start enabled. Each cube has a one-tile footprint and
 height, with the original tile texture repeated on all six faces. Its top matches
