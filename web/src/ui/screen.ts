@@ -24,6 +24,7 @@
  */
 
 import { GraphicsSet, type ImageMap } from './graphics.ts';
+import { showSpriteSheet } from './spriteSheet.ts';
 import { Keyboard } from './input.ts';
 import { LEVELS, levelLabel, SoundPlayer } from './sound.ts';
 import { MusicPlayer } from './music.ts';
@@ -861,6 +862,7 @@ export class Screen implements GameIO {
         { key: 'A', label: `Auto combat: ${onOff(w.autoCombat)}` },
         { key: 'V', label: 'Visuals' },
         { key: '3', label: '3D Settings' },
+        { key: 'S', label: 'Sprite sheet' },
         { key: 'P', label: 'Gameplay' },
         { key: 'U', label: 'Audio' },
         { key: 'G', label: 'Tips' },
@@ -882,6 +884,9 @@ export class Screen implements GameIO {
           break;
         case '3':
           await this.settings3DMenu();
+          break;
+        case 'S':
+          await showSpriteSheet(this.keyboard);
           break;
         case 'A':
           w.autoCombat = !w.autoCombat;

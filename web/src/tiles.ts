@@ -1,20 +1,4 @@
-/**
- * tiles.ts
- *
- * The tile test page (tiles.html), for checking the tile sets by eye; the
- * game does not link to it. Every tile of a set is drawn as the map draws
- * it, through the game's own GraphicsSet: terrain opaque, everything else
- * masked over a chosen ground, animated at the game's rate (flags, frames,
- * scrolling water and lava, Exodus' lights). Under each tile its two sheet
- * frames are drawn still, so a bad second frame shows even when the tile
- * never swaps. Two kinds of tile are the exception, their second cells
- * holding something else. The letter I's is the door (the two share a map
- * value, and the map decides which a square is), so the I shows only its
- * letter and the Door cell after the tiles only the door. Those of 32-35
- * (force field, lava, moongate, wall, none of which swaps) hold Exodus'
- * four light panels, so those tiles show only their own frame and Exodus
- * shows the four panels. The choices are kept in the URL.
- */
+/** Sprite sheet comparison: the same named sprite across the game’s tile sets. */
 
 import { EXODUS_INDEX, GraphicsSet } from './ui/graphics.ts';
 import { TILE_SETS } from './ui/help.ts';
@@ -110,7 +94,7 @@ async function loadNames(): Promise<string[]> {
 
 const params = new URLSearchParams(location.search);
 const state = {
-  set: TILE_SETS.includes(params.get('set') ?? '') || params.get('set') === 'All' ? params.get('set')! : 'Standard',
+  set: TILE_SETS.includes(params.get('set') ?? '') || params.get('set') === 'All' ? params.get('set')! : 'All',
   ground: GROUNDS.some((g) => g.id === params.get('ground')) ? params.get('ground')! : 'grass',
   size: SIZES.includes(Number(params.get('size'))) ? Number(params.get('size')) : 64,
   frames: params.get('frames') !== '0',
@@ -132,6 +116,7 @@ interface Panel {
   name: string;
   gfx: GraphicsSet;
   canvas: HTMLCanvasElement;
+  index: number;
 }
 
 let panels: Panel[] = [];
@@ -144,16 +129,11 @@ function load(name: string): Promise<GraphicsSet> {
   return set;
 }
 
-/** The layout for the current size: a block per tile (the tile, its frames, its name), as many across as fit. */
+/** Each table cell shows the live sprite, with its sheet frames beneath. */
 function layout() {
   const s = state.size;
   const frame = state.frames ? s / 2 : 0;
-  const blockW = Math.max(s, 64) + 12;
-  const blockH = s + (frame ? frame + 4 : 0) + 18 + 10;
-  const width = Math.min(document.documentElement.clientWidth - 32, 16 * blockW);
-  const columns = Math.max(4, Math.floor(width / blockW));
-  const rows = Math.ceil((TILE_COUNT + 1) / columns);
-  return { s, frame, blockW, blockH, columns, width: columns * blockW, height: rows * blockH };
+  return { s, frame, width: s, height: s + (frame ? frame + 4 : 0) };
 }
 
 function sizeCanvas(canvas: HTMLCanvasElement): void {
@@ -203,40 +183,30 @@ function drawFrame(
 }
 
 function draw(panel: Panel): void {
-  const { canvas, gfx } = panel;
+  const { canvas, gfx, index } = panel;
+  const bounds = canvas.getBoundingClientRect();
+  if (bounds.bottom < 0 || bounds.top > innerHeight || bounds.right < 0 || bounds.left > innerWidth) return;
   const ctx = canvas.getContext('2d')!;
   const dpr = canvas.width / parseFloat(canvas.style.width);
   ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   ctx.imageSmoothingEnabled = false;
-  const { s, frame, blockW, blockH, columns } = layout();
-  ctx.fillStyle = '#111';
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  ctx.font = '11px -apple-system, "Segoe UI", Helvetica, Arial, sans-serif';
-  ctx.textBaseline = 'top';
-  tileOrder(state.grouped).forEach((index, place) => {
-    const x = (place % columns) * blockW + 6;
-    const y = Math.floor(place / columns) * blockH + 6;
-    // The tile as the map draws it: terrain opaque, the rest over the ground.
-    const terrain = index !== DOOR && TERRAIN.has(index);
-    if (!terrain) drawGround(ctx, gfx, x, y, s);
-    gfx.drawShape(ctx, index === DOOR ? Shape.Door : index * 2, x, y, s, { masked: !terrain });
-    let labelY = y + s + 3;
-    if (frame && index === EXODUS_INDEX) {
-      // Exodus' own cells are blank: its four light panels, in the second cells of 32-35, in sheet order.
-      for (let n = 0; n < PANEL_TILES.length; n++) drawFrame(ctx, gfx, PANEL_TILES[n], true, x + (n * frame) / 2, y + s + 4, frame / 2);
-      labelY += frame + 4;
-    } else if (frame) {
-      // The I's second frame is the door, and 32-35's are Exodus' panels: each is shown with the tile that uses it.
-      if (index !== DOOR) drawFrame(ctx, gfx, index, false, x, y + s + 4, frame);
-      const ownSecond = index !== LETTER_I && !PANEL_TILES.includes(index);
-      if (ownSecond) drawFrame(ctx, gfx, index, true, index === DOOR ? x : x + frame, y + s + 4, frame);
-      labelY += frame + 4;
-    }
-    ctx.fillStyle = terrain ? '#8cc8ff' : '#bbb';
-    const name = index === DOOR && drawsDoorAsLetter(gfx) ? 'Door (as I)' : tileName(index, names);
-    const label = `${index === DOOR ? '' : `${index} `}${name}`;
-    ctx.fillText(label, x, labelY, blockW - 8);
-  });
+  const { s, frame } = layout();
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  const x = 0;
+  const y = 0;
+  // The tile as the map draws it: terrain opaque, the rest over the ground.
+  const terrain = index !== DOOR && TERRAIN.has(index);
+  if (!terrain) drawGround(ctx, gfx, x, y, s);
+  gfx.drawShape(ctx, index === DOOR ? Shape.Door : index * 2, x, y, s, { masked: !terrain });
+  if (frame && index === EXODUS_INDEX) {
+    // Exodus' own cells are blank: its four light panels, in the second cells of 32-35, in sheet order.
+    for (let n = 0; n < PANEL_TILES.length; n++) drawFrame(ctx, gfx, PANEL_TILES[n], true, x + (n * frame) / 2, y + s + 4, frame / 2);
+  } else if (frame) {
+    // The I's second frame is the door, and 32-35's are Exodus' panels: each is shown with the tile that uses it.
+    if (index !== DOOR) drawFrame(ctx, gfx, index, false, x, y + s + 4, frame);
+    const ownSecond = index !== LETTER_I && !PANEL_TILES.includes(index);
+    if (ownSecond) drawFrame(ctx, gfx, index, true, index === DOOR ? x : x + frame, y + s + 4, frame);
+  }
 }
 
 /** Whether the set draws a door as the letter I: the I's two sheet frames are the same picture. */
@@ -263,27 +233,54 @@ async function build(): Promise<void> {
   const mine = ++generation;
   const main = document.getElementById('sets')!;
   const shown = state.set === 'All' ? TILE_SETS : [state.set];
-  const sets = shown.map((name) => load(name)); // all at once, shown in order as they arrive
-  main.replaceChildren();
+  const status = document.getElementById('status')!;
+  status.textContent = 'Loading sprite sheets…';
+  const results = await Promise.allSettled(shown.map((name) => load(name)));
+  if (mine !== generation) return;
+  const available: { name: string; gfx: GraphicsSet }[] = [];
+  const failed: string[] = [];
+  results.forEach((result, i) => {
+    if (result.status === 'fulfilled') available.push({ name: shown[i], gfx: result.value });
+    else failed.push(shown[i]);
+  });
+  status.textContent = failed.length ? `Could not load: ${failed.join(', ')}. Reload to try again.` : '';
+  const table = document.createElement('table');
+  const caption = table.createCaption();
+  caption.textContent = 'Compare each sprite across tile sets';
+  const header = table.createTHead().insertRow();
+  const corner = document.createElement('th');
+  corner.scope = 'col';
+  corner.textContent = 'Sprite';
+  header.append(corner);
+  for (const { name } of available) {
+    const th = document.createElement('th');
+    th.scope = 'col';
+    th.textContent = name;
+    header.append(th);
+  }
+  const body = table.createTBody();
   panels = [];
-  for (const [i, name] of shown.entries()) {
-    const section = document.createElement('section');
-    const heading = document.createElement('h2');
-    heading.textContent = name;
-    const canvas = document.createElement('canvas');
-    section.append(heading, canvas);
-    main.append(section);
-    try {
-      const gfx = await sets[i];
-      if (mine !== generation) return;
-      const panel = { name, gfx, canvas };
+  for (const index of tileOrder(state.grouped)) {
+    const row = body.insertRow();
+    const label = document.createElement('th');
+    label.scope = 'row';
+    label.textContent = `${index === DOOR ? '' : `${index} · `}${tileName(index, names)}`;
+    if (index !== DOOR && TERRAIN.has(index)) label.className = 'terrain';
+    row.append(label);
+    for (const { name, gfx } of available) {
+      const cell = row.insertCell();
+      const canvas = document.createElement('canvas');
+      canvas.setAttribute('role', 'img');
+      canvas.setAttribute('aria-label', `${tileName(index, names)} — ${name}`);
+      if (index === DOOR && drawsDoorAsLetter(gfx)) cell.title = 'This set uses the letter I for doors';
+      cell.append(canvas);
+      const panel = { name, gfx, canvas, index };
       sizeCanvas(canvas);
       panels.push(panel);
-      draw(panel);
-    } catch (e) {
-      heading.textContent = `${name}: ${(e as Error).message}`;
     }
   }
+  main.replaceChildren(table);
+  redrawAll();
 }
 
 function redrawAll(resize = false): void {
@@ -352,9 +349,11 @@ function setUp(): void {
   grouped.onchange = () => {
     state.grouped = grouped.checked;
     saveState();
-    redrawAll();
+    void build();
   };
   window.addEventListener('resize', () => redrawAll(true));
+  document.getElementById('sets')!.addEventListener('scroll', () => redrawAll());
+  window.addEventListener('scroll', () => redrawAll());
 }
 
 /** Advance every shown set's animation at the game's rate, and redraw. */
@@ -363,7 +362,7 @@ function run(): void {
   const frame = (time: number) => {
     if (state.animate && time - last >= ANIMATION_INTERVAL_MS) {
       last = time;
-      for (const panel of panels) panel.gfx.tick();
+      for (const gfx of new Set(panels.map((panel) => panel.gfx))) gfx.tick();
       redrawAll();
     }
     requestAnimationFrame(frame);

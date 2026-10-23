@@ -4,18 +4,17 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex" />
-    <title>Tile sets</title>
+    <title>Sprite sheet</title>
     <link rel="icon" href="pwa-192.png" type="image/png" />
-    <!--
-      A test page for checking the tile sets by eye; the game does not link
-      to it. Every tile of a set, drawn as the game draws it (src/tiles.ts).
-    -->
     <style>
       :root {
         color-scheme: dark;
       }
       body {
         margin: 0;
+        height: 100dvh;
+        display: flex;
+        flex-direction: column;
         background: #111;
         color: #ddd;
         font:
@@ -59,21 +58,69 @@
         font-weight: normal;
       }
       main {
-        padding: 8px 16px 32px;
+        flex: 1;
+        min-height: 0;
+        overflow: auto;
       }
-      h2 {
-        font-size: 15px;
-        margin: 18px 0 6px;
-        color: #eee;
+      table {
+        border-spacing: 0;
+        min-width: 100%;
+      }
+      caption {
+        text-align: left;
+        padding: 12px 16px;
+        color: #aaa;
+      }
+      th,
+      td {
+        padding: 10px 16px;
+        border-bottom: 1px solid #333;
+        border-right: 1px solid #333;
+      }
+      thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+        background: #242424;
+        min-width: 96px;
+      }
+      tbody th,
+      thead th:first-child {
+        position: sticky;
+        left: 0;
+        text-align: left;
+        min-width: 170px;
+        background: #1c1c1c;
+      }
+      tbody th {
+        z-index: 1;
+      }
+      thead th:first-child {
+        z-index: 3;
+      }
+      .terrain {
+        color: #8cc8ff;
       }
       canvas {
         display: block;
+        margin: auto;
+        image-rendering: pixelated;
+      }
+      #status:empty {
+        display: none;
+      }
+      #status {
+        padding: 0 16px;
+      }
+      select,
+      input {
+        accent-color: #8cc8ff;
       }
     </style>
   </head>
   <body>
     <header>
-      <h1>Tile sets</h1>
+      <h1>Sprite sheet</h1>
       <div>
         <label for="set">Set</label>
         <select id="set"></select>
@@ -99,11 +146,12 @@
         <label for="grouped">Variants with their monster</label>
       </div>
       <p class="legend">
-        Each tile as the map draws it, its two sheet frames beneath. <b>Blue</b> names are terrain, drawn opaque. The I's second frame is
-        the door, shown last, and those of 32-35 are Exodus' four light panels, shown under Exodus.
+        Names stay on the left; sets run across the columns. Scroll to compare.
+        <b>Blue</b> names are terrain. Smaller images show the sheet frames.
       </p>
     </header>
-    <main id="sets"></main>
+    <p id="status" role="status"></p>
+    <main id="sets" tabindex="0" aria-label="Sprite comparison table"></main>
     <script type="module" src="/src/tiles.ts"></script>
   </body>
 </html>

@@ -353,7 +353,7 @@ src/main.ts       bootstrap, service worker, export/import transfer
 tools/compose-figures.ts   art/figures/ -> the Standard tile sheet
 tools/key-art.mjs          art/box/ -> the Steam artwork, the banner, the boot screen (needs ImageMagick 7)
 tools/title-art.mjs        the box's EXODUS / ULTIMA III drawn as vectors, for that art
-tiles.html, src/tiles.ts   the tile test page (below)
+tiles.html, src/tiles.ts   the sprite comparison table (below)
 debug.html                 the development starts, linked (dev server only)
 tools/chip-sfx.ts          renders the Standard sound effects (npm run sfx)
 ```
@@ -434,13 +434,13 @@ check, the lint and the tests on every push (the desktop workflow's checks
 job, which a release waits for) and again in the Pages deploy, before its
 build.
 
-The tile sets are checked by eye on `tiles.html`
-(<http://localhost:5173/tiles.html> under `npm run dev`, and `tiles.html`
-beside the game in a build; nothing links to it). It draws every tile of
-a set, or of all of them, through the game's own `GraphicsSet`: terrain
-opaque and everything else over a chosen ground (any terrain tile, a
-checkerboard for transparency, or black), animated at the game's rate,
-with each tile's two sheet frames still beneath it, and each monster's two
-variants beside it unless sheet order is asked for. The choices stay in
-the URL, so a view can be shared. The service worker neither caches the
-page nor answers for it.
+The **Sprite sheet** entry in Settings and Pause opens a comparison table:
+sprite names down the rows, all twelve sets across the columns. Names and
+headings stay visible while scrolling. Back or Escape returns to the menu;
+a controller's d-pad scrolls and B returns. The game stays paused.
+
+The same table is at `tiles.html` (<http://localhost:5173/tiles.html> in
+development). It uses the game's own `GraphicsSet`, including animation,
+with controls for ground, size, sheet frames, animation and monster variant
+ordering. A single set can also be selected. Choices stay in the URL.
+The page and its assets are included in the offline cache.

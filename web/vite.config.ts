@@ -44,20 +44,17 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,png,gif,jpg,wav,mp3,mov,json,webmanifest}'],
-        // The tile test page is for checking the sets in a browser, not part of the installed game.
-        globIgnores: ['tiles.html', 'assets/tiles-*.js'],
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         // The Flatpak repository under /flatpak/ is fetched by flatpak and Discover, and a browser that has the
         // worker must get those files too, not be handed the game instead.
-        // The same for the tile test page, which is never precached (matched with or without its query).
-        navigateFallbackDenylist: [/\/flatpak\//, /\/tiles\.html(\?|$)/],
+        navigateFallbackDenylist: [/\/flatpak\//],
       },
     }),
   ],
   server: { port: 5173 },
   build: {
     target: 'es2022',
-    // The game, and the tile test page (tiles.html), which nothing links to.
+    // The game and the sprite comparison opened from Settings and Pause.
     rollupOptions: {
       input: {
         main: fileURLToPath(new URL('index.html', import.meta.url)),
