@@ -978,14 +978,52 @@ export class Screen implements GameIO {
         { key: 'W', label: `Wall cubes: ${onOff(this.view3D.walls)}`, disabled },
         { key: 'N', label: `Mountain cubes: ${onOff(this.view3D.mountains)}`, disabled },
         { key: 'M', label: `Mouse camera: ${onOff(this.view3D.mouseCamera)}`, disabled },
+        {
+          key: 'F',
+          label: `Camera: ${this.view3D.fixedCamera ? 'Fixed' : 'Free'}`,
+          disabled,
+          hint: 'F4 switches fixed angled view and free mouse camera. Scroll zooms in either mode.',
+        },
         { key: 'R', label: 'Reset camera', disabled },
+        {
+          key: 'O',
+          label: `Rotation: ${this.view3D.fixedRotation}`,
+          disabled,
+          hint: 'Map rotation in degrees. Default 5; independent of camera tilt.',
+        },
+        {
+          key: 'I',
+          label: `Tilt: ${this.view3D.fixedAngle}`,
+          disabled,
+          hint: 'Degrees from straight down. Choose 0 for overhead; default 45.',
+        },
       ],
-      (key) => {
+      async (key) => {
         const setting = (
-          { D: 'enabled', C: 'characters', L: 'buildings', T: 'distantTerrain', W: 'walls', N: 'mountains', M: 'mouseCamera' } as const
-        )[key as 'D' | 'C' | 'L' | 'T' | 'W' | 'N' | 'M'];
+          {
+            D: 'enabled',
+            C: 'characters',
+            L: 'buildings',
+            T: 'distantTerrain',
+            W: 'walls',
+            N: 'mountains',
+            M: 'mouseCamera',
+            F: 'fixedCamera',
+          } as const
+        )[key as 'D' | 'C' | 'L' | 'T' | 'W' | 'N' | 'M' | 'F'];
         if (setting) this.set3DSettings({ ...this.view3D, [setting]: !this.view3D[setting] });
         else if (key === 'R') this.presentation.map.reset();
+        else if (key === 'I' || key === 'O') {
+          const rotation = key === 'O';
+          const angles = Array.from({ length: rotation ? 72 : 15 }, (_, i) => i * 5);
+          const choices = angles.map((angle) => ({
+            key: String(angle),
+            label: `${angle} degrees${angle === (rotation ? 5 : 45) ? ' (default)' : ''}`,
+          }));
+          const picked = await this.runMenu(rotation ? 'Rotation' : 'Tilt', [...choices, { key: 'B', label: 'Back' }]);
+          if (picked >= 0 && picked < angles.length)
+            this.set3DSettings({ ...this.view3D, [rotation ? 'fixedRotation' : 'fixedAngle']: angles[picked] });
+        }
       },
     );
   }

@@ -34,11 +34,16 @@ Its output is committed so the game runs straight after `npm install`.
 
 Three.js owns the visible canvas using WebGL 2. The interface is an unlit,
 screen-sized plane; the map has its own scene and orthographic camera, clipped
-to the map window. Right-drag over the map to rotate and tilt, and use the
-mouse wheel to zoom. Gameplay zoom stops before the map edges expose the black
+to the map window. The default fixed orthographic view tilts 45° from straight down with a 5° map
+rotation. **F4** switches between this view and the free camera, also offered
+as **Camera: Fixed / Free** in 3D Settings. **Tilt** chooses 0–70° and
+**Rotation** chooses 0–355°, separately, in 5° steps. Both are remembered.
+In free mode, right-drag over
+the map to rotate and tilt. The mouse wheel zooms in both modes. Gameplay zoom stops before the map edges expose the black
 background, adjusting for rotation and tilt. Near the edges of bounded maps,
 the camera shifts inward just enough to keep terrain under the whole view.
-**Reset view** returns to the original party-centred, straight-down camera. These controls
+**Reset view** returns to the fixed angle in Fixed mode, or the original
+party-centred, straight-down camera in Free mode. These controls
 send no game commands, and keyboard directions always refer to the map.
 Camera angle and zoom last for this session and do not change saved games.
 

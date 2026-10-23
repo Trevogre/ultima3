@@ -3,6 +3,16 @@ import { DEFAULT_3D_SETTINGS, read3DSettings } from '../src/ui/view3DSettings.ts
 import { cutoutBackground } from '../src/ui/billboardArt.ts';
 
 describe('3D display preferences', () => {
+  it('defaults map rotation to 5 independently of tilt and preserves valid saved rotation', () => {
+    expect(read3DSettings({ fixedAngle: 45 })).toMatchObject({ fixedAngle: 45, fixedRotation: 5 });
+    expect(read3DSettings({ fixedRotation: 120 }).fixedRotation).toBe(120);
+    for (const fixedRotation of [-5, 360, NaN, Infinity, '25']) expect(read3DSettings({ fixedRotation }).fixedRotation).toBe(5);
+  });
+  it('defaults to 45 degrees and accepts only finite fixed angles in the supported range', () => {
+    expect(read3DSettings({}).fixedAngle).toBe(45);
+    for (const fixedAngle of [0, 25, 45, 70]) expect(read3DSettings({ fixedAngle }).fixedAngle).toBe(fixedAngle);
+    for (const fixedAngle of [-1, 71, NaN, Infinity, '25', true, null]) expect(read3DSettings({ fixedAngle }).fixedAngle).toBe(45);
+  });
   it('upgrades missing or partial old preferences while preserving explicit Off choices', () => {
     expect(read3DSettings(undefined)).toEqual(DEFAULT_3D_SETTINGS);
     expect(read3DSettings({ characters: false, buildings: false })).toEqual({
@@ -16,6 +26,8 @@ describe('3D display preferences', () => {
       mouseCamera: false,
     });
     expect(read3DSettings({ walls: false, mountains: false })).toMatchObject({ walls: false, mountains: false });
+    expect(read3DSettings({ fixedCamera: false }).fixedCamera).toBe(false);
+    expect(read3DSettings({ fixedCamera: 'free' }).fixedCamera).toBe(true);
   });
 
   it('ignores invalid values and gives each reader independent defaults', () => {

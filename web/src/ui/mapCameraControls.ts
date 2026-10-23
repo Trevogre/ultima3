@@ -18,7 +18,7 @@ export class MapCameraControls {
     this.reset.type = 'button';
     this.reset.id = 'map-camera-reset';
     this.reset.textContent = 'Reset view';
-    this.reset.title = 'Return the map camera to its original top-down view';
+    this.reset.title = 'Reset the current camera mode';
     this.toolbar.style.cssText = 'position:absolute;z-index:2;display:none;transform:translateX(-100%);gap:5px;';
     this.fit.type = 'button';
     this.fit.id = 'map-camera-fit';
@@ -47,9 +47,14 @@ export class MapCameraControls {
   }
 
   setActive(active: boolean): void {
+    if (this.map.fixedCamera) this.cancelDrag();
+    this.canvas.title = active
+      ? this.map.fixedCamera
+        ? 'Fixed angled view. F4: free camera; scroll to zoom.'
+        : 'Free camera. F4: fixed angled view; right-drag to rotate and tilt; scroll to zoom.'
+      : this.originalTitle;
     if (this.active !== active) {
       this.active = active;
-      this.canvas.title = active ? 'Map: right-drag to rotate and tilt; scroll to zoom.' : this.originalTitle;
       if (!active) this.cancelDrag();
     }
     const wholeMap = this.map.inspectionMode && this.map.hasLandscape;
@@ -71,7 +76,7 @@ export class MapCameraControls {
   }
 
   private readonly onDown = (event: PointerEvent): void => {
-    if (!this.active || event.button !== 2 || !this.contains(event.clientX, event.clientY)) return;
+    if (!this.active || this.map.fixedCamera || event.button !== 2 || !this.contains(event.clientX, event.clientY)) return;
     event.preventDefault();
     this.canvas.focus();
     this.drag = { id: event.pointerId, x: event.clientX, y: event.clientY };

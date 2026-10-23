@@ -318,6 +318,21 @@ async function start(): Promise<void> {
   });
   screen.onGamepadPress = () => pad.show(false);
 
+  // Camera-only shortcut: never enters the game's command queue or spends a turn.
+  window.addEventListener(
+    'keydown',
+    (event) => {
+      if (event.key !== 'F4' || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+      if (document.querySelector('dialog[open]') || !screen.view3D.enabled) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (event.repeat) return;
+      screen.set3DSettings({ ...screen.view3D, fixedCamera: !screen.view3D.fixedCamera });
+      remember();
+    },
+    true,
+  );
+
   // Development shortcut, not in the help: Option-Shift-6 (Alt-Shift-6, the ^ key) steps to the next tile set.
   window.addEventListener('keydown', (e) => {
     if (e.altKey && e.shiftKey && e.code === 'Digit6') {

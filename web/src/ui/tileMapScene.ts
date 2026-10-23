@@ -59,8 +59,8 @@ export class TileMapScene {
   private fitX = 0;
   private fitY = 0;
   private landscapeSide = 0;
-  yaw = 0;
-  tilt = 0;
+  yaw = (DEFAULT_3D_SETTINGS.fixedRotation * Math.PI) / 180;
+  tilt = (DEFAULT_3D_SETTINGS.fixedAngle * Math.PI) / 180;
   zoom = 1;
 
   constructor(
@@ -235,8 +235,16 @@ export class TileMapScene {
   }
 
   setOptions(options: View3DSettings): void {
+    const changedMode = options.fixedCamera !== this.options.fixedCamera;
+    const changedAngle = options.fixedAngle !== this.options.fixedAngle;
+    const changedRotation = options.fixedRotation !== this.options.fixedRotation;
     this.options = { ...options };
-    this.updateCamera();
+    if (changedMode && options.fixedCamera) this.reset();
+    else {
+      if (changedRotation && options.fixedCamera) this.yaw = (options.fixedRotation * Math.PI) / 180;
+      if (changedAngle && options.fixedCamera) this.tilt = (options.fixedAngle * Math.PI) / 180;
+      this.updateCamera();
+    }
   }
 
   setActorLayout(cells: ViewCell[], partyGrid: boolean): void {
@@ -286,6 +294,7 @@ export class TileMapScene {
   }
 
   orbit(dx: number, dy: number): void {
+    if (this.options.fixedCamera) return;
     this.yaw = (this.yaw + dx * 0.006) % (Math.PI * 2);
     this.tilt = Math.max(0, Math.min((70 * Math.PI) / 180, this.tilt + dy * 0.006));
     this.updateCamera();
@@ -297,13 +306,20 @@ export class TileMapScene {
   }
 
   reset(): void {
-    this.yaw = this.tilt = 0;
+    this.yaw = this.options.fixedCamera ? (this.options.fixedRotation * Math.PI) / 180 : 0;
+    this.tilt = this.options.fixedCamera ? (this.options.fixedAngle * Math.PI) / 180 : 0;
     this.zoom = 1;
     this.updateCamera();
   }
 
   get isDefault(): boolean {
-    return this.yaw === 0 && this.tilt === 0 && this.zoom === 1;
+    const yaw = this.options.fixedCamera ? (this.options.fixedRotation * Math.PI) / 180 : 0;
+    const tilt = this.options.fixedCamera ? (this.options.fixedAngle * Math.PI) / 180 : 0;
+    return this.yaw === yaw && this.tilt === tilt && this.zoom === 1;
+  }
+
+  get fixedCamera(): boolean {
+    return this.options.fixedCamera;
   }
 
   private updateCamera(): void {
