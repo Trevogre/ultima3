@@ -39,11 +39,13 @@ import { bootHold } from './ui/bootHold.ts';
 import { MusicPlayer } from './ui/music.ts';
 import { Screen } from './ui/screen.ts';
 import { TILE_SETS } from './ui/help.ts';
+import { DEFAULT_3D_SETTINGS, read3DSettings, type View3DSettings } from './ui/view3DSettings.ts';
 
 const PREFS_KEY = 'ultima3.settings';
 
 /** What the Settings menu can change, as remembered between visits. */
 interface Prefs {
+  view3D: View3DSettings;
   inputMode: 'keyboard' | 'controller';
   tiles: string;
   /** CRT lines over the whole game (scanlines.ts); off unless asked for. */
@@ -67,6 +69,7 @@ interface Prefs {
 }
 
 const DEFAULT_PREFS: Prefs = {
+  view3D: { ...DEFAULT_3D_SETTINGS },
   inputMode: 'controller',
   tiles: 'Standard',
   scanlines: false,
@@ -89,6 +92,7 @@ function loadPrefs(): Prefs {
     const raw = localStorage.getItem(PREFS_KEY);
     const saved = raw ? (JSON.parse(raw) as Partial<Prefs>) : {};
     const prefs = { ...DEFAULT_PREFS, ...saved };
+    prefs.view3D = read3DSettings(saved.view3D);
     // Apple II Color TV was dropped when scanlines became a setting; Apple II Color is its art without the fringing.
     if (prefs.tiles === 'Apple II Color TV') prefs.tiles = 'Apple II Color';
     if (!TILE_SETS.includes(prefs.tiles)) prefs.tiles = DEFAULT_PREFS.tiles;
@@ -122,7 +126,11 @@ function bootDone(): void {
 /** Text on the bare canvas instead of the game, on failure. */
 function canvasNotice(text: string): void {
   bootDone();
-  const canvas = document.getElementById('screen') as HTMLCanvasElement | null;
+  const target = document.getElementById('screen') as HTMLCanvasElement | null;
+  // The game may already own a WebGL context, which cannot become a 2D
+  // context. A fresh canvas also keeps startup failures readable in that case.
+  const canvas = target?.cloneNode(false) as HTMLCanvasElement | undefined;
+  if (canvas) target?.replaceWith(canvas);
   const ctx = canvas?.getContext('2d');
   if (!canvas || !ctx) return;
   ctx.fillStyle = '#000';
@@ -265,6 +273,7 @@ async function start(): Promise<void> {
   screen.inputMode = params.has('controller') ? 'controller' : prefs.inputMode;
   screen.tileSetName = tiles;
   screen.scanlines = prefs.scanlines;
+  screen.set3DSettings(prefs.view3D);
   canvas.focus();
 
   // Whatever changes a setting (the menu, a gamepad press, Escape in a fight), remember it.
@@ -272,6 +281,7 @@ async function start(): Promise<void> {
     if (peek) return;
     savePrefs({
       inputMode: screen.inputMode,
+      view3D: screen.view3D,
       // A set asked for in the address (development) is this page's alone: the one remembered stays.
       tiles: screen.tileSetName === tilesAsked ? prefs.tiles : screen.tileSetName,
       scanlines: screen.scanlines,

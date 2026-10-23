@@ -1,7 +1,7 @@
 /**
  * screen.ts
  *
- * The Canvas renderer, and the browser implementation of `GameIO`.
+ * The pixel screen, presented by Three.js, and the browser implementation of `GameIO`.
  *
  * The screen is a grid of 40 x 24 cells (`blkSiz` pixels each in the
  * original; `cell` here). The layout is the Apple II one:
@@ -30,6 +30,12 @@ import { MusicPlayer } from './music.ts';
 import { DungeonRenderer } from './dungeonView.ts';
 import { markerColour } from './display.ts';
 import { ScanlineOverlay } from './scanlines.ts';
+import { ThreeRenderer } from './threeRenderer.ts';
+import type { ScreenRect } from './tileMapScene.ts';
+import { buildLandscape } from '../game/landscape.ts';
+import { Shape } from '../game/tiles.ts';
+import { DEFAULT_3D_SETTINGS, type View3DSettings } from './view3DSettings.ts';
+import { buildingGround, isBuilding } from './billboardArt.ts';
 import { World, holdCombatMark, STARVATION_MODES, TIMER_MODES } from '../game/world.ts';
 import { PlayerRecord, levelUpDue, statusLetter } from '../game/player.ts';
 import { commandMenu, hasMagic } from '../game/context.ts';
@@ -39,7 +45,7 @@ import { journalCard, journalSnapshot, journalTop, wordCard, type JournalLine } 
 import { TIPS, tipPages, type Tip } from '../game/tips.ts';
 import { CHEATS } from '../game/cheats.ts';
 import { Location } from '../game/party.ts';
-import { buildViewport, VIEW_SIZE, VIEW_CENTRE, type Viewport } from '../game/viewport.ts';
+import { buildViewport, VIEW_SIZE, VIEW_CENTRE, type Viewport, type ViewCell } from '../game/viewport.ts';
 import { buildDungeonView, secretMessage } from '../game/dungeon.ts';
 import { recordView, MAP_SIDE } from '../game/automap.ts';
 import { aroundParty, wholeLevel } from '../game/dungeonLayout.ts';
@@ -167,6 +173,8 @@ function dungeonMapPiece(value: number): number {
 }
 
 export class Screen implements GameIO {
+  view3D: View3DSettings = { ...DEFAULT_3D_SETTINGS };
+  private readonly presentation: ThreeRenderer;
   private readonly ctx: CanvasRenderingContext2D;
   /** Pixel size of one cell. */
   readonly cell: number;
@@ -277,9 +285,9 @@ export class Screen implements GameIO {
     private readonly musicPlayer: MusicPlayer,
     private readonly world: World,
   ) {
-    this.ctx = canvas.getContext('2d')!;
-    this.ctx.imageSmoothingEnabled = false;
     this.cell = Math.floor(canvas.width / COLUMNS);
+    this.presentation = new ThreeRenderer(canvas, this.cell, VIEW_SIZE);
+    this.ctx = this.presentation.context;
     for (let r = 0; r < TEXT_BOTTOM - TEXT_TOP; r++) this.textRows.push(Array<string>(TEXT_RIGHT - TEXT_LEFT).fill(' '));
     this.dungeonRenderer = DungeonRenderer.forSet(gfx);
     this.crt = new ScanlineOverlay(canvas);
@@ -852,6 +860,7 @@ export class Screen implements GameIO {
         ...resume,
         { key: 'A', label: `Auto combat: ${onOff(w.autoCombat)}` },
         { key: 'V', label: 'Visuals' },
+        { key: '3', label: '3D Settings' },
         { key: 'P', label: 'Gameplay' },
         { key: 'U', label: 'Audio' },
         { key: 'G', label: 'Tips' },
@@ -870,6 +879,9 @@ export class Screen implements GameIO {
           return 'Q'; // the game saves and ends once this menu is gone
         case 'V':
           await this.visualsMenu();
+          break;
+        case '3':
+          await this.settings3DMenu();
           break;
         case 'A':
           w.autoCombat = !w.autoCombat;
@@ -925,6 +937,52 @@ export class Screen implements GameIO {
       await act(options[picked].key, place);
       this.onSettingsChange?.();
     }
+  }
+
+  /** Apply display preferences without changing the world or the saved game. */
+  set3DSettings(settings: View3DSettings): void {
+    this.view3D = { ...settings };
+    this.presentation.map.setOptions(this.view3D);
+    this.viewDirty = true;
+  }
+
+  private async settings3DMenu(): Promise<void> {
+    const disabled = !this.presentation.supports3D;
+    await this.settingsList(
+      '3D Settings',
+      () => [
+        {
+          key: 'D',
+          label: `3D map: ${onOff(this.view3D.enabled)}`,
+          disabled,
+          hint: disabled ? '3D view is unavailable on this device.' : 'Off restores the classic flat view.',
+        },
+        {
+          key: 'C',
+          label: `Characters: ${this.view3D.characters ? 'Cards' : 'Flat'}`,
+          disabled,
+          hint: 'Cards turn to face the camera. Flat keeps character sprites on the ground.',
+        },
+        {
+          key: 'L',
+          label: `Buildings: ${this.view3D.buildings ? 'Cards' : 'Flat'}`,
+          disabled,
+          hint: 'Town, castle, dungeon and shrine artwork stands up as camera-facing cards.',
+        },
+        { key: 'T', label: `Distant land: ${onOff(this.view3D.distantTerrain)}`, disabled },
+        { key: 'W', label: `Wall cubes: ${onOff(this.view3D.walls)}`, disabled },
+        { key: 'N', label: `Mountain cubes: ${onOff(this.view3D.mountains)}`, disabled },
+        { key: 'M', label: `Mouse camera: ${onOff(this.view3D.mouseCamera)}`, disabled },
+        { key: 'R', label: 'Reset camera', disabled },
+      ],
+      (key) => {
+        const setting = (
+          { D: 'enabled', C: 'characters', L: 'buildings', T: 'distantTerrain', W: 'walls', N: 'mountains', M: 'mouseCamera' } as const
+        )[key as 'D' | 'C' | 'L' | 'T' | 'W' | 'N' | 'M'];
+        if (setting) this.set3DSettings({ ...this.view3D, [setting]: !this.view3D[setting] });
+        else if (key === 'R') this.presentation.map.reset();
+      },
+    );
   }
 
   /** Visuals: the tile set (its own list of sets) and the scanlines. */
@@ -1963,10 +2021,10 @@ export class Screen implements GameIO {
    * is white, it runs black to grey instead. (The Apple II blinked the
    * figure.)
    */
-  private markActiveMember(): void {
+  private markActiveMember(ctx = this.ctx): void {
     const c = this.world.combat;
     if (!c || c.markedMember < 0) return;
-    const { ctx, cell } = this;
+    const { cell } = this;
     const me = c.members[c.markedMember];
     if (me.x > 10 || me.y > 10) return;
     const tile = 2 * cell;
@@ -2040,23 +2098,39 @@ export class Screen implements GameIO {
       return;
     }
     if (!this.view) return;
+    const map = this.presentation.map;
+    map.beginFrame();
+    map.setLandscape(world.combat || !this.view3D.distantTerrain ? null : buildLandscape(world, this.view), gfx, this.view.cells);
+    map.setActorLayout(this.view.cells, this.partyStyle === 'grid');
     const tile = cell * 2;
     for (let i = 0; i < this.view.cells.length; i++) {
       const c = this.view.cells[i];
       const dx = cell + (i % VIEW_SIZE) * tile;
       const dy = cell + Math.floor(i / VIEW_SIZE) * tile;
       gfx.drawShape(ctx, c.base, dx, dy, tile);
-      if (c.follower !== undefined && this.partyStyle === 'line') this.drawMember(c.follower, dx, dy, tile);
-      if (c.hit && !this.burstTiles) {
-        // The Apple II way: the ball's "HIT" frame replaces whatever was hit.
-        gfx.drawShape(ctx, c.hit.shape, dx, dy, tile, { masked: true, altFrame: true });
-        continue;
-      }
-      if (c.party && this.partyStyle !== 'symbol') this.drawParty(dx, dy, tile, this.partyStyle);
-      else if (c.overlay !== undefined) gfx.drawShape(ctx, c.overlay, dx, dy, tile, { masked: true, flip: c.flip, altFrame: c.altFrame });
-      if (c.hit) this.drawBurst(dx, dy, tile, c.hit.frame);
+      if (c.base !== Shape.Void)
+        gfx.drawShape(map.terrainContext, this.view3D.buildings && isBuilding(c.base) ? buildingGround(c.base) : c.base, dx, dy, tile);
+      this.drawViewportActors(ctx, c, dx, dy, tile);
+      this.drawViewportActors(map.actorContext, c, dx, dy, tile, map.effectContext);
     }
     this.markActiveMember();
+    this.markActiveMember(map.effectContext);
+  }
+
+  /** The same sprite composition supplies the legacy screen and the native map's actor layer. */
+  private drawViewportActors(ctx: CanvasRenderingContext2D, c: ViewCell, dx: number, dy: number, tile: number, effectContext = ctx): void {
+    if (c.follower !== undefined && this.partyStyle === 'line') this.drawMember(c.follower, dx, dy, tile, ctx);
+    if (c.hit && !this.burstTiles) {
+      this.gfx.drawShape(ctx, c.hit.shape, dx, dy, tile, { masked: true, altFrame: true });
+      return;
+    }
+    if (c.party && this.partyStyle !== 'symbol') this.drawParty(dx, dy, tile, this.partyStyle, ctx);
+    else if (c.overlay !== undefined) {
+      if (ctx === this.presentation.map.actorContext && isBuilding(c.overlay)) {
+        if (!this.view3D.buildings) this.gfx.drawShape(effectContext, c.overlay, dx, dy, tile, { masked: true });
+      } else this.gfx.drawShape(ctx, c.overlay, dx, dy, tile, { masked: true, flip: c.flip, altFrame: c.altFrame });
+    }
+    if (c.hit) this.drawBurst(dx, dy, tile, c.hit.frame, effectContext);
   }
 
   /**
@@ -2069,27 +2143,27 @@ export class Screen implements GameIO {
    * the NES did. A poisoned member is drawn all in green; a dead one, or
    * ashes, is not drawn. The other tile sets keep the Apple II's single figure.
    */
-  private drawParty(dx: number, dy: number, tile: number, style: 'grid' | 'line'): void {
+  private drawParty(dx: number, dy: number, tile: number, style: 'grid' | 'line', ctx = this.ctx): void {
     const { world } = this;
     if (style === 'line') {
       const leader = [0, 1, 2, 3].find((m) => world.party.memberSlot(m) >= 0 && world.memberAlive(m));
-      if (leader !== undefined) this.drawMember(leader, dx, dy, tile);
+      if (leader !== undefined) this.drawMember(leader, dx, dy, tile, ctx);
       return;
     }
     const q = tile / 2;
     for (let m = 0; m < 4; m++) {
       if (world.party.memberSlot(m) < 0) continue;
-      this.drawMember(m, dx + (m % 2) * q, dy + Math.floor(m / 2) * q, q);
+      this.drawMember(m, dx + (m % 2) * q, dy + Math.floor(m / 2) * q, q, ctx);
     }
   }
 
   /** One member's class figure at (x, y), `size` pixels square: green if poisoned, nothing if dead or ashes. */
-  private drawMember(m: number, x: number, y: number, size: number): void {
+  private drawMember(m: number, x: number, y: number, size: number, ctx = this.ctx): void {
     const p = this.world.member(m);
     if (p.status === 'D' || p.status === 'A') return;
     const shape = memberShape(this.world, p.classLetter);
-    if (p.status === 'P') this.ctx.drawImage(this.greenFigure(shape, size), x, y);
-    else this.gfx.drawShape(this.ctx, shape, x, y, size, { masked: true });
+    if (p.status === 'P') ctx.drawImage(this.greenFigure(shape, size), x, y);
+    else this.gfx.drawShape(ctx, shape, x, y, size, { masked: true });
   }
 
   /** Cache of member figures recoloured green (poison), keyed by shape and size. */
@@ -2126,8 +2200,7 @@ export class Screen implements GameIO {
    * Frames 1 and 2 are filled discs, a bright rim round a darker centre;
    * frame 3 is a ring, so the target shows through as the burst passes.
    */
-  private drawBurst(dx: number, dy: number, tile: number, frame: number): void {
-    const { ctx } = this;
+  private drawBurst(dx: number, dy: number, tile: number, frame: number, ctx = this.ctx): void {
     const gp = tile / 16;
     const radius = [0, 2.6, 4.6, 6.8][frame] ?? 6.8;
     const inner = frame === 3 ? 4.6 : frame === 2 ? 3.0 : 0; // hollow, or the darker centre
@@ -2143,6 +2216,7 @@ export class Screen implements GameIO {
   }
 
   private invert(x: number, y: number, w: number, h: number): void {
+    if (x === 1 && y === 1 && w === 22 && h === 22) this.presentation.map.invert();
     const { ctx, cell } = this;
     ctx.save();
     ctx.globalCompositeOperation = 'difference';
@@ -2179,11 +2253,41 @@ export class Screen implements GameIO {
     if (!this.pulse) return;
     const { ctx, cell } = this;
     const { x, y, w, h } = this.pulse;
-    ctx.save();
-    ctx.globalAlpha = 0.5;
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(x * cell, y * cell, w * cell, h * cell);
-    ctx.restore();
+    for (const target of [ctx, this.presentation.map.effectContext]) {
+      target.save();
+      target.globalAlpha = 0.5;
+      target.fillStyle = '#fff';
+      target.fillRect(x * cell, y * cell, w * cell, h * cell);
+      target.restore();
+    }
+    this.presentation.map.changed();
+  }
+
+  /** Keep interface overlays in screen space while the map camera moves independently. */
+  private present(): void {
+    const mapVisible =
+      this.view3D.enabled &&
+      this.frameShown &&
+      !!this.view &&
+      !this.viewCovered &&
+      !this.overlay &&
+      !(this.world.party.location === Location.Dungeon && !this.world.combat);
+    const covers: ScreenRect[] = [];
+    const cell = this.cell;
+    if (this.menu) {
+      const m = this.menu;
+      covers.push({ x: m.x * cell, y: m.y * cell, w: m.width * cell, h: (m.visibleRows + 2) * cell });
+      if (m.hints) covers.push({ x: cell, y: (m.y + m.visibleRows + 2) * cell, w: (COLUMNS - 2) * cell, h: HINT_ROWS * cell });
+    }
+    if (this.underPaused) {
+      const p = this.underPaused;
+      covers.push({ x: p.x, y: p.y, w: p.image.width, h: p.image.height });
+    }
+    this.presentation.present({
+      mapVisible,
+      mapInteractive: mapVisible && this.view3D.mouseCamera && !this.menu && !this.keyboard.paused && !this.pauseShown,
+      covers,
+    });
   }
 
   /** The cells a spell's flash covers: a member's 2x2 square in the arena, the party's square on a map, or the whole view. */
@@ -2214,11 +2318,13 @@ export class Screen implements GameIO {
       else this.hidePaused();
     }
     if (this.underPaused) {
+      this.present();
       requestAnimationFrame((t) => this.frame(t));
       return;
     }
     if (this.overlay) {
       this.overlay(time);
+      this.present();
       requestAnimationFrame((t) => this.frame(t));
       return;
     }
@@ -2233,6 +2339,7 @@ export class Screen implements GameIO {
       this.viewDirty = false;
       if (this.menu) drawMenu(this.ctx, this.gfx, this.cell, this.menu);
     }
+    this.present();
     requestAnimationFrame((t) => this.frame(t));
   }
 

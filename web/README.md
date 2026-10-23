@@ -3,8 +3,8 @@
 ![EXODUS: Ultima III, 1983 to 2026, beside the demon from Denis Loubet's box painting](../promo/banner.jpg)
 
 A TypeScript port of LairWare's Macintosh remake of Ultima III (the C sources
-in `../Lairware/Sources`). It renders with plain Canvas 2D, plays sound and music with
-Web Audio, and needs no game engine. What the game is and what changed for
+in `../Lairware/Sources`). It displays the pixel screen with Three.js and plays
+sound and music with Web Audio. What the game is and what changed for
 the player is in the [root README](../README.md); this file is about the
 code.
 
@@ -29,6 +29,57 @@ real bug. `npm run extract` only needs to run again if the original
 resources change.
 Its output is committed so the game runs straight after `npm install`.
 `?new` on the URL starts a fresh game instead of resuming the last one.
+
+### Rendering
+
+Three.js owns the visible canvas using WebGL 2. The interface is an unlit,
+screen-sized plane; the map has its own scene and orthographic camera, clipped
+to the map window. Right-drag over the map to rotate and tilt, and use the
+mouse wheel to zoom. Gameplay zoom stops before the map edges expose the black
+background, adjusting for rotation and tilt. Near the edges of bounded maps,
+the camera shifts inward just enough to keep terrain under the whole view.
+**Reset view** returns to the original party-centred, straight-down camera. These controls
+send no game commands, and keyboard directions always refer to the map.
+Camera angle and zoom last for this session and do not change saved games.
+
+**Settings / Pause → 3D Settings** controls the 3D map, character cards,
+building cards, wall cubes, mountain cubes, distant landscape and mouse camera,
+and offers a camera reset.
+These toggles are remembered with the other device preferences. Turning the
+3D map off restores the classic viewport while retaining the 3D choices.
+Character and building billboarding start enabled: cards face the camera,
+lie flat overhead, and rise toward a foot anchor as the view tilts. The four
+party members use separate cards. Building backgrounds are separated from
+the existing art at runtime; combat markers and effects stay on the ground.
+
+Wall and mountain cubes start enabled. Each cube has a one-tile footprint and
+height, with the original tile texture repeated on all six faces. Its top matches
+the flat tile when viewed straight down. The two terrain types can be toggled
+independently; cubes use the same visibility mask as flat terrain and change no
+movement or line-of-sight rules.
+
+The whole 64 × 64 landscape is batched into one instanced terrain mesh, with
+animated art in a tile atlas. The original 11 × 11 viewport supplies local
+floors and transparent character/effect quads, preserving creature visibility.
+In towns and castles, the original current line-of-sight mask also applies to
+the landscape: hidden tiles stay black, including explored rooms outside current
+sight. Distant terrain and billboarding never override this mask.
+Secret locations stay concealed until visible or discovered; displaying distant
+terrain never records it as explored. Wrapping maps place their seam far from
+the party.
+Combat retains its 11 × 11 arena. First-person dungeons, charts and scene
+pictures keep their existing presentation, and menus stay in screen space.
+
+The terrain remains flat for now, ready for elevation.
+Canvas 2D still composes the original pixel screen for interface textures,
+snapshots and the display fallback on devices without WebGL 2. Nearest-neighbour
+sampling, sRGB colour and no tone mapping retain the art's appearance. CSS,
+scanlines and touch controls continue to use the same visible canvas. The
+drawing buffer is preserved for the pilot's canvas screenshots, and textures
+are refreshed after a lost WebGL context is restored.
+
+For renderer testing under `npm run dev`, `?freeCamera` restores unrestricted
+zoom and the **Whole map** button. This flag has no effect in production builds.
 
 ### Development starts
 
@@ -283,7 +334,8 @@ src/game/   pure game logic, no DOM, unit tested
 
 src/ui/     browser only
   graphics.ts     tile sheet, mask, font and UI sheet; tile animation
-  screen.ts       Canvas renderer and the GameIO implementation
+  screen.ts       pixel composition and the GameIO implementation
+  threeRenderer.ts Three.js display backend (orthographic pixel screen)
   dungeonView.ts  the first-person dungeon renderer
   input.ts        keyboard as an awaitable queue, and what pauses it
   menus.ts        menu windows (keys, feedback sounds), controller command lists, gamepad reader
