@@ -22,7 +22,7 @@ export const STALE_KEY_MS = 300;
 export type PauseReason = 'focus' | 'menu';
 
 /** Where a press came from: a real keyboard, a gamepad, or the on-screen pad. */
-export type InputSource = 'keyboard' | 'gamepad' | 'touch';
+export type InputSource = 'keyboard' | 'gamepad' | 'touch' | 'mouse';
 
 export class Keyboard {
   private queue: { key: string; at: number }[] = [];

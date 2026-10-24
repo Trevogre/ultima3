@@ -26,6 +26,7 @@
 import { GraphicsSet, type ImageMap } from './graphics.ts';
 import { showSpriteSheet } from './spriteSheet.ts';
 import { daylightColour } from './daylight.ts';
+import { MenuMouse } from './menuMouse.ts';
 import { Keyboard } from './input.ts';
 import { LEVELS, levelLabel, SoundPlayer } from './sound.ts';
 import { MusicPlayer } from './music.ts';
@@ -275,6 +276,7 @@ export class Screen implements GameIO {
   private readonly gamepads: GamepadReader;
   /** The menu window being shown, drawn over the map every frame. */
   private menu: MenuWindow | null = null;
+  private menuWatch: (() => void) | null = null;
   /** Scripted keys (auto-combat), read before the keyboard. (`Macro[]`) */
   private macro: string[] = [];
 
@@ -290,6 +292,23 @@ export class Screen implements GameIO {
     this.cell = Math.floor(canvas.width / COLUMNS);
     this.presentation = new ThreeRenderer(canvas, this.cell, VIEW_SIZE);
     this.ctx = this.presentation.context;
+    new MenuMouse(
+      canvas,
+      this.cell,
+      () => this.menu,
+      () => this.view3D.menuClicks,
+      () => {
+        this.showMenuNow();
+        this.menuWatch?.();
+      },
+      () => this.keyboard.push(Key.A, 'mouse'),
+      (direction) => this.keyboard.push(direction === 'down' ? Key.Down : Key.Up, 'mouse'),
+      () => this.keyboard.push(Key.B, 'mouse'),
+    );
+    this.presentation.map.onCameraModeToggle = () => {
+      this.set3DSettings({ ...this.view3D, fixedCamera: !this.view3D.fixedCamera });
+      this.onSettingsChange?.();
+    };
     for (let r = 0; r < TEXT_BOTTOM - TEXT_TOP; r++) this.textRows.push(Array<string>(TEXT_RIGHT - TEXT_LEFT).fill(' '));
     this.dungeonRenderer = DungeonRenderer.forSet(gfx);
     this.crt = new ScanlineOverlay(canvas);
@@ -752,6 +771,7 @@ export class Screen implements GameIO {
       onCursor?.(visible[menu.cursor]);
     };
     watch();
+    this.menuWatch = watch;
     try {
       for (;;) {
         const key = await this.readKey();
@@ -772,6 +792,7 @@ export class Screen implements GameIO {
         }
       }
     } finally {
+      this.menuWatch = null;
       this.closeMenu();
       if (cards) this.showCard(null);
     }
@@ -1063,11 +1084,13 @@ export class Screen implements GameIO {
       'Visuals',
       () => [
         { key: 'T', label: `Tiles: ${this.tileSetName}` },
+        { key: 'M', label: 'Mouse settings' },
         { key: 'P', label: 'Presentation', hint: `Current: ${presentationPreset(this.view3D)}. Adjust individual options in 3D Settings.` },
         { key: 'L', label: `Scanlines: ${onOff(this.scanlines)}` },
       ],
       async (key) => {
         if (key === 'T') await this.chooseTiles();
+        else if (key === 'M') await this.mouseSettingsMenu();
         else if (key === 'P') {
           const picked = await this.runMenu('Presentation', [
             { key: 'C', label: 'Classic', hint: 'The original flat viewport.' },
@@ -1086,6 +1109,38 @@ export class Screen implements GameIO {
   }
 
   /** Audio: the sound effects and their level, the music and its level, each level a dial heard as it turns. */
+  private async mouseSettingsMenu(): Promise<void> {
+    await this.settingsList(
+      'Mouse',
+      () => [
+        {
+          key: 'M',
+          label: `Camera: ${onOff(this.view3D.mouseCamera)}`,
+          hint: 'Camera mouse controls. F4 switches Fixed and Free camera modes.',
+        },
+        {
+          key: 'L',
+          label: `Left drag: ${onOff(this.view3D.leftDrag)}`,
+          hint: 'In Free mode, hold the normal mouse button and drag over the map to orbit.',
+        },
+        { key: 'R', label: `Right drag: ${onOff(this.view3D.rightDrag)}`, hint: 'Also allow secondary-click dragging in Free mode.' },
+        { key: 'W', label: `Scroll zoom: ${onOff(this.view3D.wheelZoom)}`, hint: 'Scroll over the map to zoom in either camera mode.' },
+        {
+          key: 'C',
+          label: `Menu clicks: ${onOff(this.view3D.menuClicks)}`,
+          hint: 'Point and click menu choices; scroll lists. Keyboard controls always work.',
+        },
+      ],
+      (key) => {
+        const setting = ({ M: 'mouseCamera', L: 'leftDrag', R: 'rightDrag', W: 'wheelZoom', C: 'menuClicks' } as const)[
+          key as 'M' | 'L' | 'R' | 'W' | 'C'
+        ];
+        if (setting) this.set3DSettings({ ...this.view3D, [setting]: !this.view3D[setting] });
+      },
+    );
+  }
+
+  /** Audio: sound effects, music and their levels. */
   private async audioMenu(): Promise<void> {
     const w = this.world;
     await this.settingsList(

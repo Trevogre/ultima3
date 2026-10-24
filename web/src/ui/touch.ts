@@ -73,9 +73,9 @@ export class TouchPad {
     this.root.appendChild(this.pauseButton());
     if (options.fullScreen) this.root.appendChild(this.fullScreenSwitch(options.fullScreen));
 
-    // A tap or click anywhere shows the pad; a physical key hides it.
-    window.addEventListener('pointerdown', () => {
-      if (!this._shown) this.show(true);
+    // Touch and pen show the pad; mouse menus and camera drags do not.
+    window.addEventListener('pointerdown', (event) => {
+      if (event.pointerType !== 'mouse' && !this._shown) this.show(true);
     });
     // iOS WebKit zooms in on a double-tapped element whatever the CSS and
     // viewport say, unless the page cancels the tap itself: the pad works

@@ -13,6 +13,10 @@ export interface View3DSettings {
   contactShadows: boolean;
   steppedMountains: boolean;
   recessedWater: boolean;
+  leftDrag: boolean;
+  rightDrag: boolean;
+  wheelZoom: boolean;
+  menuClicks: boolean;
 }
 
 export const DEFAULT_3D_SETTINGS: Readonly<View3DSettings> = {
@@ -30,6 +34,10 @@ export const DEFAULT_3D_SETTINGS: Readonly<View3DSettings> = {
   contactShadows: true,
   steppedMountains: false,
   recessedWater: true,
+  leftDrag: true,
+  rightDrag: true,
+  wheelZoom: true,
+  menuClicks: true,
 };
 
 const DEPTH_OPTIONS = {

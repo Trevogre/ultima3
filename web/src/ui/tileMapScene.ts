@@ -71,6 +71,7 @@ export class TileMapScene {
   zoom = 1;
   private combat = false;
   private explorationZoom = 1;
+  onCameraModeToggle: (() => void) | null = null;
 
   constructor(
     cell: number,
@@ -368,6 +369,10 @@ export class TileMapScene {
 
   get fixedCamera(): boolean {
     return this.options.fixedCamera;
+  }
+
+  get mouseOptions(): Pick<View3DSettings, 'leftDrag' | 'rightDrag' | 'wheelZoom'> {
+    return this.options;
   }
 
   private updateCamera(): void {

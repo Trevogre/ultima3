@@ -1,11 +1,16 @@
 import type { TileMapScene } from './tileMapScene.ts';
 
+export function orbitButton(button: number, pointerType: string, options: { leftDrag: boolean; rightDrag: boolean }): boolean {
+  return pointerType === 'mouse' && ((button === 0 && options.leftDrag) || (button === 2 && options.rightDrag));
+}
+
 /** Mouse camera controls scoped to the map; they never send game commands. */
 export class MapCameraControls {
   private active = false;
   private drag: { id: number; x: number; y: number } | null = null;
   private readonly reset = document.createElement('button');
   private readonly fit = document.createElement('button');
+  private readonly mode = document.createElement('button');
   private readonly toolbar = document.createElement('div');
   private readonly observer: ResizeObserver;
   private readonly originalTitle: string;
@@ -24,14 +29,20 @@ export class MapCameraControls {
     this.fit.id = 'map-camera-fit';
     this.fit.textContent = 'Whole map';
     this.fit.title = 'Zoom out to see the whole landscape; creatures remain limited to party visibility';
-    for (const button of [this.fit, this.reset]) {
+    this.mode.type = 'button';
+    this.mode.title = 'Switch between fixed view and mouse orbit (F4)';
+    this.mode.addEventListener('click', () => {
+      this.map.onCameraModeToggle?.();
+      this.canvas.focus();
+    });
+    for (const button of [this.fit, this.reset, this.mode]) {
       button.style.cssText =
         'padding:5px 8px;background:#111e;color:#fff;border:1px solid #888;border-radius:3px;font:12px sans-serif;cursor:pointer;';
       button.addEventListener('keydown', (event) => event.stopPropagation());
     }
     this.reset.addEventListener('click', this.onReset);
     this.fit.addEventListener('click', this.onFit);
-    this.toolbar.append(this.fit, this.reset);
+    this.toolbar.append(this.mode, this.fit, this.reset);
     canvas.after(this.toolbar);
     canvas.addEventListener('pointerdown', this.onDown);
     canvas.addEventListener('pointermove', this.onMove);
@@ -47,18 +58,19 @@ export class MapCameraControls {
   }
 
   setActive(active: boolean): void {
+    this.mode.textContent = this.map.fixedCamera ? 'Free camera' : 'Fixed camera';
     if (this.map.fixedCamera) this.cancelDrag();
     this.canvas.title = active
       ? this.map.fixedCamera
         ? 'Fixed angled view. F4: free camera; scroll to zoom.'
-        : 'Free camera. F4: fixed angled view; right-drag to rotate and tilt; scroll to zoom.'
+        : 'Free camera. F4: fixed view; click-drag to rotate and tilt (Mouse settings); scroll to zoom.'
       : this.originalTitle;
     if (this.active !== active) {
       this.active = active;
       if (!active) this.cancelDrag();
     }
     const wholeMap = this.map.inspectionMode && this.map.hasLandscape;
-    const display = active && (wholeMap || !this.map.isDefault) ? 'flex' : 'none';
+    const display = active ? 'flex' : 'none';
     this.reset.style.display = this.map.isDefault ? 'none' : 'block';
     this.fit.style.display = wholeMap ? 'block' : 'none';
     if (this.toolbar.style.display !== display) {
@@ -76,7 +88,13 @@ export class MapCameraControls {
   }
 
   private readonly onDown = (event: PointerEvent): void => {
-    if (!this.active || this.map.fixedCamera || event.button !== 2 || !this.contains(event.clientX, event.clientY)) return;
+    if (
+      !this.active ||
+      this.map.fixedCamera ||
+      !orbitButton(event.button, event.pointerType, this.map.mouseOptions) ||
+      !this.contains(event.clientX, event.clientY)
+    )
+      return;
     event.preventDefault();
     this.canvas.focus();
     this.drag = { id: event.pointerId, x: event.clientX, y: event.clientY };
@@ -111,7 +129,7 @@ export class MapCameraControls {
   };
 
   private readonly onWheel = (event: WheelEvent): void => {
-    if (!this.active || event.ctrlKey || !this.contains(event.clientX, event.clientY)) return;
+    if (!this.active || !this.map.mouseOptions.wheelZoom || event.ctrlKey || !this.contains(event.clientX, event.clientY)) return;
     event.preventDefault();
     const unit = event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? this.canvas.clientHeight : 1;
     this.map.zoomBy(Math.max(-500, Math.min(500, event.deltaY * unit)));

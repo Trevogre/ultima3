@@ -59,14 +59,25 @@ to the map window. The default fixed orthographic view tilts 45° from straight 
 rotation. **F4** switches between this view and the free camera, also offered
 as **Camera: Fixed / Free** in 3D Settings. **Tilt** chooses 0–70° and
 **Rotation** chooses 0–355°, separately, in 5° steps. Both are remembered.
-In free mode, right-drag over
-the map to rotate and tilt. The mouse wheel zooms in both modes. Gameplay zoom stops before the map edges expose the black
+In free mode, left-drag or right-drag over
+the map to rotate and tilt. The map's Free camera / Fixed camera button also
+switches modes. The mouse wheel zooms in both modes. Gameplay zoom stops before the map edges expose the black
 background, adjusting for rotation and tilt. Near the edges of bounded maps,
 the camera shifts inward just enough to keep terrain under the whole view.
 **Reset view** returns to the fixed angle in Fixed mode, or the original
 party-centred, straight-down camera in Free mode. These controls
 send no game commands, and keyboard directions always refer to the map.
 Camera angle and zoom last for this session and do not change saved games.
+
+**Visuals → Mouse settings** controls left-drag orbit, right-drag orbit,
+scroll zoom and menu clicks independently; all start enabled. These input
+preferences survive presentation-preset changes. Camera dragging is limited
+to Free mode and the map viewport, with touch/pen reserved for touch controls.
+With Menu clicks On, point to highlight, left-click to choose, scroll to
+navigate lists or adjust numeric dials, and right-click for the controller's
+Back action. Disabled choices retain the keyboard/controller refusal rules.
+Menu clicks do not issue movement commands, and mouse input does not summon
+the touch pad. Keyboard and gamepad controls remain available.
 
 **Settings / Pause → 3D Settings** controls the 3D map, character cards,
 building cards, wall cubes, mountain cubes, distant landscape and mouse camera,
