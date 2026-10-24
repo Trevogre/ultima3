@@ -36,6 +36,7 @@ import { WaterSurface } from './waterSurface.ts';
 import { cardGroundLift } from './cardGroundLift.ts';
 import { ModelScene } from './modelScene.ts';
 import type { ModelActor } from './modelActors.ts';
+import { DoorCards } from './doorCards.ts';
 
 export interface ScreenRect {
   x: number;
@@ -70,6 +71,8 @@ export class TileMapScene {
   private readonly geometries: PlaneGeometry[] = [];
   private readonly materials: MeshBasicMaterial[] = [];
   private readonly inverted = { value: false };
+  private readonly doors = new DoorCards(this.inverted);
+  private doorMode = false;
   private readonly buildings = new BuildingBillboards(this.inverted);
   private readonly trees = new BuildingBillboards(this.inverted, 'trees');
   private treeMode = false;
@@ -207,6 +210,7 @@ export class TileMapScene {
       this.partyCards.push({ mesh, x: (i % 2) / 2 - 0.25, y: 0.25 - Math.floor(i / 2) / 2, size: 0.5 });
     }
     this.scene.add(this.buildings.mesh);
+    this.scene.add(this.doors.mesh);
     this.scene.add(this.trees.mesh);
     this.landscapeCanvas.width = this.landscapeCanvas.height = 1024;
     this.landscapeContext = this.landscapeCanvas.getContext('2d')!;
@@ -271,6 +275,7 @@ export class TileMapScene {
 
   /** Batch the entire landscape in one draw call, using a small animated tile atlas. */
   setLandscape(landscape: Landscape | null, gfx: GraphicsSet, cells: ViewCell[]): void {
+    this.doors.set(landscape, cells, gfx, this.doorCardsActive && !this.modelMode);
     this.solidCells.clear();
     const solids = landscape?.shapes ?? cells.map((c) => c.base);
     const solidSide = landscape?.side ?? Math.sqrt(cells.length);
@@ -353,7 +358,7 @@ export class TileMapScene {
       else if (this.options.buildings && isBuilding(shape)) drawBuildingGround(ctx, gfx, shape, x, y, 64);
       else if (shape === Shape.Shrine || shape === Shape.Door) {
         gfx.drawShape(ctx, shape === Shape.Door ? Shape.Floor : Shape.Grass, x, y, 64);
-        gfx.drawShape(ctx, shape, x, y, 64, { masked: true });
+        if (shape !== Shape.Door || !this.doorCardsActive) gfx.drawShape(ctx, shape, x, y, 64, { masked: true });
       } else gfx.drawShape(ctx, shape, x, y, 64);
     }
     this.landscapeTexture.needsUpdate = true;
@@ -466,6 +471,7 @@ export class TileMapScene {
 
   /** Tint only the map; menus, status text and the moon indicators stay bright. */
   setDaylight(colour: [number, number, number]): void {
+    this.doors.material.color.setRGB(...colour);
     this.models.setDaylight(colour);
     for (const material of this.materials) material.color.setRGB(...colour);
     this.buildings.setDaylight(colour);
@@ -556,8 +562,12 @@ export class TileMapScene {
   private get treeCardsActive(): boolean {
     return useTreeCards(this.options.treeCards, this.tilt, true);
   }
+  get doorCardsActive(): boolean {
+    return this.options.enabled && this.tilt > 0.001;
+  }
 
   forestGround(shape: number, gfx: GraphicsSet): number {
+    if (shape === Shape.Door && this.doorCardsActive) return Shape.Floor;
     const hasCutout = shape === Shape.Forest ? !!gfx.forestCard : shape === Shape.Brush && !!gfx.brushCards;
     return useTreeCards(this.options.treeCards, this.tilt, hasCutout) ? Shape.Grass : shape;
   }
@@ -567,6 +577,10 @@ export class TileMapScene {
   }
 
   private updateCamera(): void {
+    if (this.doorMode !== this.doorCardsActive) {
+      this.doorMode = this.doorCardsActive;
+      this.onCardModeChange?.();
+    }
     this.movement.update(this.yaw, this.options.enabled && !this.options.fixedCamera && this.options.cameraRelative);
     const blend = this.options.buildings ? buildingSlide(this.tilt) : 0;
     if (this.treeMode !== this.treeCardsActive || this.characterCutouts !== this.characterCutoutsActive || blend !== this.buildingBlend) {
@@ -651,6 +665,7 @@ export class TileMapScene {
   }
 
   dispose(): void {
+    this.doors.dispose();
     this.models.dispose();
     this.grass.dispose();
     this.sunShadows.dispose();

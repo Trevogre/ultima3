@@ -43,6 +43,8 @@
       const index = (x, y) => (5 - y) * 11 + x + 5;
       for (const x of [-2, 0]) cells[index(x, 1)].base = Shape.Wall;
       cells[index(2, -1)].base = Shape.Wall + 4;
+      cells[index(-2, -2)].base = Shape.Door;
+      cells[index(-3, -2)].base = cells[index(-1, -2)].base = Shape.Wall;
       for (let x = -2; x <= 2; x++) cells[index(x, 3)].base = 76 + (x + 2) * 2;
       cells[index(0, 0)].party = true;
       let gfx;
@@ -57,7 +59,9 @@
         map.setSun(3, 12, true);
         map.setLandscape(null, gfx, cells);
         map.setActorLayout(cells, true);
-        cells.forEach((c, i) => gfx.drawShape(map.terrainContext, c.base, 32 + (i % 11) * 64, 32 + Math.floor(i / 11) * 64, 64));
+        cells.forEach((c, i) =>
+          gfx.drawShape(map.terrainContext, map.forestGround(c.base, gfx), 32 + (i % 11) * 64, 32 + Math.floor(i / 11) * 64, 64),
+        );
         const actors = [
           { x: -2, y: 0, size: 1, shape: 36 },
           { x: 2, y: 0, size: 1, shape: 136 },
