@@ -8,6 +8,11 @@ sound and music with Web Audio. What the game is and what changed for
 the player is in the [root README](../README.md); this file is about the
 code.
 
+For the next 3D development session on the RTX 5090 PC, start with the
+[local generation and model-quality handoff](docs/models/5090-HANDOFF.md).
+It records the intended art direction, current limitations, hardware assessment,
+local worker connection plan, and first generation benchmark.
+
 ## Running it
 
 ```sh

@@ -1,5 +1,8 @@
 # Atelier ranger and composed-world study
 
+For the current direction and the move to local generation on the RTX 5090,
+read the [3D/5090 handoff](../5090-HANDOFF.md) before extending these prototypes.
+
 This is a **work-in-progress review milestone**, not the completed replacement
 for the game's current model sets. Select the third **3D set: Composed** to try
 the new environment and rigged ranger. F7 cycles Low-poly → Van Gogh → Composed.

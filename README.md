@@ -585,6 +585,13 @@ updates. A bundle opened in Discover installs system-wide instead and asks
 for a password the deck account does not have; the link and the line
 above install per user and need none.
 
+## Development handoff
+
+The [3D asset and RTX 5090 plan](web/docs/models/5090-HANDOFF.md) preserves the
+model-quality goals, current implementation, and local Hunyuan generation setup
+for continuing development on another machine. General development instructions
+are in [web/README.md](web/README.md).
+
 ## Changelog
 
 Every release, with the desktop and Android downloads, is on the
