@@ -203,7 +203,7 @@ export class TileMapScene {
   /** Batch the entire landscape in one draw call, using a small animated tile atlas. */
   setLandscape(landscape: Landscape | null, gfx: GraphicsSet, cells: ViewCell[]): void {
     this.trees.set(landscape, cells, gfx, this.treeCardsActive);
-    if (this.options.contactShadows) this.trees.forEachFootprint((x, y) => this.shadows.add(x, y, 1));
+    if (this.options.contactShadows) this.trees.forEachFootprint((x, y, size) => this.shadows.add(x, y, size));
     this.buildings.set(landscape, cells, gfx, this.options.buildings);
     if (this.options.contactShadows && this.options.buildings) this.buildings.forEachFootprint((x, y) => this.shadows.add(x, y, 1));
     this.cubes.set(landscape, cells, this.options);

@@ -1,0 +1,9 @@
+{
+  "source": "Standard-Tiles.png",
+  "atlas": "Standard-TreeCards.png",
+  "anchors": [
+    [20, 35],
+    [48, 55],
+    [18, 63]
+  ]
+}

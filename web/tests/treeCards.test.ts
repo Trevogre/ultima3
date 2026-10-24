@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
-import { MeshBasicMaterial, OrthographicCamera, Matrix4 } from 'three';
-import { BuildingBillboards } from '../src/ui/buildingBillboards.ts';
+import { MeshBasicMaterial, OrthographicCamera, Matrix4, Vector3 } from 'three';
+import { BuildingBillboards, STANDARD_TREE_ANCHORS } from '../src/ui/buildingBillboards.ts';
 import type { GraphicsSet } from '../src/ui/graphics.ts';
 import { Shape } from '../src/game/tiles.ts';
 import { DEFAULT_3D_SETTINGS, presentationPreset, read3DSettings, useTreeCards } from '../src/ui/view3DSettings.ts';
@@ -70,6 +70,28 @@ describe('optional reviewed tree cards', () => {
       true,
     );
     expect(trees.mesh.count).toBe(1);
+    trees.set(null, [{ base: Shape.Forest }], { forestCard: {}, treeCards: {} } as GraphicsSet, true);
+    expect(trees.mesh.count).toBe(3);
+    expect(trees.mesh.instanceMatrix.count).toBeGreaterThanOrEqual(4096 * 3);
+    for (const tilt of [0, Math.PI / 4, (70 * Math.PI) / 180]) {
+      for (const yaw of [(5 * Math.PI) / 180, 2]) {
+        camera.position.set(10 * Math.sin(yaw) * Math.sin(tilt), -10 * Math.cos(yaw) * Math.sin(tilt), 10 * Math.cos(tilt));
+        camera.up.set(-Math.sin(yaw) * Math.cos(tilt), Math.cos(yaw) * Math.cos(tilt), Math.sin(tilt));
+        camera.lookAt(0, 0, 0);
+        trees.faceCamera(camera, tilt);
+        STANDARD_TREE_ANCHORS.forEach(([px, py], i) => {
+          trees.mesh.getMatrixAt(i, matrix);
+          const base = new Vector3(px / 64 - 0.5, 0.5 - py / 64, 0).applyMatrix4(matrix);
+          expect(base.x).toBeCloseTo(px / 64 - 0.5);
+          expect(base.y).toBeCloseTo(0.5 - py / 64);
+          expect(base.z).toBeCloseTo(0.002);
+        });
+      }
+    }
+    const footprints: number[][] = [];
+    trees.forEachFootprint((x, y, size) => footprints.push([x, y, size]));
+    expect(footprints).toHaveLength(3);
+    expect(footprints.every((f) => f[2] === 0.45)).toBe(true);
     trees.set(null, [{ base: Shape.Forest }], { forestCard: null } as GraphicsSet, true);
     expect(trees.mesh.count).toBe(0);
     trees.dispose();

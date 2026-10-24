@@ -27,3 +27,16 @@ The original sheets are unchanged. The generator asserts retained RGB equality
 and useful transparency. `manifest.json` records source and output SHA-256 hashes,
 mask decisions, dimensions, and retained pixel counts. Forest B cells are not
 used, matching the game’s existing non-animated forest rendering.
+
+## Individual Standard trees
+
+Standard uses `Standard-TreeCards.png`: three independent 64×64 transparent
+frames, one for each traced silhouette. Their native pixel bases are (20,35),
+(48,55), and (18,63), with the origin at the source tile’s top left. Each base
+maps to that position within the ground tile, and stays fixed as the camera
+rotates or tilts. Each card retains the source pixel scale and colours. No
+missing foliage is filled in; the bottom tree remains clipped at the original
+tile boundary. Other sets keep their reviewed cluster cards.
+
+Each tree gets a smaller contact shadow at its own base. Players remain in
+front. Straight-down views continue to use the untouched original tile.

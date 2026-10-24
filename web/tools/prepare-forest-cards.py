@@ -44,6 +44,18 @@ for row,name in enumerate(sets):
  assert all(a[:3]==b[:3] for a,b in zip(tile.getdata(),card.getdata()) if b[3]), "Changed source RGB"
  assert 0 < sum(a>0 for a in mask.getdata()) < size*size, "Not a useful cutout"
  output=graphics/f'{stem}-ForestCard.png';card.save(output)
+ if name == 'Standard':
+  # Keep each tree in its original 64x64 pixel coordinate system. The
+  # renderer anchors these independent planes at the reviewed trunk bases.
+  separate=Image.new('RGBA',(192,64))
+  anchors=[(20,35),(48,55),(18,63)]
+  for i,polygon in enumerate(polygons):
+   tree_mask=Image.new('L',(64,64),0)
+   ImageDraw.Draw(tree_mask).polygon(polygon,fill=255)
+   tree=tile.copy();tree.putalpha(tree_mask)
+   separate.paste(tree,(i*64,0))
+  separate.save(graphics/'Standard-TreeCards.png')
+  (out/'standard-trees.json').write_text(json.dumps({'source':p.name,'atlas':'Standard-TreeCards.png','anchors':anchors},indent=2)+'\n')
  y=85+row*130;d.text((15,y+35),name,font=font,fill='white')
  check=Image.new('RGBA',(size,size),'#888');cd=ImageDraw.Draw(check)
  for cy in range(size):

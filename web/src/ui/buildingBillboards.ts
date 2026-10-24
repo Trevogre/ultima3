@@ -18,6 +18,13 @@ import type { GraphicsSet } from './graphics.ts';
 import { buildingArt } from './billboardArt.ts';
 import { cardGroundLift } from './cardGroundLift.ts';
 
+/** Native 64px trunk bases, measured in the Standard forest tile. */
+export const STANDARD_TREE_ANCHORS = [
+  [20, 35],
+  [48, 55],
+  [18, 63],
+] as const;
+const MAX_CARDS = 4096 * 3;
 const SHAPES = [Shape.Town, Shape.Castle, Shape.Dungeon, Shape.Shrine] as number[];
 
 /** Static building/tree cards use filtered scenery, never the raw secret map. */
@@ -28,10 +35,11 @@ export class BuildingBillboards {
   private readonly texture: CanvasTexture;
   private readonly geometry = new PlaneGeometry(1, 1);
   private readonly material: MeshBasicMaterial;
-  private readonly slots = new InstancedBufferAttribute(new Float32Array(4096), 1);
-  private readonly positions: { x: number; y: number }[] = [];
+  private readonly slots = new InstancedBufferAttribute(new Float32Array(MAX_CARDS), 1);
+  private readonly positions: { x: number; y: number; anchor?: readonly [number, number] }[] = [];
   private readonly matrix = new Matrix4();
   private readonly position = new Vector3();
+  private readonly right = new Vector3();
   private readonly scale = new Vector3(1, 1, 1);
   private readonly shapes: number[];
 
@@ -69,7 +77,7 @@ export class BuildingBillboards {
         '#include <dithering_fragment>\nif (mapInverted) gl_FragColor.rgb = vec3(1.0) - gl_FragColor.rgb;',
       );
     };
-    this.mesh = new InstancedMesh(this.geometry, this.material, 4096);
+    this.mesh = new InstancedMesh(this.geometry, this.material, MAX_CARDS);
     this.mesh.frustumCulled = false;
     // Tree colour is behind actor cards and does not write depth against them.
     // Opaque terrain cubes still occlude both kinds of card normally.
@@ -84,13 +92,22 @@ export class BuildingBillboards {
     this.mesh.count = 0;
     if (!enabled) return;
     this.ctx.clearRect(0, 0, 256, 64);
-    if (this.kind === 'trees') this.ctx.drawImage(gfx.forestCard!, 0, 0, 64, 64);
+    const separateTrees = this.kind === 'trees' && !!gfx.treeCards;
+    if (separateTrees) this.ctx.drawImage(gfx.treeCards, 0, 0, 192, 64);
+    else if (this.kind === 'trees') this.ctx.drawImage(gfx.forestCard!, 0, 0, 64, 64);
     else SHAPES.forEach((shape, i) => this.ctx.drawImage(buildingArt(gfx, shape), i * 64, 0));
     this.texture.needsUpdate = true;
     const add = (shape: number, x: number, y: number) => {
       if (!this.shapes.includes(shape)) return;
-      this.slots.setX(this.positions.length, this.shapes.indexOf(shape));
-      this.positions.push({ x, y });
+      if (separateTrees) {
+        STANDARD_TREE_ANCHORS.forEach((anchor, slot) => {
+          this.slots.setX(this.positions.length, slot);
+          this.positions.push({ x: x + anchor[0] / 64 - 0.5, y: y + 0.5 - anchor[1] / 64, anchor });
+        });
+      } else {
+        this.slots.setX(this.positions.length, this.shapes.indexOf(shape));
+        this.positions.push({ x, y });
+      }
     };
     if (landscape) {
       const { side, partyX, partyY, wraps } = landscape;
@@ -113,8 +130,16 @@ export class BuildingBillboards {
 
   faceCamera(camera: OrthographicCamera, tilt: number): void {
     const lift = Math.sin(tilt) / 2;
-    this.positions.forEach(({ x, y }, i) => {
-      this.position.set(x, y, cardGroundLift(1, tilt)).addScaledVector(camera.up, lift);
+    this.right.set(1, 0, 0).applyQuaternion(camera.quaternion);
+    this.positions.forEach(({ x, y, anchor }, i) => {
+      if (anchor) {
+        // The source pixel at the trunk base remains on its own ground point,
+        // independent of yaw and tilt; transparent padding does not set the foot.
+        this.position
+          .set(x, y, 0.002)
+          .addScaledVector(this.right, 0.5 - anchor[0] / 64)
+          .addScaledVector(camera.up, anchor[1] / 64 - 0.5);
+      } else this.position.set(x, y, cardGroundLift(1, tilt)).addScaledVector(camera.up, lift);
       this.mesh.setMatrixAt(i, this.matrix.compose(this.position, camera.quaternion, this.scale));
     });
     this.mesh.instanceMatrix.needsUpdate = true;
@@ -131,7 +156,7 @@ export class BuildingBillboards {
     this.material.color.setRGB(...colour);
   }
 
-  forEachFootprint(visit: (x: number, y: number) => void): void {
-    if (this.mesh.visible) this.positions.forEach(({ x, y }) => visit(x, y));
+  forEachFootprint(visit: (x: number, y: number, size: number) => void): void {
+    if (this.mesh.visible) this.positions.forEach(({ x, y, anchor }) => visit(x, y, anchor ? 0.45 : 1));
   }
 }
