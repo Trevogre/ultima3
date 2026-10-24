@@ -1,0 +1,15 @@
+Vertical force fields
+
+Angled sprite views and model scenes display a tile-wide, one-tile-high barrier
+with 0.08-tile thickness. Front, back, top and edges use the selected set's existing
+animated force-field artwork. UVs keep the broad faces upright. Neighbouring walls,
+counters, doors and fields determine orientation, independent of camera movement.
+
+The barrier uses only visibility-filtered cells and writes/tests depth, so nearer
+walls and figures occlude it normally. Its floor uses the underlying floor artwork;
+there is no duplicate field painted on the ground. Classic and full-overhead sprite
+views retain their original tiles. Model scenes use the barrier instead of the old
+portal-shaped model. Gameplay, movement, visibility and original art are unchanged.
+
+Review without saves/preferences: /tools/preview-force-fields.html.
+Tests: forceFieldWalls.test.ts (geometry, orientation, frame refresh, hidden cells).

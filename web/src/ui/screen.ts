@@ -2572,6 +2572,7 @@ export class Screen implements GameIO {
       !c.hit &&
       c.overlay !== Shape.Whirlpool &&
       !(c.overlay === Shape.Door && this.presentation.map.doorCardsActive) &&
+      !(c.overlay === Shape.ForceField && this.presentation.map.forceFieldsActive) &&
       (c.overlay === undefined || !isBuilding(c.overlay))
     ) {
       this.drawViewportActors(this.presentation.map.sunActorContext, c, dx, dy, tile);
@@ -2589,6 +2590,8 @@ export class Screen implements GameIO {
         this.gfx.drawShape(effectContext, c.overlay, dx, dy, tile, { masked: true });
       } else if (ctx === this.presentation.map.actorContext && c.overlay === Shape.Door && this.presentation.map.doorCardsActive) {
         // The scene draws a fixed door plane through this tile's centre.
+      } else if (ctx === this.presentation.map.actorContext && c.overlay === Shape.ForceField && this.presentation.map.forceFieldsActive) {
+        // The scene draws the animated field as a fixed vertical barrier.
       } else if (ctx === this.presentation.map.actorContext && isBuilding(c.overlay)) {
         if (!this.view3D.buildings) this.gfx.drawShape(effectContext, c.overlay, dx, dy, tile, { masked: true });
       } else {

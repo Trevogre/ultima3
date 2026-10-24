@@ -203,7 +203,7 @@ export class ModelScene {
       );
       this.ground.setColorAt(this.ground.count++, this.colour.setHex(modelGroundColour(shape)));
       if (shape >= 76 && shape <= 114 && shape !== Shape.Door) this.addSign(shape, x, y, gfx);
-      else if (hasTerrainModel(shape)) {
+      else if (shape !== Shape.ForceField && hasTerrainModel(shape)) {
         if (shape === Shape.Mountains && cliffHosts.has(index) && this.cliffs.count < 32) {
           this.cliffs.setMatrixAt(this.cliffs.count++, this.matrix.makeTranslation(x, y, z));
         } else this.add(shape, x, y, z);

@@ -42,6 +42,7 @@ import { ModelScene } from './modelScene.ts';
 import type { ModelActor } from './modelActors.ts';
 import { WindowLights, windowNight } from './windowLights.ts';
 import type { DoorState } from './doorStates.ts';
+import { ForceFieldWalls } from './forceFieldWalls.ts';
 import { DoorCards } from './doorCards.ts';
 
 export interface ScreenRect {
@@ -79,6 +80,7 @@ export class TileMapScene {
   private readonly geometries: PlaneGeometry[] = [];
   private readonly materials: MeshBasicMaterial[] = [];
   private readonly inverted = { value: false };
+  private readonly forceFields = new ForceFieldWalls(this.inverted);
   private readonly doors = new DoorCards(this.inverted);
   private readonly townFigures = new TownSightFigures(this.inverted);
   private doorMode = false;
@@ -248,7 +250,7 @@ export class TileMapScene {
       this.partyCards.push({ mesh, x: (i % 2) / 2 - 0.25, y: 0.25 - Math.floor(i / 2) / 2, size: 0.5 });
     }
     this.scene.add(this.buildings.mesh);
-    this.scene.add(this.doors.mesh);
+    this.scene.add(this.doors.mesh, this.forceFields.mesh);
     this.scene.add(this.trees.mesh);
     this.landscapeCanvas.width = this.landscapeCanvas.height = 1024;
     this.landscapeContext = this.landscapeCanvas.getContext('2d')!;
@@ -349,6 +351,7 @@ export class TileMapScene {
       mesh.material = cells[i].overlay === Shape.Whirlpool ? this.waterEffectsMaterial : this.materials[2];
     });
     this.doors.set(landscape, cells, gfx, this.doorCardsActive && !this.modelMode, doors, location, doorContext);
+    this.forceFields.set(landscape, cells, gfx, this.forceFieldsActive);
     this.solidCells.clear();
     const solids = landscape?.shapes ?? cells.map((c) => c.base);
     const solidSide = landscape?.side ?? Math.sqrt(cells.length);
@@ -437,7 +440,7 @@ export class TileMapScene {
       if (shape === Shape.Void) continue; // hidden cells are solid black in every tile set
       const x = (shape % 16) * 64;
       const y = Math.floor(shape / 16) * 64;
-      if (this.forestGround(shape, gfx) !== shape) gfx.drawShape(ctx, Shape.Grass, x, y, 64);
+      if (this.forestGround(shape, gfx) !== shape) gfx.drawShape(ctx, this.forestGround(shape, gfx), x, y, 64);
       else if (this.options.buildings && isBuilding(shape)) drawBuildingGround(ctx, gfx, shape, x, y, 64);
       else if (shape === Shape.Shrine || shape === Shape.Door) {
         gfx.drawShape(ctx, shape === Shape.Door ? Shape.Floor : Shape.Grass, x, y, 64);
@@ -564,6 +567,7 @@ export class TileMapScene {
     this.buildings.setWindowNight(this.tilt > 0.001 ? windowNight(colour) : 0);
     this.townFigures.setDaylight(colour);
     this.entranceFaces.material.color.setRGB(...colour);
+    this.forceFields.material.color.setRGB(...colour);
     this.doors.setDaylight(colour);
     this.models.setDaylight(colour);
     for (const material of this.materials) material.color.setRGB(...colour);
@@ -660,7 +664,12 @@ export class TileMapScene {
     return this.options.enabled && this.tilt > 0.001;
   }
 
+  get forceFieldsActive(): boolean {
+    return this.options.enabled && (this.modelMode || this.tilt > 0.001);
+  }
+
   forestGround(shape: number, gfx: GraphicsSet): number {
+    if (shape === Shape.ForceField && this.forceFieldsActive) return Shape.Floor;
     if (shape === Shape.Door && this.doorCardsActive) return Shape.Floor;
     const hasCutout = shape === Shape.Forest ? !!gfx.forestCard : shape === Shape.Brush && !!gfx.brushCards;
     return useTreeCards(this.options.treeCards, this.tilt, hasCutout) ? Shape.Grass : shape;
@@ -769,6 +778,7 @@ export class TileMapScene {
     this.windows.dispose();
     this.townFigures.dispose();
     this.entranceFaces.dispose();
+    this.forceFields.dispose();
     this.doors.dispose();
     this.models.dispose();
     this.grass.dispose();
