@@ -566,7 +566,10 @@ first-person dungeon presentation keep their original rendering. These controls
 change no movement, discovery, music or game rules, and modify no sprite files.
 
 Legacy opaque character tiles receive a separate cached alpha mask in the 3D
-actor pass: only edge-connected black background (white for Macintosh B&W) is
+actor pass at angled views: only edge-connected black background (white for Macintosh B&W) is
 removed. Enclosed details, RGB values, and existing native transparency are
 preserved. Both animation frames and poisoned party figures use these masks.
-Terrain, letter tiles, original sprite files, and Classic rendering are unchanged.
+Straight-down views and flat-character mode retain the original backgrounds,
+including poisoned figures. Orbiting into or out of overhead redraws the card
+textures automatically. Terrain, letter tiles, original sprite files, and Classic
+rendering are unchanged.

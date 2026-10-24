@@ -33,3 +33,8 @@ export function clearCharacterBackground(pixels: Uint8ClampedArray, width: numbe
     if (i < width * (height - 1)) queue.push(i + width);
   }
 }
+
+/** Keep original opaque figures in overhead and flat-character presentation. */
+export function useCharacterCutouts(enabled: boolean, characters: boolean, tilt: number): boolean {
+  return enabled && characters && tilt > 0.001;
+}

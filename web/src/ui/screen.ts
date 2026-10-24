@@ -292,7 +292,7 @@ export class Screen implements GameIO {
     this.cell = Math.floor(canvas.width / COLUMNS);
     this.presentation = new ThreeRenderer(canvas, this.cell, VIEW_SIZE);
     this.ctx = this.presentation.context;
-    this.presentation.map.onTreeModeChange = () => {
+    this.presentation.map.onCardModeChange = () => {
       this.viewDirty = true;
     };
     new MenuMouse(
@@ -2345,7 +2345,7 @@ export class Screen implements GameIO {
       } else {
         this.gfx.drawShape(ctx, c.overlay, dx, dy, tile, {
           masked: true,
-          card: ctx === this.presentation.map.actorContext,
+          card: ctx === this.presentation.map.actorContext && this.presentation.map.characterCutoutsActive,
           flip: c.flip,
           altFrame: c.altFrame,
         });
@@ -2384,8 +2384,17 @@ export class Screen implements GameIO {
     const p = this.world.member(m);
     if (p.status === 'D' || p.status === 'A') return;
     const shape = memberShape(this.world, p.classLetter);
-    if (p.status === 'P') ctx.drawImage(this.greenFigure(shape, size, ctx === this.presentation.map.actorContext), x, y);
-    else this.gfx.drawShape(ctx, shape, x, y, size, { masked: true, card: ctx === this.presentation.map.actorContext });
+    if (p.status === 'P')
+      ctx.drawImage(
+        this.greenFigure(shape, size, ctx === this.presentation.map.actorContext && this.presentation.map.characterCutoutsActive),
+        x,
+        y,
+      );
+    else
+      this.gfx.drawShape(ctx, shape, x, y, size, {
+        masked: true,
+        card: ctx === this.presentation.map.actorContext && this.presentation.map.characterCutoutsActive,
+      });
     if (ctx === this.presentation.map.actorContext) this.presentation.map.addActorShadow(x, y, size, shape);
   }
 

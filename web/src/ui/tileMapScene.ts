@@ -25,6 +25,7 @@ import { TerrainCubes } from './terrainCubes.ts';
 import { Shoreline } from './shoreline.ts';
 import { shorelineTexture, terrainElevation } from './terrainDepth.ts';
 import { castsContactShadow, ContactShadows } from './contactShadows.ts';
+import { useCharacterCutouts } from './characterMask.ts';
 import { addZoomFiltering } from './zoomFiltering.ts';
 import { FogEdges } from './fogEdges.ts';
 import { WaterSurface } from './waterSurface.ts';
@@ -45,6 +46,7 @@ export class TileMapScene {
   readonly terrainContext: CanvasRenderingContext2D;
   readonly actorContext: CanvasRenderingContext2D;
   readonly effectContext: CanvasRenderingContext2D;
+  private characterCutouts = false;
   private readonly filters: ReturnType<typeof addZoomFiltering>[] = [];
   private readonly shading = { value: 1 };
   private readonly fog = new FogEdges();
@@ -81,7 +83,7 @@ export class TileMapScene {
   private combat = false;
   private explorationZoom = 1;
   onCameraModeToggle: (() => void) | null = null;
-  onTreeModeChange: (() => void) | null = null;
+  onCardModeChange: (() => void) | null = null;
 
   constructor(
     cell: number,
@@ -422,6 +424,10 @@ export class TileMapScene {
     return this.options;
   }
 
+  get characterCutoutsActive(): boolean {
+    return useCharacterCutouts(this.options.enabled, this.options.characters, this.tilt);
+  }
+
   private get treeCardsActive(): boolean {
     return useTreeCards(this.options.treeCards, this.tilt, true);
   }
@@ -432,9 +438,10 @@ export class TileMapScene {
   }
 
   private updateCamera(): void {
-    if (this.treeMode !== this.treeCardsActive) {
+    if (this.treeMode !== this.treeCardsActive || this.characterCutouts !== this.characterCutoutsActive) {
       this.treeMode = this.treeCardsActive;
-      this.onTreeModeChange?.();
+      this.characterCutouts = this.characterCutoutsActive;
+      this.onCardModeChange?.();
     }
     const s = Math.sin(this.yaw);
     const c = Math.cos(this.yaw);
