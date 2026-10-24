@@ -121,4 +121,8 @@ export class BuildingBillboards {
   setDaylight(colour: [number, number, number]): void {
     this.material.color.setRGB(...colour);
   }
+
+  forEachFootprint(visit: (x: number, y: number) => void): void {
+    if (this.mesh.visible) this.positions.forEach(({ x, y }) => visit(x, y));
+  }
 }

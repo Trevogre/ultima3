@@ -40,6 +40,13 @@ the selected tile set and input preferences are preserved when applying a
 preset. Existing saved overrides are preserved when preferences are upgraded.
 No unfinished Layered or Expanded-art mode is exposed.
 
+**3D Settings → Shadows** toggles soft, procedural contact shadows (18%
+maximum opacity) under visible land cards and building cards. Half-size
+party members have half-size footprints. Flat sprites, waterborne objects,
+the whirlpool and first-person dungeon views have no contact shadows.
+Shadows test against terrain depth, so foreground cubes occlude them, and
+their opacity is independent of day/night lighting. Source artwork is untouched.
+
 Three.js owns the visible canvas using WebGL 2. The interface is an unlit,
 screen-sized plane; the map has its own scene and orthographic camera, clipped
 to the map window. The default fixed orthographic view tilts 45° from straight down with a 5° map

@@ -22,6 +22,7 @@ import { DEFAULT_3D_SETTINGS, type View3DSettings } from './view3DSettings.ts';
 import { buildingGround, isBuilding } from './billboardArt.ts';
 import { BuildingBillboards } from './buildingBillboards.ts';
 import { TerrainCubes } from './terrainCubes.ts';
+import { castsContactShadow, ContactShadows } from './contactShadows.ts';
 import { cardGroundLift } from './cardGroundLift.ts';
 
 export interface ScreenRect {
@@ -48,6 +49,8 @@ export class TileMapScene {
   private readonly inverted = { value: false };
   private readonly buildings = new BuildingBillboards(this.inverted);
   private readonly localTerrain = new Group();
+  private readonly shadows = new ContactShadows();
+  private shadowCells: ViewCell[] = [];
   private readonly landscapeCanvas = document.createElement('canvas');
   private readonly landscapeContext: CanvasRenderingContext2D;
   private readonly landscapeMesh: InstancedMesh;
@@ -126,6 +129,7 @@ export class TileMapScene {
       }
     }
     this.scene.add(this.localTerrain);
+    this.scene.add(this.shadows.mesh);
     for (let i = 0; i < 4; i++) {
       const geometry = new PlaneGeometry(0.5, 0.5);
       const uv = geometry.getAttribute('uv');
@@ -187,6 +191,7 @@ export class TileMapScene {
   /** Batch the entire landscape in one draw call, using a small animated tile atlas. */
   setLandscape(landscape: Landscape | null, gfx: GraphicsSet, cells: ViewCell[]): void {
     this.buildings.set(landscape, cells, gfx, this.options.buildings);
+    if (this.options.contactShadows && this.options.buildings) this.buildings.forEachFootprint((x, y) => this.shadows.add(x, y, 1));
     this.cubes.set(landscape, cells, this.options);
     this.landscapeMesh.visible = !!landscape;
     // Preserve exact local floors. The landscape supplies either distant
@@ -250,6 +255,7 @@ export class TileMapScene {
   }
 
   setActorLayout(cells: ViewCell[], partyGrid: boolean): void {
+    this.shadowCells = cells;
     const centre = Math.floor(cells.length / 2);
     const split = this.options.characters && partyGrid && !!cells[centre].party;
     this.actorCards.forEach(({ mesh }, i) => {
@@ -287,6 +293,7 @@ export class TileMapScene {
   }
 
   beginFrame(): void {
+    this.shadows.reset();
     const { x, y, w, h } = this.rect;
     this.terrainContext.fillStyle = '#000';
     this.terrainContext.fillRect(x, y, w, h);
@@ -311,6 +318,17 @@ export class TileMapScene {
     for (const material of this.materials) material.color.setRGB(...colour);
     this.buildings.setDaylight(colour);
     this.invalidate();
+  }
+
+  /** Called only after actual visible card artwork has been drawn. */
+  addActorShadow(x: number, y: number, size: number, shape: number): void {
+    if (!this.options.contactShadows || !this.options.characters) return;
+    const tile = this.rect.w / this.visibleSide;
+    const col = (x - this.rect.x) / tile;
+    const row = (y - this.rect.y) / tile;
+    const ground = this.shadowCells[Math.floor(row) * this.visibleSide + Math.floor(col)]?.base ?? Shape.Void;
+    if (!castsContactShadow(shape, ground)) return;
+    this.shadows.add(col + size / tile / 2 - this.visibleSide / 2, this.visibleSide / 2 - row - size / tile / 2, size / tile);
   }
 
   orbit(dx: number, dy: number): void {
@@ -382,6 +400,7 @@ export class TileMapScene {
     for (const geometry of this.geometries) geometry.dispose();
     for (const material of this.materials) material.dispose();
     this.buildings.dispose();
+    this.shadows.dispose();
     this.landscapeMesh.dispose();
     this.cubes.dispose();
     this.scene.clear();

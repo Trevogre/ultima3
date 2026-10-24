@@ -980,6 +980,12 @@ export class Screen implements GameIO {
         { key: 'N', label: `Mountain cubes: ${onOff(this.view3D.mountains)}`, disabled },
         { key: 'M', label: `Mouse camera: ${onOff(this.view3D.mouseCamera)}`, disabled },
         {
+          key: 'S',
+          label: `Shadows: ${onOff(this.view3D.contactShadows)}`,
+          disabled,
+          hint: 'Contact shadows beneath visible land cards. No changes to sprite art.',
+        },
+        {
           key: 'Y',
           label: `Day/night: ${onOff(this.view3D.dayNight)}`,
           disabled,
@@ -1017,8 +1023,9 @@ export class Screen implements GameIO {
             M: 'mouseCamera',
             F: 'fixedCamera',
             Y: 'dayNight',
+            S: 'contactShadows',
           } as const
-        )[key as 'D' | 'C' | 'L' | 'T' | 'W' | 'N' | 'M' | 'F' | 'Y'];
+        )[key as 'D' | 'C' | 'L' | 'T' | 'W' | 'N' | 'M' | 'F' | 'Y' | 'S'];
         if (setting) this.set3DSettings({ ...this.view3D, [setting]: !this.view3D[setting] });
         else if (key === 'R') this.presentation.map.reset();
         else if (key === 'I' || key === 'O') {
@@ -2198,7 +2205,10 @@ export class Screen implements GameIO {
         this.gfx.drawShape(this.presentation.map.terrainContext, c.overlay, dx, dy, tile, { masked: true });
       } else if (ctx === this.presentation.map.actorContext && isBuilding(c.overlay)) {
         if (!this.view3D.buildings) this.gfx.drawShape(effectContext, c.overlay, dx, dy, tile, { masked: true });
-      } else this.gfx.drawShape(ctx, c.overlay, dx, dy, tile, { masked: true, flip: c.flip, altFrame: c.altFrame });
+      } else {
+        this.gfx.drawShape(ctx, c.overlay, dx, dy, tile, { masked: true, flip: c.flip, altFrame: c.altFrame });
+        if (ctx === this.presentation.map.actorContext) this.presentation.map.addActorShadow(dx, dy, tile, c.overlay);
+      }
     }
     if (c.hit) this.drawBurst(dx, dy, tile, c.hit.frame, effectContext);
   }
@@ -2234,6 +2244,7 @@ export class Screen implements GameIO {
     const shape = memberShape(this.world, p.classLetter);
     if (p.status === 'P') ctx.drawImage(this.greenFigure(shape, size), x, y);
     else this.gfx.drawShape(ctx, shape, x, y, size, { masked: true });
+    if (ctx === this.presentation.map.actorContext) this.presentation.map.addActorShadow(x, y, size, shape);
   }
 
   /** Cache of member figures recoloured green (poison), keyed by shape and size. */
