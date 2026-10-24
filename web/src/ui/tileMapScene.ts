@@ -176,9 +176,9 @@ export class TileMapScene {
     });
     scenery.onBeforeCompile = (shader) => {
       shader.uniforms.mapInverted = this.inverted;
-      shader.vertexShader = `attribute vec2 mapTile;\n${shader.vertexShader}`.replace(
+      shader.vertexShader = `attribute vec2 mapTile;\nattribute float shorelineBackground;\n${shader.vertexShader}`.replace(
         '#include <uv_vertex>',
-        '#include <uv_vertex>\nvMapUv = (mapTile + vMapUv) / 16.0;',
+        '#include <uv_vertex>\nvMapUv = (mapTile + mix(vMapUv, vec2(0.5 / 64.0, 63.5 / 64.0), shorelineBackground)) / 16.0;',
       );
       shader.fragmentShader = `uniform bool mapInverted;\n${shader.fragmentShader}`.replace(
         '#include <dithering_fragment>',

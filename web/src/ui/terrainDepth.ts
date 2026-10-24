@@ -1,4 +1,4 @@
-import { Shape } from '../game/tiles.ts';
+import { isLetter, Shape } from '../game/tiles.ts';
 
 export const WATER_DEPTH = 0.2;
 export const MOUNTAIN_STEPS = [
@@ -34,4 +34,9 @@ export function isCoastalLand(shapes: ArrayLike<number>, side: number, index: nu
     if (!wraps && (nx < 0 || ny < 0 || nx >= side || ny >= side)) return false;
     return shapes[((ny + side) % side) * side + ((nx + side) % side)] === Shape.Water;
   });
+}
+
+/** Sign lettering belongs on the top; sample only its background on vertical sides. */
+export function shorelineUsesBackground(shape: number): boolean {
+  return shape !== Shape.Door && isLetter(shape * 2);
 }

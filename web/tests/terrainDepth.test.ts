@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Matrix4, MeshBasicMaterial } from 'three';
 import { Shape } from '../src/game/tiles.ts';
-import { MOUNTAIN_STEPS, terrainElevation, isCoastalLand } from '../src/ui/terrainDepth.ts';
+import { MOUNTAIN_STEPS, terrainElevation, isCoastalLand, shorelineUsesBackground } from '../src/ui/terrainDepth.ts';
 import { TerrainCubes } from '../src/ui/terrainCubes.ts';
 import { Shoreline } from '../src/ui/shoreline.ts';
 import { applyPresentationPreset, DEFAULT_3D_SETTINGS, read3DSettings } from '../src/ui/view3DSettings.ts';
@@ -64,6 +64,13 @@ describe('optional terrain depth', () => {
     shore.set(null, forestCells, true);
     expect(shore.mesh.count).toBe(2);
     for (let i = 0; i < shore.mesh.count; i++) expect([shore.slots.getX(i), shore.slots.getY(i)]).toEqual([Shape.Grass, 15]);
+    const signs = [MapValue.LetterA / 2, Shape.Water, Shape.Door, Shape.Water].map((base) => ({ base }));
+    shore.set(null, signs, true);
+    expect(shore.mesh.count).toBe(2);
+    expect(shore.backgrounds.getX(0)).toBe(1);
+    expect(shore.backgrounds.getX(1)).toBe(0);
+    expect(shorelineUsesBackground(MapValue.LetterT / 2)).toBe(true);
+    expect(shorelineUsesBackground(Shape.Grass)).toBe(false);
     shore.set(null, cells, false);
     expect(shore.mesh.count).toBe(0);
     shore.dispose();
