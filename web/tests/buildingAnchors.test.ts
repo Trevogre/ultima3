@@ -24,7 +24,7 @@ describe('building foundation anchors', () => {
     expect(buildingBase(pixels, 8, 8)).toEqual([36, 48]);
     expect(buildingBase(new Uint8ClampedArray(4 * 4 * 4), 4, 4)).toEqual([32, 64]);
   });
-  it('keeps that source foundation on the ground at all supported camera angles and shares it with shadows', () => {
+  it('keeps the source foundation at the tile centre through camera rotation and shares that pivot with shadows', () => {
     const foundation = new Uint8ClampedArray(64 * 64 * 4);
     for (let y = 10; y <= 47; y++) for (let x = 20; x < 36; x++) foundation[(y * 64 + x) * 4 + 3] = 255;
     vi.stubGlobal('document', {
@@ -53,16 +53,14 @@ describe('building foundation anchors', () => {
         buildings.faceCamera(camera, tilt);
         buildings.mesh.getMatrixAt(0, matrix);
         const base = new Vector3(28 / 64 - 0.5, 0.5 - 48 / 64, 0).applyMatrix4(matrix);
-        expect(base.x).toBeCloseTo(28 / 64 - 0.5);
-        expect(base.y).toBeCloseTo(0.5 - 48 / 64);
+        expect(base.x).toBeCloseTo(0);
+        expect(base.y).toBeCloseTo(0);
         expect(base.z).toBeCloseTo(0.002);
       }
     const footprints: number[][] = [];
     buildings.forEachFootprint((x, y, size) => footprints.push([x, y, size]));
-    expect(footprints).toEqual([[28 / 64 - 0.5, 0.5 - 48 / 64, 1]]);
-    buildings.forEachShadow((x, y, _slot, anchor) =>
-      expect([x, y, ...anchor]).toEqual([28 / 64 - 0.5, 0.5 - 48 / 64, 28 / 64, 1 - 48 / 64]),
-    );
+    expect(footprints).toEqual([[0, 0, 1]]);
+    buildings.forEachShadow((x, y, _slot, anchor) => expect([x, y, ...anchor]).toEqual([0, 0, 28 / 64, 1 - 48 / 64]));
     buildings.dispose();
   });
 });

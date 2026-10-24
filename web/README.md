@@ -619,7 +619,8 @@ other sets. Cards fade overhead and when zoomed out, preserve the flat ground,
 and cast no individual shadows. See [grass review](docs/grass-depth/README.md).
 
 Building cards use the bottommost retained foundation pixels of each set’s
-cutout as their ground anchor, including inset Macintosh B&W cities. Transparent
-tile padding cannot lift the building. Contact and sun shadows share the same
+cutout as their card pivot, including inset Macintosh B&W cities. That foundation
+pivot sits at the centre of the ground tile as the camera rotates; source padding
+cannot lift the building or shift its world pivot toward a tile edge. Contact and sun shadows share the same
 anchor. `/tools/preview-building-anchors.html` is an isolated, save-free check
 for overhead, tilted and rotated views in Macintosh B&W, Standard and EGA.

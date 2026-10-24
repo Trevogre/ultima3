@@ -139,7 +139,9 @@ export class BuildingBillboards {
         this.slots.setX(this.positions.length, this.kind === 'trees' && shape === Shape.Brush ? 4 : this.shapes.indexOf(shape));
         if (this.kind === 'buildings') {
           const anchor = buildingAnchor(gfx, shape);
-          this.positions.push({ x: x + anchor[0] / 64 - 0.5, y: y + 0.5 - anchor[1] / 64, anchor, footprint: 1 });
+          // The visible foundation is the card pivot, but its world position
+          // stays at the tile centre as the billboard follows the camera.
+          this.positions.push({ x, y, anchor, footprint: 1 });
         } else this.positions.push({ x, y });
       }
     };
