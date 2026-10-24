@@ -25,7 +25,7 @@
  */
 
 import { LEVELS, levelGain } from './sound.ts';
-import { loadOrchestra, nearestSample, readMusicStyle, type LoadedSample, type MusicStyle } from './orchestra.ts';
+import { loadOrchestra, nearestSample, orchestralArticulation, readMusicStyle, type LoadedSample, type MusicStyle } from './orchestra.ts';
 
 export interface MusicNote {
   /** Start time in seconds from the beginning of the tune. */
@@ -410,16 +410,16 @@ export class MusicPlayer {
     source.loopEnd = spec.loopEnd;
     const gain = ctx.createGain();
     const peak = (note.volume / 127) * (spec.instrument === 'flute' ? 0.35 : 0.5);
-    const end = at + Math.max(0.05, note.duration);
-    const attack = Math.min(0.05, Math.max(0.01, note.duration / 4));
+    const articulation = orchestralArticulation(spec.id, note.duration);
+    const end = at + articulation.end;
     gain.gain.setValueAtTime(0, at);
-    gain.gain.linearRampToValueAtTime(peak, at + attack);
-    gain.gain.setValueAtTime(peak, end);
-    gain.gain.linearRampToValueAtTime(0, end + 0.18);
+    gain.gain.linearRampToValueAtTime(peak, at + articulation.attack);
+    gain.gain.setValueAtTime(peak, at + articulation.releaseStart);
+    gain.gain.linearRampToValueAtTime(0, end);
     source.connect(gain);
     gain.connect(this.master!);
-    source.start(at);
-    source.stop(end + 0.2);
+    source.start(at, articulation.offset);
+    source.stop(end + 0.01);
     this.playing.add(source);
     source.onended = () => {
       this.playing.delete(source);

@@ -192,6 +192,11 @@ Everything the Apple II game had:
   apply to both styles. The choice is saved independently of visual presets.
 - Auto-combat, a LairWare addition.
 
+Orchestral playback skips each sustained sample’s quiet bow/breath lead-in,
+uses a 5 ms attack and at most 40 ms release, and leaves a small gap between
+notes. Original note starts, pitches, velocities and tempo remain unchanged;
+harp samples retain their plucked transients.
+
 The offline orchestral bank is a 1.3 MiB processed subset of **VSCO 2 Community
 Edition**, by Versilian Studios / Sam Gossner, with Ivy Audio / Simon Dalzell
 credited where applicable. The publisher releases the recordings under

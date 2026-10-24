@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { ORCHESTRA_SAMPLES } from '../src/ui/orchestraSamples.ts';
-import { orchestralInstrument, nearestSample, readMusicStyle } from '../src/ui/orchestra.ts';
+import { orchestralInstrument, nearestSample, orchestralArticulation, readMusicStyle } from '../src/ui/orchestra.ts';
 import { MusicPlayer } from '../src/ui/music.ts';
 
 afterEach(() => {
@@ -13,6 +13,20 @@ afterEach(() => {
 const asset = (name: string) => readFileSync(new URL(`../public/music/orchestra/${name}`, import.meta.url));
 
 describe('offline orchestral bank', () => {
+  it('skips sustained swells, preserves plucked attacks and separates notes within their original duration', () => {
+    for (const spec of ORCHESTRA_SAMPLES) {
+      for (const duration of [0.01, 0.1, 0.25, 1, 4]) {
+        const a = orchestralArticulation(spec.id, duration);
+        expect(a.attack).toBeLessThan(a.releaseStart);
+        expect(a.releaseStart).toBeLessThan(a.end);
+        expect(a.end).toBeLessThan(Math.max(0.05, duration));
+        expect(a.offset).toBeGreaterThanOrEqual(0);
+        if (spec.loopEnd) expect(a.offset).toBeLessThan(spec.loopStart);
+        else expect(a.offset).toBe(0);
+      }
+    }
+    expect(orchestralArticulation('violin-high', 0.25).offset).toBe(0.28);
+  });
   it('bundles valid PCM samples, provenance hashes and the full CC0 license', () => {
     const manifest = JSON.parse(asset('manifest.json').toString()) as { license: string; samples: { id: string; sha256: string }[] };
     expect(manifest.license).toBe('CC0-1.0');
@@ -64,7 +78,10 @@ class Source {
   onended: (() => void) | null = null;
   connect() {}
   disconnect() {}
-  start() {}
+  offset = 0;
+  start(_at: number, offset = 0) {
+    this.offset = offset;
+  }
   stop() {
     this.stopped = true;
   }
@@ -137,6 +154,7 @@ describe('sampled playback lifecycle', () => {
     const ctx = FakeContext.last;
     expect(ctx.voices.length).toBeGreaterThan(0);
     expect(ctx.oscillators).toHaveLength(0);
+    expect(ctx.voices.some((v) => v.loop && v.offset > 0)).toBe(true);
     expect(ctx.voices.some((v) => v.loop && v.loopStart === 0.88)).toBe(true);
     player.pause();
     expect(ctx.state).toBe('suspended');
