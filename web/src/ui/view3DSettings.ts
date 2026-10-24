@@ -27,6 +27,7 @@ export interface View3DSettings {
   softFog: boolean;
   terrainShading: boolean;
   waterHighlights: boolean;
+  lavaBubbles: boolean;
   alphaWater: boolean;
   sunShadows: boolean;
   cameraRelative: boolean;
@@ -61,6 +62,7 @@ export const DEFAULT_3D_SETTINGS: Readonly<View3DSettings> = {
   softFog: true,
   terrainShading: true,
   waterHighlights: true,
+  lavaBubbles: true,
   alphaWater: false,
   sunShadows: true,
   grassDepth: false,
@@ -74,6 +76,7 @@ const DEPTH_OPTIONS = {
   softFog: true,
   terrainShading: true,
   waterHighlights: true,
+  lavaBubbles: true,
   alphaWater: false,
   sunShadows: true,
   grassDepth: false,

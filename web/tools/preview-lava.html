@@ -1,0 +1,69 @@
+<!doctype html>
+<html>
+  <body style="margin: 0; background: #17151d; color: white; font: 16px sans-serif">
+    <button id="toggle">Bubbles on/off</button><button id="pause">Pause animation</button><button id="rotate">Rotate</button>
+    <canvas></canvas>
+    <script type="module">
+      import * as T from 'three';
+      import { LavaSurface } from '/src/ui/lavaSurface.ts';
+      import { GraphicsSet } from '/src/ui/graphics.ts';
+      import { DEFAULT_3D_SETTINGS } from '/src/ui/view3DSettings.ts';
+      import { Shape } from '/src/game/tiles.ts';
+      const renderer = new T.WebGLRenderer({ canvas: document.querySelector('canvas') });
+      renderer.setSize(960, 700);
+      renderer.setClearColor('#17151d');
+      const camera = new T.OrthographicCamera(-3.5, 3.5, 2.55, -2.55, 0.1, 100),
+        scene = new T.Scene();
+      const gfx = await GraphicsSet.load('Van Gogh', '/graphics/');
+      const options = { ...DEFAULT_3D_SETTINGS };
+      const cells = Array.from({ length: 25 }, (_, i) => ({ base: i % 5 > 0 && i % 5 < 4 && i > 4 && i < 20 ? Shape.Lava : Shape.Floor }));
+      for (let i = 0; i < 25; i++) {
+        const c = document.createElement('canvas');
+        c.width = c.height = 128;
+        gfx.drawShape(c.getContext('2d'), cells[i].base, 0, 0, 128);
+        const texture = new T.CanvasTexture(c);
+        texture.colorSpace = T.SRGBColorSpace;
+        texture.magFilter = T.NearestFilter;
+        const mesh = new T.Mesh(new T.PlaneGeometry(1, 1), new T.MeshBasicMaterial({ map: texture }));
+        mesh.position.set((i % 5) - 2, 2 - Math.floor(i / 5), 0);
+        scene.add(mesh);
+      }
+      const lava = new LavaSurface({ value: false });
+      scene.add(lava.mesh);
+      lava.set(null, cells, gfx, options);
+      const cube = new T.Mesh(new T.BoxGeometry(1, 1, 1), new T.MeshBasicMaterial({ color: '#71615b' }));
+      cube.position.set(1, 1, 0.5);
+      scene.add(cube);
+      let yaw = 0.09,
+        paused = false,
+        time = 0,
+        last = performance.now();
+      function pose() {
+        camera.position.set(15 * Math.sin(yaw), -15 * Math.cos(yaw), 15);
+        camera.up.set(0, 0, 1);
+        camera.lookAt(0, 0, 0);
+      }
+      pose();
+      function frame(now) {
+        if (!paused) time += (now - last) / 1000;
+        last = now;
+        lava.time.value = time;
+        renderer.render(scene, camera);
+        requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+      document.querySelector('#toggle').onclick = () => {
+        options.lavaBubbles = !options.lavaBubbles;
+        lava.set(null, cells, gfx, options);
+      };
+      document.querySelector('#pause').onclick = () => {
+        paused = !paused;
+        document.querySelector('#pause').textContent = paused ? 'Resume animation' : 'Pause animation';
+      };
+      document.querySelector('#rotate').onclick = () => {
+        yaw += Math.PI / 2;
+        pose();
+      };
+    </script>
+  </body>
+</html>

@@ -35,6 +35,7 @@ import { FogEdges } from './fogEdges.ts';
 import { CameraMovement } from './cameraMovement.ts';
 import { GrassDepth } from './grassDepth.ts';
 import { SunShadows } from './sunShadows.ts';
+import { LavaSurface } from './lavaSurface.ts';
 import { WaterSurface } from './waterSurface.ts';
 import { cardGroundLift } from './cardGroundLift.ts';
 import { ModelScene } from './modelScene.ts';
@@ -69,6 +70,7 @@ export class TileMapScene {
   private readonly shading = { value: 1 };
   private readonly fog = new FogEdges();
   private readonly water: WaterSurface;
+  private readonly lava: LavaSurface;
   private options: View3DSettings = { ...DEFAULT_3D_SETTINGS };
   private readonly actorCards: { mesh: Mesh; x: number; y: number; size: number }[] = [];
   private readonly partyCards: { mesh: Mesh; x: number; y: number; size: number }[] = [];
@@ -301,6 +303,8 @@ export class TileMapScene {
     this.scene.add(this.cubes.mesh);
     this.shoreline = new Shoreline(scenery);
     this.scene.add(this.shoreline.mesh);
+    this.lava = new LavaSurface(this.inverted);
+    this.scene.add(this.lava.mesh);
     this.water = new WaterSurface(this.inverted);
     this.scene.add(this.water.mesh);
     this.scene.add(this.fog.mesh, this.grass.mesh);
@@ -362,6 +366,7 @@ export class TileMapScene {
       for (const mesh of [
         this.grass.mesh,
         this.water.mesh,
+        this.lava.mesh,
         this.fog.mesh,
         this.trees.mesh,
         this.buildings.mesh,
@@ -388,6 +393,8 @@ export class TileMapScene {
     this.shadows.mesh.visible = true;
     for (const mesh of [this.water.mesh, this.fog.mesh, this.cubes.mesh, this.shoreline.mesh]) mesh.visible = true;
     this.grass.set(cells, gfx, this.options.grassDepth, landscape);
+    this.lava.mesh.visible = true;
+    this.lava.set(landscape, cells, gfx, this.options, location);
     this.water.set(landscape, cells, gfx, this.options);
     this.fog.set(landscape, cells, this.options.softFog, this.options.recessedWater);
     this.trees.set(landscape, cells, gfx, this.treeCardsActive);
@@ -554,6 +561,7 @@ export class TileMapScene {
     for (const material of this.materials) material.color.setRGB(...colour);
     this.buildings.setDaylight(colour);
     this.trees.setDaylight(colour);
+    this.lava.material.color.setRGB(...colour);
     this.water.material.color.setRGB(...colour);
     this.grass.setDaylight(colour);
     this.invalidate();
@@ -738,6 +746,10 @@ export class TileMapScene {
 
   animate(time: number, active: boolean): void {
     if (this.models.animate(time, active && this.modelMode)) this.invalidate();
+    if (active && this.lava.mesh.visible && this.lava.mesh.count > 0) {
+      this.lava.time.value = time / 1000;
+      this.invalidate();
+    }
     if (active && this.options.waterHighlights && this.water.mesh.count > 0) {
       this.water.time.value = time / 1000;
       this.invalidate();
@@ -752,6 +764,7 @@ export class TileMapScene {
     this.models.dispose();
     this.grass.dispose();
     this.sunShadows.dispose();
+    this.lava.dispose();
     this.water.dispose();
     this.fog.dispose();
     for (const texture of this.textures) texture.dispose();

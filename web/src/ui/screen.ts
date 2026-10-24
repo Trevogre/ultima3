@@ -1112,6 +1112,12 @@ export class Screen implements GameIO {
             hint: 'Restrained animated highlights over this tile set’s water artwork.',
           },
           {
+            key: '2',
+            label: `Lava bubbles: ${onOff(this.view3D.lavaBubbles)}`,
+            disabled,
+            hint: 'Van Gogh lava: slow golden swirls and bursting painted bubbles over the existing tile.',
+          },
+          {
             key: 'A',
             label: `Alpha water: ${onOff(this.view3D.alphaWater)}`,
             disabled,
@@ -1165,7 +1171,7 @@ export class Screen implements GameIO {
           },
         ].map((option) => ({
           ...option,
-          disabled: option.disabled || (this.view3D.renderStyle === 'Models' && 'CLWNGEQHVUAKS'.includes(option.key)),
+          disabled: option.disabled || (this.view3D.renderStyle === 'Models' && 'CLWNGEQHVUAKS2'.includes(option.key)),
         })),
       async (key) => {
         const setting = (
@@ -1186,11 +1192,12 @@ export class Screen implements GameIO {
             H: 'softFog',
             V: 'terrainShading',
             U: 'waterHighlights',
+            '2': 'lavaBubbles',
             A: 'alphaWater',
             J: 'sunShadows',
             K: 'grassDepth',
           } as const
-        )[key as 'D' | 'C' | 'L' | 'T' | 'W' | 'N' | 'M' | 'F' | 'Y' | 'S' | 'E' | 'Z' | 'G' | 'H' | 'V' | 'U' | 'A' | 'J' | 'K'];
+        )[key as 'D' | 'C' | 'L' | 'T' | 'W' | 'N' | 'M' | 'F' | 'Y' | 'S' | 'E' | 'Z' | 'G' | 'H' | 'V' | 'U' | 'A' | 'J' | 'K' | '2'];
         if (setting) this.set3DSettings({ ...this.view3D, [setting]: !this.view3D[setting] });
         else if (key === 'P') this.set3DSettings({ ...this.view3D, renderStyle: this.view3D.renderStyle === 'Cards' ? 'Models' : 'Cards' });
         else if (key === 'X') await this.chooseModelSet();
