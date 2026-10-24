@@ -1,6 +1,7 @@
 import {
   CanvasTexture,
   DoubleSide,
+  Euler,
   InstancedBufferAttribute,
   InstancedMesh,
   Matrix4,
@@ -8,6 +9,7 @@ import {
   NearestFilter,
   OrthographicCamera,
   PlaneGeometry,
+  Quaternion,
   SRGBColorSpace,
   Vector3,
 } from 'three';
@@ -32,6 +34,12 @@ export const STANDARD_BRUSH_ANCHORS = [
   [16, 50],
   [46, 63],
 ] as const;
+/** Transition only near overhead; by 20 degrees the foundation is tile-centred. */
+export function buildingSlide(tilt: number): number {
+  const t = Math.max(0, Math.min(1, tilt / ((20 * Math.PI) / 180)));
+  return t * t * (3 - 2 * t);
+}
+
 const MAX_CARDS = 4096 * 4;
 const SHAPES = [Shape.Town, Shape.Castle, Shape.Dungeon, Shape.Shrine] as number[];
 
@@ -48,6 +56,12 @@ export class BuildingBillboards {
   private readonly matrix = new Matrix4();
   private readonly position = new Vector3();
   private readonly right = new Vector3();
+  private readonly up = new Vector3();
+  private readonly rotation = new Quaternion();
+  private readonly euler = new Euler();
+  private lastTilt = 0;
+  private lastYaw: number | null = null;
+  private continuousYaw = 0;
   private readonly scale = new Vector3(1, 1, 1);
   private readonly shapes: number[];
   private readonly filter: ReturnType<typeof addZoomFiltering>;
@@ -139,8 +153,8 @@ export class BuildingBillboards {
         this.slots.setX(this.positions.length, this.kind === 'trees' && shape === Shape.Brush ? 4 : this.shapes.indexOf(shape));
         if (this.kind === 'buildings') {
           const anchor = buildingAnchor(gfx, shape);
-          // The visible foundation is the card pivot, but its world position
-          // stays at the tile centre as the billboard follows the camera.
+          // Store the tile centre; near-overhead posing restores the native
+          // foundation position before sliding toward this centred pivot.
           this.positions.push({ x, y, anchor, footprint: 1 });
         } else this.positions.push({ x, y });
       }
@@ -166,19 +180,42 @@ export class BuildingBillboards {
 
   faceCamera(camera: OrthographicCamera, tilt: number): void {
     const lift = Math.sin(tilt) / 2;
-    this.right.set(1, 0, 0).applyQuaternion(camera.quaternion);
+    this.lastTilt = tilt;
+    this.rotation.copy(camera.quaternion);
+    if (this.kind === 'buildings') {
+      this.right.set(1, 0, 0).applyQuaternion(camera.quaternion);
+      const blend = buildingSlide(tilt);
+      const yaw = Math.atan2(this.right.y, this.right.x);
+      if (this.lastYaw === null || blend === 0 || blend === 1) this.continuousYaw = yaw;
+      else this.continuousYaw += Math.atan2(Math.sin(yaw - this.lastYaw), Math.cos(yaw - this.lastYaw));
+      this.lastYaw = yaw;
+      this.rotation.setFromEuler(this.euler.set(tilt * blend, 0, this.continuousYaw * blend, 'ZXY'));
+    }
+    this.right.set(1, 0, 0).applyQuaternion(this.rotation);
+    this.up.set(0, 1, 0).applyQuaternion(this.rotation);
     this.positions.forEach(({ x, y, anchor }, i) => {
       if (anchor) {
-        // The source pixel at the trunk base remains on its own ground point,
-        // independent of yaw and tilt; transparent padding does not set the foot.
+        // Keep the visible base grounded. Vegetation retains its native point;
+        // buildings slide between native overhead and centred upright pivots.
+        const foot = this.groundPivot(x, y, anchor);
         this.position
-          .set(x, y, 0.002)
+          .set(foot[0], foot[1], 0.002)
           .addScaledVector(this.right, 0.5 - anchor[0] / 64)
-          .addScaledVector(camera.up, anchor[1] / 64 - 0.5);
+          .addScaledVector(this.up, anchor[1] / 64 - 0.5);
       } else this.position.set(x, y, cardGroundLift(1, tilt)).addScaledVector(camera.up, lift);
-      this.mesh.setMatrixAt(i, this.matrix.compose(this.position, camera.quaternion, this.scale));
+      this.mesh.setMatrixAt(i, this.matrix.compose(this.position, this.rotation, this.scale));
     });
     this.mesh.instanceMatrix.needsUpdate = true;
+  }
+
+  private groundPivot(x: number, y: number, anchor?: readonly [number, number]): [number, number] {
+    if (this.kind !== 'buildings' || !anchor) return [x, y];
+    const original = 1 - buildingSlide(this.lastTilt);
+    return [x + (anchor[0] / 64 - 0.5) * original, y + (0.5 - anchor[1] / 64) * original];
+  }
+
+  get cardRotation(): Quaternion {
+    return this.rotation;
   }
 
   get shadowTexture() {
@@ -187,9 +224,10 @@ export class BuildingBillboards {
 
   forEachShadow(visit: (x: number, y: number, slot: number, anchor: [number, number]) => void): void {
     if (this.mesh.visible)
-      this.positions.forEach(({ x, y, anchor }, i) =>
-        visit(x, y, this.slots.getX(i), anchor ? [anchor[0] / 64, 1 - anchor[1] / 64] : [0.5, 0]),
-      );
+      this.positions.forEach(({ x, y, anchor }, i) => {
+        const foot = this.groundPivot(x, y, anchor);
+        visit(foot[0], foot[1], this.slots.getX(i), anchor ? [anchor[0] / 64, 1 - anchor[1] / 64] : [0.5, 0]);
+      });
   }
 
   setFiltering(mode: ZoomFiltering): void {
@@ -208,6 +246,10 @@ export class BuildingBillboards {
   }
 
   forEachFootprint(visit: (x: number, y: number, size: number) => void): void {
-    if (this.mesh.visible) this.positions.forEach(({ x, y, anchor, footprint }) => visit(x, y, footprint ?? (anchor ? 0.45 : 1)));
+    if (this.mesh.visible)
+      this.positions.forEach(({ x, y, anchor, footprint }) => {
+        const foot = this.groundPivot(x, y, anchor);
+        visit(foot[0], foot[1], footprint ?? (anchor ? 0.45 : 1));
+      });
   }
 }

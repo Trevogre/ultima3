@@ -37,7 +37,9 @@ describe('world-space sun shadows', () => {
     const right = new Vector3(up.y, -up.x, 0).normalize();
     const normal = new Vector3().crossVectors(right, up);
     const rotation = new Quaternion().setFromRotationMatrix(new Matrix4().makeBasis(right, up, normal));
-    shadows.faceCards(rotation, Math.asin(up.z));
+    shadows.faceCards(rotation, Math.asin(up.z), new Quaternion());
+    expect(shadows.buildings.cardUp.value.toArray()).toEqual([0, 1, 0]);
+    expect(shadows.trees.cardUp.value.distanceTo(up)).toBeCloseTo(0);
     const project = (axis: Vector3) => new Vector2(axis.x + sun.x * axis.z, axis.y + sun.y * axis.z);
     expect(project(shadows.uniforms.cardUp.value).length()).toBeCloseTo(0);
     expect(shadows.uniforms.sunOffset.value.toArray()).toEqual(sun.toArray());

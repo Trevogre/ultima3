@@ -36,6 +36,8 @@ class ShadowBatch {
   readonly feet = new InstancedBufferAttribute(new Float32Array(16384 * 3), 3);
   readonly rectangles = new InstancedBufferAttribute(new Float32Array(16384 * 4), 4);
   readonly anchors = new InstancedBufferAttribute(new Float32Array(16384 * 2), 2);
+  readonly cardRight = { value: new Vector3(1, 0, 0) };
+  readonly cardUp = { value: new Vector3(0, 0, 1) };
   readonly footCorrection = { value: new Vector2() };
   readonly material: ShaderMaterial;
   readonly mesh: InstancedMesh;
@@ -44,7 +46,13 @@ class ShadowBatch {
     this.geometry.setAttribute('shadowRect', this.rectangles);
     this.geometry.setAttribute('shadowAnchor', this.anchors);
     this.material = new ShaderMaterial({
-      uniforms: { ...uniforms, footCorrection: this.footCorrection, silhouette: { value: texture } },
+      uniforms: {
+        ...uniforms,
+        cardRight: this.cardRight,
+        cardUp: this.cardUp,
+        footCorrection: this.footCorrection,
+        silhouette: { value: texture },
+      },
       transparent: true,
       depthTest: true,
       depthWrite: false,
@@ -115,9 +123,15 @@ export class SunShadows {
     this.trees = new ShadowBatch(trees, this.uniforms);
   }
   /** Project the actual billboard plane, including its tilt, along world-space sunlight. */
-  faceCards(rotation: Quaternion, tilt: number): void {
+  faceCards(rotation: Quaternion, tilt: number, buildingRotation: Quaternion = rotation): void {
     this.uniforms.cardRight.value.set(1, 0, 0).applyQuaternion(rotation);
     this.uniforms.cardUp.value.set(0, 1, 0).applyQuaternion(rotation);
+    for (const batch of [this.actors, this.trees]) {
+      batch.cardRight.value.copy(this.uniforms.cardRight.value);
+      batch.cardUp.value.copy(this.uniforms.cardUp.value);
+    }
+    this.buildings.cardRight.value.set(1, 0, 0).applyQuaternion(buildingRotation);
+    this.buildings.cardUp.value.set(0, 1, 0).applyQuaternion(buildingRotation);
     // Actor cards have a small camera-dependent ground-foot shift; building
     // and vegetation cards already use explicit foundation/trunk pivots.
     const up = this.uniforms.cardUp.value;

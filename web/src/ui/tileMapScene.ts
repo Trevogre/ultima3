@@ -20,7 +20,7 @@ import type { ViewCell } from '../game/viewport.ts';
 import { battlefieldZoom, mapCameraTarget, minimumMapZoom } from './mapCameraBounds.ts';
 import { DEFAULT_3D_SETTINGS, useTreeCards, type View3DSettings } from './view3DSettings.ts';
 import { buildingGround, isBuilding } from './billboardArt.ts';
-import { BuildingBillboards } from './buildingBillboards.ts';
+import { BuildingBillboards, buildingSlide } from './buildingBillboards.ts';
 import { TerrainCubes } from './terrainCubes.ts';
 import { Shoreline } from './shoreline.ts';
 import { shorelineTexture, terrainElevation } from './terrainDepth.ts';
@@ -52,6 +52,7 @@ export class TileMapScene {
   private readonly sunShadows: SunShadows;
   readonly effectContext: CanvasRenderingContext2D;
   private characterCutouts = false;
+  private buildingBlend = 0;
   private readonly movement = new CameraMovement();
   private readonly grass = new GrassDepth();
   private readonly filters: ReturnType<typeof addZoomFiltering>[] = [];
@@ -487,7 +488,9 @@ export class TileMapScene {
 
   private updateCamera(): void {
     this.movement.update(this.yaw, this.options.enabled && !this.options.fixedCamera && this.options.cameraRelative);
-    if (this.treeMode !== this.treeCardsActive || this.characterCutouts !== this.characterCutoutsActive) {
+    const blend = this.options.buildings ? buildingSlide(this.tilt) : 0;
+    if (this.treeMode !== this.treeCardsActive || this.characterCutouts !== this.characterCutoutsActive || blend !== this.buildingBlend) {
+      this.buildingBlend = blend;
       this.treeMode = this.treeCardsActive;
       this.characterCutouts = this.characterCutoutsActive;
       this.onCardModeChange?.();
@@ -511,11 +514,11 @@ export class TileMapScene {
     this.camera.lookAt(x, y, 0);
     this.camera.zoom = this.zoom;
     this.camera.updateProjectionMatrix();
-    this.sunShadows.faceCards(this.camera.quaternion, this.tilt);
     this.grass.faceCamera(this.camera, this.tilt, (this.rect.w / this.visibleSide) * this.zoom);
     this.faceActors();
     this.buildings.faceCamera(this.camera, this.tilt);
     this.trees.faceCamera(this.camera, this.tilt);
+    this.sunShadows.faceCards(this.camera.quaternion, this.tilt, this.buildings.cardRotation);
     this.invalidate();
   }
 
