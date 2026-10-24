@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { Texture } from 'three';
+import { Matrix4, Quaternion, Vector2, Vector3, Texture } from 'three';
 import { SunShadows, sunShadow } from '../src/ui/sunShadows.ts';
 import { Shape } from '../src/game/tiles.ts';
 import { DEFAULT_3D_SETTINGS, read3DSettings, presentationPreset } from '../src/ui/view3DSettings.ts';
@@ -28,6 +28,28 @@ describe('world-space sun shadows', () => {
       expect(sunShadow(Math.floor(turn / 12) + 8, 12 - (turn % 12))).toEqual(sun);
     }
   });
+  it('projects the actual card plane, collapsing edge-on silhouettes without rotating the sun', () => {
+    const texture = new Texture();
+    const shadows = new SunShadows(texture, texture, texture);
+    shadows.setSun(3, 12, true);
+    const sun = shadows.uniforms.sunOffset.value.clone();
+    const up = new Vector3(-sun.x, -sun.y, 1).normalize();
+    const right = new Vector3(up.y, -up.x, 0).normalize();
+    const normal = new Vector3().crossVectors(right, up);
+    const rotation = new Quaternion().setFromRotationMatrix(new Matrix4().makeBasis(right, up, normal));
+    shadows.faceCards(rotation, Math.asin(up.z));
+    const project = (axis: Vector3) => new Vector2(axis.x + sun.x * axis.z, axis.y + sun.y * axis.z);
+    expect(project(shadows.uniforms.cardUp.value).length()).toBeCloseTo(0);
+    expect(shadows.uniforms.sunOffset.value.toArray()).toEqual(sun.toArray());
+    shadows.faceCards(new Quaternion(), 0);
+    const across = project(shadows.uniforms.cardRight.value),
+      upwards = project(shadows.uniforms.cardUp.value);
+    expect(Math.abs(across.x * upwards.y - across.y * upwards.x)).toBeGreaterThan(0.1);
+    expect(shadows.uniforms.sunOffset.value.toArray()).toEqual(sun.toArray());
+    shadows.dispose();
+    texture.dispose();
+  });
+
   it('clips receivers to filtered known land and retains independent contact shadows', () => {
     const texture = new Texture();
     const shadows = new SunShadows(texture, texture, texture);

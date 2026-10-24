@@ -8,6 +8,8 @@ import {
   RGBAFormat,
   ShaderMaterial,
   Vector2,
+  Vector3,
+  type Quaternion,
   Vector4,
   type Texture,
 } from 'three';
@@ -34,6 +36,7 @@ class ShadowBatch {
   readonly feet = new InstancedBufferAttribute(new Float32Array(16384 * 3), 3);
   readonly rectangles = new InstancedBufferAttribute(new Float32Array(16384 * 4), 4);
   readonly anchors = new InstancedBufferAttribute(new Float32Array(16384 * 2), 2);
+  readonly footCorrection = { value: new Vector2() };
   readonly material: ShaderMaterial;
   readonly mesh: InstancedMesh;
   constructor(texture: Texture, uniforms: SunShadows['uniforms']) {
@@ -41,18 +44,19 @@ class ShadowBatch {
     this.geometry.setAttribute('shadowRect', this.rectangles);
     this.geometry.setAttribute('shadowAnchor', this.anchors);
     this.material = new ShaderMaterial({
-      uniforms: { ...uniforms, silhouette: { value: texture } },
+      uniforms: { ...uniforms, footCorrection: this.footCorrection, silhouette: { value: texture } },
       transparent: true,
       depthTest: true,
       depthWrite: false,
       side: DoubleSide,
       vertexShader: `attribute vec3 shadowFoot; attribute vec4 shadowRect; attribute vec2 shadowAnchor;
-        uniform vec2 sunOffset; varying vec2 sourceUV; varying vec2 groundPosition;
+        uniform vec2 sunOffset; uniform vec3 cardRight; uniform vec3 cardUp; uniform vec2 footCorrection; varying vec2 sourceUV; varying vec2 groundPosition;
         void main(){
           sourceUV=shadowRect.xy+uv*shadowRect.zw;
           float height=(uv.y-shadowAnchor.y)*shadowFoot.z;
-          vec2 across=normalize(vec2(sunOffset.y,-sunOffset.x)+vec2(0.00001,0.0));
-          groundPosition=shadowFoot.xy+across*(uv.x-shadowAnchor.x)*shadowFoot.z+sunOffset*height;
+          vec2 across=cardRight.xy+sunOffset*cardRight.z;
+          vec2 upwards=cardUp.xy+sunOffset*cardUp.z;
+          groundPosition=shadowFoot.xy+footCorrection*shadowFoot.z+across*(uv.x-shadowAnchor.x)*shadowFoot.z+upwards*height;
           gl_Position=projectionMatrix*modelViewMatrix*vec4(groundPosition,0.004,1.0);
         }`,
       fragmentShader: `uniform sampler2D silhouette; uniform sampler2D knownGround;
@@ -93,6 +97,8 @@ export class SunShadows {
   private ground = new DataTexture(new Uint8Array(4), 1, 1, RGBAFormat);
   readonly uniforms = {
     sunOffset: { value: new Vector2(0, 0.25) },
+    cardRight: { value: new Vector3(1, 0, 0) },
+    cardUp: { value: new Vector3(0, 0, 1) },
     sunOpacity: { value: 0 },
     knownGround: { value: this.ground },
     groundGrid: { value: new Vector4(0, 0, 1, 0) },
@@ -108,6 +114,16 @@ export class SunShadows {
     this.buildings = new ShadowBatch(buildings, this.uniforms);
     this.trees = new ShadowBatch(trees, this.uniforms);
   }
+  /** Project the actual billboard plane, including its tilt, along world-space sunlight. */
+  faceCards(rotation: Quaternion, tilt: number): void {
+    this.uniforms.cardRight.value.set(1, 0, 0).applyQuaternion(rotation);
+    this.uniforms.cardUp.value.set(0, 1, 0).applyQuaternion(rotation);
+    // Actor cards have a small camera-dependent ground-foot shift; building
+    // and vegetation cards already use explicit foundation/trunk pivots.
+    const up = this.uniforms.cardUp.value;
+    this.actors.footCorrection.value.set(up.x, up.y).multiplyScalar((Math.sin(tilt) - 1) / 2);
+  }
+
   reset() {
     this.actors.mesh.count = this.buildings.mesh.count = this.trees.mesh.count = 0;
   }

@@ -511,6 +511,7 @@ export class TileMapScene {
     this.camera.lookAt(x, y, 0);
     this.camera.zoom = this.zoom;
     this.camera.updateProjectionMatrix();
+    this.sunShadows.faceCards(this.camera.quaternion, this.tilt);
     this.grass.faceCamera(this.camera, this.tilt, (this.rect.w / this.visibleSide) * this.zoom);
     this.faceActors();
     this.buildings.faceCamera(this.camera, this.tilt);

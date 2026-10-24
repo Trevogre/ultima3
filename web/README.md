@@ -583,7 +583,9 @@ remembered independently of **Shadows** (contact shadows) and **Day/night**
 96-turn slow-moon clock, rising in the east (+world X) and setting in the west.
 Shadows point away from it, lengthen toward dawn/dusk (capped at three tiles per
 unit of card height), shorten at noon, and fade out at night. Contact shadows
-remain when enabled. Camera rotation never changes their world direction.
+remain when enabled. Sunlight stays fixed in world space, while each shadow is projected from the
+card’s actual camera-facing plane. Rotating or tilting a card changes its shadow
+shape; an edge-on card can cast a thin or invisible shadow.
 
 Existing card alpha supplies the silhouettes, including individual Standard
 trunk/clump anchors. A separate masked actor canvas keeps original opaque
