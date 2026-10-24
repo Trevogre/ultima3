@@ -40,7 +40,7 @@ the selected tile set and input preferences are preserved when applying a
 preset. Existing saved overrides are preserved when preferences are upgraded.
 No unfinished Layered or Expanded-art mode is exposed.
 
-**3D Settings → Shadows** toggles soft, procedural contact shadows (18%
+**3D Settings → Shadows** toggles soft, procedural contact shadows (40%
 maximum opacity) under visible land cards and building cards. Half-size
 party members have half-size footprints. Flat sprites, waterborne objects,
 the whirlpool and first-person dungeon views have no contact shadows.
@@ -87,7 +87,7 @@ timer, starting a new game at noon. The UI stays bright and dungeon light
 is unchanged. Turning it off restores the original colours. This affects
 the WebGL map only, with no changes to visibility or gameplay rules.
 
-Wall and mountain cubes start enabled. **Mt steps** adds three shrinking
+Wall and mountain cubes start enabled. Cube mountains are the default. Optional **Mt steps** adds three shrinking
 mountain tiers (1, 0.72 and 0.44 tiles wide), reaching 1.2 tiles high. Off
 restores the previous one-tile cube; Mountain cubes Off keeps mountains flat.
 Every face repeats the selected set's original mountain texture. Wall cubes
@@ -98,7 +98,7 @@ mask and change no movement or line-of-sight rules.
 whirlpool and effects. Shoreline sides reuse the adjacent land tile's texture;
 there is no new side art or seabed. Only visible water neighbours create shore
 sides, including across wrapping maps. Off restores the original flat surface.
-Both options are enabled by the Depth preset, remembered independently in 3D
+The Depth preset uses cube mountains and lowered water. Both options are remembered independently in 3D
 Settings, and work in the local viewport and distant terrain, including combat.
 
 The whole 64 × 64 landscape is batched into one instanced terrain mesh, with

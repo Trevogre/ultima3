@@ -24,13 +24,13 @@ describe('contact shadows', () => {
     expect(castsContactShadow(Shape.Ranger, Shape.Void)).toBe(false);
   });
 
-  it('uses neutral procedural pixels fading to transparency, capped at 18 percent opacity', () => {
+  it('uses neutral procedural pixels fading to transparency, capped at 40 percent opacity', () => {
     const pixels = shadowPixels();
     expect(pixels[3]).toBe(0);
-    expect(pixels[(32 * 64 + 32) * 4 + 3]).toBeGreaterThan(40);
+    expect(pixels[(32 * 64 + 32) * 4 + 3]).toBeGreaterThan(95);
     for (let i = 0; i < pixels.length; i += 4) {
       expect([...pixels.slice(i, i + 3)]).toEqual([0, 0, 0]);
-      expect(pixels[i + 3]).toBeLessThanOrEqual(46);
+      expect(pixels[i + 3]).toBeLessThanOrEqual(102);
     }
   });
 
@@ -43,8 +43,8 @@ describe('contact shadows', () => {
     shadows.add(2, -3, 0.5);
     const matrix = new Matrix4();
     shadows.mesh.getMatrixAt(0, matrix);
-    expect(matrix.elements[0]).toBeCloseTo(0.35);
-    expect(matrix.elements[5]).toBeCloseTo(0.17);
+    expect(matrix.elements[0]).toBeCloseTo(0.475);
+    expect(matrix.elements[5]).toBeCloseTo(0.3);
     expect(matrix.elements[12]).toBe(2);
     expect(matrix.elements[13]).toBe(-3);
     expect(matrix.elements[14]).toBeCloseTo(0.002);

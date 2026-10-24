@@ -16,7 +16,7 @@ describe('optional terrain depth', () => {
     const material = new MeshBasicMaterial();
     const cubes = new TerrainCubes(material);
     const cells = [{ base: Shape.Mountains }];
-    cubes.set(null, cells, DEFAULT_3D_SETTINGS);
+    cubes.set(null, cells, { ...DEFAULT_3D_SETTINGS, steppedMountains: true });
     expect(cubes.mesh.count).toBe(3);
     const matrix = new Matrix4();
     MOUNTAIN_STEPS.forEach((step, i) => {
@@ -63,11 +63,11 @@ describe('optional terrain depth', () => {
     material.dispose();
   });
 
-  it('preserves explicit Off preferences and enables both enhancements with Depth', () => {
+  it('preserves explicit Off preferences and uses cube mountains and recessed water with Depth', () => {
     const off = read3DSettings({ steppedMountains: false, recessedWater: false });
     expect(off).toMatchObject({ steppedMountains: false, recessedWater: false });
-    expect(applyPresentationPreset(off, 'Depth')).toMatchObject({ steppedMountains: true, recessedWater: true });
-    expect(read3DSettings({})).toMatchObject({ steppedMountains: true, recessedWater: true });
+    expect(applyPresentationPreset(off, 'Depth')).toMatchObject({ steppedMountains: false, recessedWater: true });
+    expect(read3DSettings({})).toMatchObject({ steppedMountains: false, recessedWater: true });
   });
 
   it('does not derive shorelines from water hidden behind town walls in either terrain mode', () => {

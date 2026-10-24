@@ -4,6 +4,7 @@ import { applyPresentationPreset, DEFAULT_3D_SETTINGS, presentationPreset, read3
 describe('presentation presets', () => {
   it('derives Classic, Depth and Custom from effective features', () => {
     expect(presentationPreset({ ...DEFAULT_3D_SETTINGS })).toBe('Depth');
+    expect(presentationPreset({ ...DEFAULT_3D_SETTINGS, steppedMountains: true })).toBe('Custom');
     expect(presentationPreset({ ...DEFAULT_3D_SETTINGS, enabled: false, buildings: false })).toBe('Classic');
     for (const key of [
       'characters',
@@ -14,7 +15,6 @@ describe('presentation presets', () => {
       'dayNight',
       'contactShadows',
       'fixedCamera',
-      'steppedMountains',
       'recessedWater',
     ] as const)
       expect(presentationPreset({ ...DEFAULT_3D_SETTINGS, [key]: false })).toBe('Custom');

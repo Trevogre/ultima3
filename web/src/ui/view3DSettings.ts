@@ -28,7 +28,7 @@ export const DEFAULT_3D_SETTINGS: Readonly<View3DSettings> = {
   fixedRotation: 5,
   dayNight: true,
   contactShadows: true,
-  steppedMountains: true,
+  steppedMountains: false,
   recessedWater: true,
 };
 
@@ -42,7 +42,7 @@ const DEPTH_OPTIONS = {
   fixedCamera: true,
   dayNight: true,
   contactShadows: true,
-  steppedMountains: true,
+  steppedMountains: false,
   recessedWater: true,
 } as const;
 
@@ -51,7 +51,9 @@ export type PresentationPreset = 'Classic' | 'Depth';
 /** Presets are derived labels, never a second source of saved display state. */
 export function presentationPreset(settings: View3DSettings): PresentationPreset | 'Custom' {
   if (!settings.enabled) return 'Classic';
-  return (Object.keys(DEPTH_OPTIONS) as (keyof typeof DEPTH_OPTIONS)[]).every((key) => settings[key]) ? 'Depth' : 'Custom';
+  return (Object.keys(DEPTH_OPTIONS) as (keyof typeof DEPTH_OPTIONS)[]).every((key) => settings[key] === DEPTH_OPTIONS[key])
+    ? 'Depth'
+    : 'Custom';
 }
 
 export function applyPresentationPreset(settings: View3DSettings, preset: PresentationPreset): View3DSettings {

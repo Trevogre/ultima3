@@ -20,7 +20,7 @@ export function shadowPixels(side = 64): Uint8Array {
   for (let y = 0; y < side; y++)
     for (let x = 0; x < side; x++) {
       const radius = Math.hypot(((x + 0.5) / side) * 2 - 1, ((y + 0.5) / side) * 2 - 1);
-      pixels[(y * side + x) * 4 + 3] = Math.round(255 * 0.18 * Math.max(0, 1 - radius * radius) ** 2);
+      pixels[(y * side + x) * 4 + 3] = Math.round(255 * 0.4 * Math.max(0, 1 - radius * radius) ** 1.3);
     }
   return pixels;
 }
@@ -55,7 +55,7 @@ export class ContactShadows {
 
   add(x: number, y: number, size: number): void {
     if (this.mesh.count >= 4224) return;
-    this.matrix.makeScale(size * 0.7, size * 0.34, 1).setPosition(x, y, 0.002);
+    this.matrix.makeScale(size * 0.95, size * 0.6, 1).setPosition(x, y, 0.002);
     this.mesh.setMatrixAt(this.mesh.count++, this.matrix);
     this.mesh.instanceMatrix.needsUpdate = true;
   }
