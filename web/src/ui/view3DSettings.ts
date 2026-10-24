@@ -25,6 +25,7 @@ export interface View3DSettings {
   terrainShading: boolean;
   waterHighlights: boolean;
   alphaWater: boolean;
+  sunShadows: boolean;
 }
 
 export const DEFAULT_3D_SETTINGS: Readonly<View3DSettings> = {
@@ -52,6 +53,7 @@ export const DEFAULT_3D_SETTINGS: Readonly<View3DSettings> = {
   terrainShading: true,
   waterHighlights: true,
   alphaWater: false,
+  sunShadows: true,
 };
 
 const DEPTH_OPTIONS = {
@@ -61,6 +63,7 @@ const DEPTH_OPTIONS = {
   terrainShading: true,
   waterHighlights: true,
   alphaWater: false,
+  sunShadows: true,
   enabled: true,
   characters: true,
   buildings: true,

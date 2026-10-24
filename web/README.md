@@ -573,3 +573,29 @@ Straight-down views and flat-character mode retain the original backgrounds,
 including poisoned figures. Orbiting into or out of overhead redraws the card
 textures automatically. Terrain, letter tiles, original sprite files, and Classic
 rendering are unchanged.
+
+### Sun shadows
+
+**3D Settings → Sun shadows** enables directional silhouettes for visible
+character/party, building, tree and brush cards. It defaults on in Depth and is
+remembered independently of **Shadows** (contact shadows) and **Day/night**
+(colour tint). All three use presentation only; the sun follows the same
+96-turn slow-moon clock, rising in the east (+world X) and setting in the west.
+Shadows point away from it, lengthen toward dawn/dusk (capped at three tiles per
+unit of card height), shorten at noon, and fade out at night. Contact shadows
+remain when enabled. Camera rotation never changes their world direction.
+
+Existing card alpha supplies the silhouettes, including individual Standard
+trunk/clump anchors. A separate masked actor canvas keeps original opaque
+figures unchanged in overhead views while supplying clean shadow silhouettes.
+Only already-visible casters are submitted, and receiving ground is clipped to
+the filtered exploration mask: no shadows on unknown terrain or water.
+First-person dungeons and flat character sprites do not receive sun shadows.
+Cube depth occludes the ground projections; mountains/walls do not yet cast
+sun shadows or block light onto other receivers. That needs a separate pass.
+No original image files are changed.
+
+For an isolated WebGL check that never reads or writes a game save, open
+`/tools/preview-sun-shadows.html` on the development server. Its Morning, Noon,
+Afternoon, Night and Rotate camera buttons exercise the production shadow code
+on a neutral surface using the existing Standard tree pixels.

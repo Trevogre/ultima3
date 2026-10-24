@@ -1053,6 +1053,12 @@ export class Screen implements GameIO {
           disabled,
           hint: 'See submerged shore blocks. Enable Lower water for depth.',
         },
+        {
+          key: 'J',
+          label: `Sun shadows: ${onOff(this.view3D.sunShadows)}`,
+          disabled,
+          hint: 'East-to-west sun casts card silhouettes. Long at dawn/dusk; no sun shadows at night.',
+        },
         { key: 'M', label: `Mouse camera: ${onOff(this.view3D.mouseCamera)}`, disabled },
         {
           key: 'S',
@@ -1106,8 +1112,9 @@ export class Screen implements GameIO {
             V: 'terrainShading',
             U: 'waterHighlights',
             A: 'alphaWater',
+            J: 'sunShadows',
           } as const
-        )[key as 'D' | 'C' | 'L' | 'T' | 'W' | 'N' | 'M' | 'F' | 'Y' | 'S' | 'E' | 'Z' | 'G' | 'H' | 'V' | 'U' | 'A'];
+        )[key as 'D' | 'C' | 'L' | 'T' | 'W' | 'N' | 'M' | 'F' | 'Y' | 'S' | 'E' | 'Z' | 'G' | 'H' | 'V' | 'U' | 'A' | 'J'];
         if (setting) this.set3DSettings({ ...this.view3D, [setting]: !this.view3D[setting] });
         else if (key === 'Q') {
           const modes = ['Crisp', 'Stable', 'Auto'] as const;
@@ -2304,6 +2311,7 @@ export class Screen implements GameIO {
     map.beginFrame();
     const outdoors = (world.combat?.previousLocation ?? world.party.location) !== Location.Dungeon;
     map.setDaylight(this.view3D.dayNight && outdoors ? daylightColour(world.moonPhase[0], world.moonTimer[0]) : [1, 1, 1]);
+    map.setSun(world.moonPhase[0], world.moonTimer[0], outdoors);
     map.setCombat(!!world.combat);
     map.setLandscape(world.combat || !this.view3D.distantTerrain ? null : buildLandscape(world, this.view), gfx, this.view.cells);
     map.setActorLayout(this.view.cells, this.partyStyle === 'grid');
@@ -2330,6 +2338,15 @@ export class Screen implements GameIO {
 
   /** The same sprite composition supplies the legacy screen and the native map's actor layer. */
   private drawViewportActors(ctx: CanvasRenderingContext2D, c: ViewCell, dx: number, dy: number, tile: number, effectContext = ctx): void {
+    if (
+      ctx === this.presentation.map.actorContext &&
+      this.view3D.sunShadows &&
+      !c.hit &&
+      c.overlay !== Shape.Whirlpool &&
+      (c.overlay === undefined || !isBuilding(c.overlay))
+    ) {
+      this.drawViewportActors(this.presentation.map.sunActorContext, c, dx, dy, tile);
+    }
     if (c.follower !== undefined && this.partyStyle === 'line') this.drawMember(c.follower, dx, dy, tile, ctx);
     if (c.hit && !this.burstTiles) {
       this.gfx.drawShape(ctx, c.hit.shape, dx, dy, tile, { masked: true, altFrame: true });
@@ -2345,7 +2362,9 @@ export class Screen implements GameIO {
       } else {
         this.gfx.drawShape(ctx, c.overlay, dx, dy, tile, {
           masked: true,
-          card: ctx === this.presentation.map.actorContext && this.presentation.map.characterCutoutsActive,
+          card:
+            ctx === this.presentation.map.sunActorContext ||
+            (ctx === this.presentation.map.actorContext && this.presentation.map.characterCutoutsActive),
           flip: c.flip,
           altFrame: c.altFrame,
         });
@@ -2386,14 +2405,21 @@ export class Screen implements GameIO {
     const shape = memberShape(this.world, p.classLetter);
     if (p.status === 'P')
       ctx.drawImage(
-        this.greenFigure(shape, size, ctx === this.presentation.map.actorContext && this.presentation.map.characterCutoutsActive),
+        this.greenFigure(
+          shape,
+          size,
+          ctx === this.presentation.map.sunActorContext ||
+            (ctx === this.presentation.map.actorContext && this.presentation.map.characterCutoutsActive),
+        ),
         x,
         y,
       );
     else
       this.gfx.drawShape(ctx, shape, x, y, size, {
         masked: true,
-        card: ctx === this.presentation.map.actorContext && this.presentation.map.characterCutoutsActive,
+        card:
+          ctx === this.presentation.map.sunActorContext ||
+          (ctx === this.presentation.map.actorContext && this.presentation.map.characterCutoutsActive),
       });
     if (ctx === this.presentation.map.actorContext) this.presentation.map.addActorShadow(x, y, size, shape);
   }

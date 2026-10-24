@@ -28,6 +28,7 @@ import { castsContactShadow, ContactShadows } from './contactShadows.ts';
 import { useCharacterCutouts } from './characterMask.ts';
 import { addZoomFiltering } from './zoomFiltering.ts';
 import { FogEdges } from './fogEdges.ts';
+import { SunShadows } from './sunShadows.ts';
 import { WaterSurface } from './waterSurface.ts';
 import { cardGroundLift } from './cardGroundLift.ts';
 
@@ -45,6 +46,8 @@ export class TileMapScene {
   readonly rect: ScreenRect;
   readonly terrainContext: CanvasRenderingContext2D;
   readonly actorContext: CanvasRenderingContext2D;
+  readonly sunActorContext: CanvasRenderingContext2D;
+  private readonly sunShadows: SunShadows;
   readonly effectContext: CanvasRenderingContext2D;
   private characterCutouts = false;
   private readonly filters: ReturnType<typeof addZoomFiltering>[] = [];
@@ -147,6 +150,17 @@ export class TileMapScene {
         });
       }
     }
+    const shadowCanvas = document.createElement('canvas');
+    shadowCanvas.width = shadowCanvas.height = size;
+    this.sunActorContext = shadowCanvas.getContext('2d')!;
+    this.sunActorContext.imageSmoothingEnabled = false;
+    this.sunActorContext.translate(-cell, -cell);
+    const shadowTexture = new CanvasTexture(shadowCanvas);
+    shadowTexture.minFilter = shadowTexture.magFilter = NearestFilter;
+    shadowTexture.generateMipmaps = false;
+    this.textures.push(shadowTexture);
+    this.sunShadows = new SunShadows(shadowTexture, this.buildings.shadowTexture, this.trees.shadowTexture);
+    this.scene.add(this.sunShadows.actors.mesh, this.sunShadows.buildings.mesh, this.sunShadows.trees.mesh);
     this.scene.add(this.localTerrain);
     this.scene.add(this.shadows.mesh);
     for (let i = 0; i < 4; i++) {
@@ -238,6 +252,11 @@ export class TileMapScene {
     if (this.options.contactShadows && this.options.buildings) this.buildings.forEachFootprint((x, y) => this.shadows.add(x, y, 1));
     this.cubes.set(landscape, cells, this.options);
     this.shoreline.set(landscape, cells, this.options.recessedWater);
+    this.sunShadows.setGround(landscape, cells);
+    if (this.sunShadows.active) {
+      this.buildings.forEachShadow((x, y, slot, anchor) => this.sunShadows.buildings.add(x, y, 1, [slot / 8, 0, 1 / 8, 1], anchor));
+      this.trees.forEachShadow((x, y, slot, anchor) => this.sunShadows.trees.add(x, y, 1, [slot / 8, 0, 1 / 8, 1], anchor));
+    }
     this.landscapeMesh.visible = !!landscape;
     // Preserve exact local floors. The landscape supplies either distant
     // outdoor scenery or black tiles from the town/castle visibility mask.
@@ -352,11 +371,13 @@ export class TileMapScene {
 
   beginFrame(): void {
     this.shadows.reset();
+    this.sunShadows.reset();
     const { x, y, w, h } = this.rect;
     this.terrainContext.fillStyle = '#000';
     this.terrainContext.fillRect(x, y, w, h);
     this.actorContext.clearRect(x, y, w, h);
     this.effectContext.clearRect(x, y, w, h);
+    this.sunActorContext.clearRect(x, y, w, h);
     this.inverted.value = false;
     this.changed();
   }
@@ -380,15 +401,31 @@ export class TileMapScene {
     this.invalidate();
   }
 
+  setSun(phase: number, timer: number, outdoors: boolean): void {
+    this.sunShadows.setSun(phase, timer, outdoors && this.options.sunShadows);
+  }
+
   /** Called only after actual visible card artwork has been drawn. */
   addActorShadow(x: number, y: number, size: number, shape: number): void {
-    if (!this.options.contactShadows || !this.options.characters) return;
+    if (!this.options.characters) return;
     const tile = this.rect.w / this.visibleSide;
     const col = (x - this.rect.x) / tile;
     const row = (y - this.rect.y) / tile;
     const ground = this.shadowCells[Math.floor(row) * this.visibleSide + Math.floor(col)]?.base ?? Shape.Void;
     if (!castsContactShadow(shape, ground)) return;
-    this.shadows.add(col + size / tile / 2 - this.visibleSide / 2, this.visibleSide / 2 - row - size / tile / 2, size / tile);
+    const footX = col + size / tile / 2 - this.visibleSide / 2;
+    const footY = this.visibleSide / 2 - row - size / tile / 2;
+    if (this.options.contactShadows) this.shadows.add(footX, footY, size / tile);
+    if (this.sunShadows.active) {
+      const canvasSize = this.actorContext.canvas.width;
+      this.sunShadows.actors.add(
+        footX,
+        footY,
+        size / tile,
+        [(x - this.rect.x) / canvasSize, 1 - (y - this.rect.y + size) / canvasSize, size / canvasSize, size / canvasSize],
+        [0.5, 0],
+      );
+    }
   }
 
   orbit(dx: number, dy: number): void {
@@ -490,6 +527,7 @@ export class TileMapScene {
   }
 
   dispose(): void {
+    this.sunShadows.dispose();
     this.water.dispose();
     this.fog.dispose();
     for (const texture of this.textures) texture.dispose();

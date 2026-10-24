@@ -161,6 +161,17 @@ export class BuildingBillboards {
     this.mesh.instanceMatrix.needsUpdate = true;
   }
 
+  get shadowTexture() {
+    return this.texture;
+  }
+
+  forEachShadow(visit: (x: number, y: number, slot: number, anchor: [number, number]) => void): void {
+    if (this.mesh.visible)
+      this.positions.forEach(({ x, y, anchor }, i) =>
+        visit(x, y, this.slots.getX(i), anchor ? [anchor[0] / 64, 1 - anchor[1] / 64] : [0.5, 0]),
+      );
+  }
+
   setFiltering(mode: ZoomFiltering): void {
     this.filter(mode);
   }
