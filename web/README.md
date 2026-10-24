@@ -599,3 +599,14 @@ For an isolated WebGL check that never reads or writes a game save, open
 `/tools/preview-sun-shadows.html` on the development server. Its Morning, Noon,
 Afternoon, Night and Rotate camera buttons exercise the production shadow code
 on a neutral surface using the existing Standard tree pixels.
+
+### Camera-relative WASD
+
+**Mouse settings → WASD: Camera / World** enables camera-relative WASD in
+Free camera mode (default Camera). It applies to controller-mode keyboard
+WASD at top-level exploration/combat movement only. Fixed camera, letter-command
+keyboard mode, arrows, gamepad directions, dungeon navigation, menus, text
+input and targeting prompts retain existing meanings. The four view sectors
+switch beyond 45° plus a 6° buffer and switch back below 45° minus 6°, avoiding
+jitter. Camera mode changes reset the sector. Presentation presets preserve
+this input preference.

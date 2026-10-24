@@ -26,6 +26,7 @@ export interface View3DSettings {
   waterHighlights: boolean;
   alphaWater: boolean;
   sunShadows: boolean;
+  cameraRelative: boolean;
 }
 
 export const DEFAULT_3D_SETTINGS: Readonly<View3DSettings> = {
@@ -47,6 +48,7 @@ export const DEFAULT_3D_SETTINGS: Readonly<View3DSettings> = {
   rightDrag: true,
   wheelZoom: true,
   menuClicks: true,
+  cameraRelative: true,
   treeCards: false,
   zoomFiltering: 'Auto',
   softFog: true,

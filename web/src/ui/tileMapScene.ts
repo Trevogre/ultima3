@@ -28,6 +28,7 @@ import { castsContactShadow, ContactShadows } from './contactShadows.ts';
 import { useCharacterCutouts } from './characterMask.ts';
 import { addZoomFiltering } from './zoomFiltering.ts';
 import { FogEdges } from './fogEdges.ts';
+import { CameraMovement } from './cameraMovement.ts';
 import { SunShadows } from './sunShadows.ts';
 import { WaterSurface } from './waterSurface.ts';
 import { cardGroundLift } from './cardGroundLift.ts';
@@ -50,6 +51,7 @@ export class TileMapScene {
   private readonly sunShadows: SunShadows;
   readonly effectContext: CanvasRenderingContext2D;
   private characterCutouts = false;
+  private readonly movement = new CameraMovement();
   private readonly filters: ReturnType<typeof addZoomFiltering>[] = [];
   private readonly shading = { value: 1 };
   private readonly fog = new FogEdges();
@@ -474,7 +476,12 @@ export class TileMapScene {
     return useTreeCards(this.options.treeCards, this.tilt, hasCutout) ? Shape.Grass : shape;
   }
 
+  movementKey(key: string): string {
+    return this.movement.key(key);
+  }
+
   private updateCamera(): void {
+    this.movement.update(this.yaw, this.options.enabled && !this.options.fixedCamera && this.options.cameraRelative);
     if (this.treeMode !== this.treeCardsActive || this.characterCutouts !== this.characterCutoutsActive) {
       this.treeMode = this.treeCardsActive;
       this.characterCutouts = this.characterCutoutsActive;

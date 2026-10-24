@@ -696,11 +696,15 @@ export class Screen implements GameIO {
    * Read a key, translating the controller stand-ins when in controller
    * mode (WASD to the d-pad, Enter/Z to A, Escape/X/B to B, C to X, V/Y to Y).
    */
-  private async readKey(timeoutMs?: number): Promise<string | null> {
+  private async readKey(timeoutMs?: number, movement = false): Promise<string | null> {
     const scripted = this.macro.shift();
     if (scripted !== undefined) return scripted;
     const key = timeoutMs === undefined ? await this.keyboard.nextKey() : await this.keyboard.nextKeyOrTimeout(timeoutMs);
     if (key === null) return null;
+    if (movement && this.inputMode === 'controller' && this.keyboard.lastSource === 'keyboard' && /^[wasd]$/i.test(key)) {
+      const relative = this.presentation.map.movementKey(key);
+      if (relative !== key) return relative;
+    }
     return this.inputMode === 'controller' ? controllerKeyFor(key) : key;
   }
 
@@ -1180,6 +1184,11 @@ export class Screen implements GameIO {
           label: `Left drag: ${onOff(this.view3D.leftDrag)}`,
           hint: 'In Free mode, hold the normal mouse button and drag over the map to orbit.',
         },
+        {
+          key: 'D',
+          label: `WASD: ${this.view3D.cameraRelative ? 'Camera' : 'World'}`,
+          hint: 'Controller-mode Free camera movement. Six-degree buffer; arrows stay world-relative.',
+        },
         { key: 'R', label: `Right drag: ${onOff(this.view3D.rightDrag)}`, hint: 'Also allow secondary-click dragging in Free mode.' },
         { key: 'W', label: `Scroll zoom: ${onOff(this.view3D.wheelZoom)}`, hint: 'Scroll over the map to zoom in either camera mode.' },
         {
@@ -1189,9 +1198,9 @@ export class Screen implements GameIO {
         },
       ],
       (key) => {
-        const setting = ({ M: 'mouseCamera', L: 'leftDrag', R: 'rightDrag', W: 'wheelZoom', C: 'menuClicks' } as const)[
-          key as 'M' | 'L' | 'R' | 'W' | 'C'
-        ];
+        const setting = (
+          { M: 'mouseCamera', L: 'leftDrag', R: 'rightDrag', W: 'wheelZoom', C: 'menuClicks', D: 'cameraRelative' } as const
+        )[key as 'M' | 'L' | 'R' | 'W' | 'C' | 'D'];
         if (setting) this.set3DSettings({ ...this.view3D, [setting]: !this.view3D[setting] });
       },
     );
@@ -1912,7 +1921,7 @@ export class Screen implements GameIO {
     let left = timeoutMs;
     for (;;) {
       const asked = this.keyboard.activeTime();
-      const key = await this.readKey(left);
+      const key = await this.readKey(left, scope !== 'dungeon');
       if (key === null || this.promptMode === 'keyboard') return key;
       if (DIRECTION_KEYS.includes(key)) return key;
       const shortcuts = BUTTON_SHORTCUTS[scope];
