@@ -644,6 +644,7 @@ async function combatAttack(world: World, io: GameIO, member: number, preset?: {
   }
   if (!dir) return cancelled(world, io);
   if (dir.dx === 0 && dir.dy === 0) return;
+  io.animateActor?.(`member:${member}`, 'attack', Math.atan2(dir.dx, dir.dy));
   io.sound(Sound.Swish[member]);
 
   const missed = () => {
@@ -826,7 +827,10 @@ async function monsterAttack(world: World, io: GameIO, i: number, target: number
   const c = world.combat!;
   const type = c.monsterShape;
   if (target < 0) return;
-  void i;
+  const attacker = c.monsters[i],
+    recipient = c.members[target];
+  if (attacker && recipient)
+    io.animateActor?.(`monster:${i}`, magic ? 'cast' : 'attack', Math.atan2(recipient.x - attacker.x, recipient.y - attacker.y));
 
   if (type === 0x1c || type === 0x3c || type === 0x38) await poison(world, io, target);
   else if (type === 0x2e) pilfer(world, io, target);

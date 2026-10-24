@@ -1,7 +1,9 @@
 export type ZoomFiltering = 'Crisp' | 'Stable' | 'Auto';
+import { readModelSet, type ModelSet } from './modelSets.ts';
 
 export interface View3DSettings {
   renderStyle: 'Cards' | 'Models';
+  modelSet: ModelSet;
   enabled: boolean;
   characters: boolean;
   buildings: boolean;
@@ -33,6 +35,7 @@ export interface View3DSettings {
 
 export const DEFAULT_3D_SETTINGS: Readonly<View3DSettings> = {
   renderStyle: 'Cards',
+  modelSet: 'Low-poly',
   enabled: true,
   characters: true,
   buildings: true,
@@ -110,11 +113,12 @@ export function read3DSettings(value: unknown): View3DSettings {
   const settings = { ...DEFAULT_3D_SETTINGS };
   if (!value || typeof value !== 'object') return settings;
   for (const key of Object.keys(settings) as (keyof View3DSettings)[]) {
-    if (key === 'fixedAngle' || key === 'fixedRotation' || key === 'zoomFiltering' || key === 'renderStyle') continue;
+    if (key === 'fixedAngle' || key === 'fixedRotation' || key === 'zoomFiltering' || key === 'renderStyle' || key === 'modelSet') continue;
     const saved: unknown = Reflect.get(value, key);
     if (typeof saved === 'boolean') settings[key] = saved;
   }
   const filtering: unknown = Reflect.get(value, 'zoomFiltering');
+  settings.modelSet = readModelSet(Reflect.get(value, 'modelSet'));
   if (Reflect.get(value, 'renderStyle') === 'Models') settings.renderStyle = 'Models';
   if (filtering === 'Crisp' || filtering === 'Stable' || filtering === 'Auto') settings.zoomFiltering = filtering;
   const angle: unknown = Reflect.get(value, 'fixedAngle');

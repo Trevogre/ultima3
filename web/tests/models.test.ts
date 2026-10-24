@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { InstancedMesh, Matrix4, Vector3 } from 'three';
 import { modelGeometry } from '../src/ui/modelAssets.ts';
 import { ModelHeadings, modelActors, type ModelActor } from '../src/ui/modelActors.ts';
@@ -10,6 +10,7 @@ import { buildViewport } from '../src/game/viewport.ts';
 import { newWorld, savedCopy } from './helpers.ts';
 
 const actor: ModelActor = { id: 'party', shape: 136, x: 0, y: 0, worldX: 63, worldY: 10, size: 1, ground: Shape.Grass };
+afterEach(() => vi.unstubAllGlobals());
 
 describe('separate low-poly presentation', () => {
   it('makes town letter barriers half-height solid blocks in model mode too', () => {
@@ -110,18 +111,19 @@ describe('separate low-poly presentation', () => {
   });
 
   it('batches filtered scenery, recesses water, clears stale actors and uses physical sun shadows', () => {
+    vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => ({}) }) });
     const scene = new ModelScene();
     const gfx = {} as GraphicsSet;
     scene.setLandscape(null, [{ base: Shape.Void }, { base: Shape.Forest }, { base: Shape.Water }, { base: Shape.Grass }], gfx, true);
     const batches = () => scene.group.children.filter((c): c is InstancedMesh => c instanceof InstancedMesh);
-    expect(batches().map((b) => b.count)).toEqual([3, 1, 1]); // ground, opaque unknown, forest
+    expect(batches().map((b) => b.count)).toEqual([3, 1, 0, 1]); // ground, opaque unknown, flags, forest
     const matrix = new Matrix4();
     batches()[0].getMatrixAt(1, matrix);
     expect(new Vector3(0, 0, 0.5).applyMatrix4(matrix).z).toBeCloseTo(-0.22);
     scene.setActors([actor], 'surface', 64, true);
-    expect(batches().at(-1)!.count).toBe(1);
+    expect(scene.actorCount).toBe(1);
     scene.setActors([], 'surface', 64, true);
-    expect(batches().at(-1)!.count).toBe(0);
+    expect(scene.actorCount).toBe(0);
     scene.setSun(3, 12, true);
     const morning = scene.sun.position.x;
     expect(scene.shadowEnabled).toBe(true);

@@ -100,6 +100,8 @@ export const Music = {
 export type SpellFlash = 'caster' | 'target' | 'window';
 
 export interface GameIO {
+  /** Optional presentation-only action cue for articulated model renderers. */
+  animateActor?(id: string, action: 'attack' | 'cast', yaw?: number): void;
   /** Print to the scrolling message area. `\n` starts a new line. (`UPrintWin`) */
   print(text: string): void;
   /** Print entry `n` (1-based, as in the C source) of the Messages table. (`UPrintMessage`) */

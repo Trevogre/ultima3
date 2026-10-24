@@ -2569,6 +2569,7 @@ export class Screen implements GameIO {
   }
 
   async flashSpell(kind: SpellFlash, member: number, sound: string): Promise<void> {
+    this.animateActor(`member:${member}`, 'cast');
     const rect = this.tileSetName === 'Standard' && !this.viewCovered ? this.spellFlashRect(kind, member) : null;
     if (!rect) {
       await this.flashTiles();
@@ -2583,6 +2584,9 @@ export class Screen implements GameIO {
     await this.pause(100);
     this.pulse = null;
     this.viewDirty = true;
+  }
+  animateActor(id: string, action: 'attack' | 'cast', yaw?: number): void {
+    this.presentation.map.triggerModelAction(id, action, yaw);
   }
 
   private drawPulse(): void {

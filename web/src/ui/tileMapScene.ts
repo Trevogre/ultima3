@@ -114,6 +114,10 @@ export class TileMapScene {
   setModelActors(actors: ModelActor[], context: string, side: number, wraps: boolean): void {
     if (this.modelMode) this.models.setActors(actors, context, side, wraps);
   }
+  triggerModelAction(id: string, action: 'attack' | 'cast', yaw?: number): void {
+    this.models.trigger(id, action, yaw);
+    this.invalidate();
+  }
   onCameraModeToggle: (() => void) | null = null;
   onCardModeChange: (() => void) | null = null;
 
@@ -392,6 +396,7 @@ export class TileMapScene {
   }
 
   setOptions(options: View3DSettings): void {
+    this.models.setSet(options.modelSet);
     const changedMode = options.fixedCamera !== this.options.fixedCamera;
     const changedAngle = options.fixedAngle !== this.options.fixedAngle;
     const changedRotation = options.fixedRotation !== this.options.fixedRotation;
@@ -663,6 +668,7 @@ export class TileMapScene {
   }
 
   animate(time: number, active: boolean): void {
+    if (this.models.animate(time, active && this.modelMode)) this.invalidate();
     if (active && this.options.waterHighlights && this.water.mesh.count > 0) {
       this.water.time.value = time / 1000;
       this.invalidate();

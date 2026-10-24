@@ -149,6 +149,14 @@ export function modelGeometry(shape: number): BufferGeometry {
       demon,
     );
   }
+  if (shape === Shape.Town || shape === Shape.Castle)
+    part(
+      new CylinderGeometry(0.012, 0.012, shape === Shape.Town ? 0.7 : 0.4, 6).rotateX(Math.PI / 2),
+      0xc7b086,
+      0,
+      0.06,
+      shape === Shape.Town ? 0.96 : 1.11,
+    );
   const geometry = mergeGeometries(parts);
   for (const p of parts) p.dispose();
   geometry.computeBoundingSphere();

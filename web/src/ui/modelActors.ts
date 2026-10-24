@@ -13,6 +13,7 @@ export interface ModelActor {
   size: number;
   ground: number;
   poisoned?: boolean;
+  hit?: boolean;
 }
 
 /** Select only figures already admitted by the normal viewport visibility rules. */
@@ -28,7 +29,7 @@ export function modelActors(world: World, view: Viewport, style: 'grid' | 'line'
     const worldX = world.constrain(view.originX + col),
       worldY = world.constrain(view.originY + row);
     const add = (id: string, shape: number, size = 1, dx = 0, dy = 0, poisoned = false) =>
-      actors.push({ id, shape, x: x + dx, y: y + dy, worldX, worldY, size, ground: cell.base, poisoned });
+      actors.push({ id, shape, x: x + dx, y: y + dy, worldX, worldY, size, ground: cell.base, poisoned, hit: !!cell.hit });
     const member = (m: number, grid: boolean) => {
       if (world.party.memberSlot(m) < 0 || !world.memberAlive(m)) return;
       const p = world.member(m);
