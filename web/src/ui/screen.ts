@@ -1095,7 +1095,7 @@ export class Screen implements GameIO {
     await this.settingsList(
       'Visuals',
       () => [
-        { key: 'T', label: `Tiles: ${this.tileSetName}` },
+        { key: 'T', label: `Tiles: ${this.tileSetName}`, hint: 'F6 cycles tile sets without opening a menu.' },
         { key: 'M', label: 'Mouse settings' },
         { key: 'P', label: 'Presentation', hint: `Current: ${presentationPreset(this.view3D)}. Adjust individual options in 3D Settings.` },
         { key: 'L', label: `Scanlines: ${onOff(this.scanlines)}` },
@@ -1306,11 +1306,19 @@ export class Screen implements GameIO {
     }
   }
 
-  /** Step to the next tile set, round and round (a development shortcut, not in the help; see main.ts). */
+  private cyclingTiles = false;
+
+  /** F6 cycles tile sets without entering the game command queue. */
   async nextTileSet(): Promise<void> {
-    const next = TILE_SETS[(TILE_SETS.indexOf(this.tileSetName) + 1) % TILE_SETS.length];
-    await this.loadTiles(next);
-    this.onSettingsChange?.();
+    if (this.cyclingTiles) return;
+    this.cyclingTiles = true;
+    try {
+      const next = TILE_SETS[(TILE_SETS.indexOf(this.tileSetName) + 1) % TILE_SETS.length];
+      await this.loadTiles(next);
+      this.onSettingsChange?.();
+    } finally {
+      this.cyclingTiles = false;
+    }
   }
 
   // -------------------------------------------------------------------------

@@ -339,13 +339,20 @@ async function start(): Promise<void> {
     true,
   );
 
-  // Development shortcut, not in the help: Option-Shift-6 (Alt-Shift-6, the ^ key) steps to the next tile set.
-  window.addEventListener('keydown', (e) => {
-    if (e.altKey && e.shiftKey && e.code === 'Digit6') {
-      e.preventDefault();
-      void screen.nextTileSet();
-    }
-  });
+  // Presentation only: capture before Keyboard so cycling never spends a turn.
+  window.addEventListener(
+    'keydown',
+    (event) => {
+      const cycleKey = event.key === 'F6' && !event.altKey && !event.shiftKey;
+      const legacyKey = event.altKey && event.shiftKey && event.code === 'Digit6';
+      if ((!cycleKey && !legacyKey) || event.ctrlKey || event.metaKey) return;
+      if (document.querySelector('dialog[open], input:focus, textarea:focus, [contenteditable="true"]:focus')) return;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+      if (!event.repeat) void screen.nextTileSet();
+    },
+    true,
+  );
 
   // Keep the browser from evicting the saved game under disk pressure (Chrome, Edge, Firefox honour this).
   if (navigator.storage?.persist) void navigator.storage.persist();

@@ -530,3 +530,6 @@ development). It uses the game's own `GraphicsSet`, including animation,
 with controls for ground, size, sheet frames, animation and monster variant
 ordering. A single set can also be selected. Choices stay in the URL.
 The page and its assets are included in the offline cache.
+
+**F6** cycles through all twelve tile sets and remembers the selection without
+spending a turn. On Macs with media keys, use **Fn–F6**.
