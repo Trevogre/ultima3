@@ -196,6 +196,16 @@ for index,spec in building_specs.items():
     mask=Image.new('L',(N,N)); painter=ImageDraw.Draw(mask)
     painter.polygon(spec['outline'],fill=255)
     painter.rectangle((x0,y0,x1-1,y1-1),fill=255)
+    # Reviewed gaps below the cloth and between the pole and roof/towers.
+    # Alpha only: retain the original RGB and the complete classic tile.
+    if index == 6:
+        painter.polygon([(45,24),(86,24),(60,60),(60,35),(45,35)],fill=0)
+    else:
+        for y in range(25,46):
+            for x in list(range(39,59))+list(range(68,83)):
+                r,g,b,_=base.getpixel((x,y))
+                if g>r*1.1 and r<100:
+                    mask.putpixel((x,y),0)
     building_masks[index]=mask
 # Reviewed chest silhouettes for angled cards only. Keep the complete painted
 # tile in the classic atlas; this derived sheet changes alpha, never RGB paint.

@@ -161,6 +161,12 @@ describe('opt-in Van Gogh art package', () => {
       expect(changed).toBeGreaterThan(100);
       expect(background).toBeGreaterThan(1000);
     }
+    // Reviewed sky gaps under the flags stay clear in both animated cards.
+    for (const frame of [0, 1]) {
+      expect(cards(frame * 4 * 128 + 52, 30)[3]).toBe(0);
+      expect(cards((frame * 4 + 1) * 128 + 54, 35)[3]).toBe(0);
+      expect(cards((frame * 4 + 1) * 128 + 75, 35)[3]).toBe(0);
+    }
     // Cool-coloured interiors and pale outer walls must never become holes.
     for (const [slot, x, y] of [
       [0, 38, 65],
