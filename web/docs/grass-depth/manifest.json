@@ -1,0 +1,20 @@
+[
+  {
+    "set": "Standard",
+    "source": "Standard-Tiles.png",
+    "sourceSha256": "aaf504c8f381af702ff2f9f95a77432e893007eec870b09d7d123a33933735ae",
+    "atlas": "Standard-GrassCards.png",
+    "sha256": "868cf5bb186d97a493bc2cab1090c4f7fc7f266e7112116ef3b9aca08ea7f6d9",
+    "marks": 53,
+    "selection": "reviewed native green >= 85"
+  },
+  {
+    "set": "PC EGA",
+    "source": "PC EGA-Tiles.png",
+    "sourceSha256": "285d86dcf203059443c449ac889379067556894deb369daac9af2403502635ef",
+    "atlas": "PC EGA-GrassCards.png",
+    "sha256": "fb33ca16a437c15289e1b695951f01808fb2612fa7610298cd7614a67ca8342c",
+    "marks": 10,
+    "selection": "reviewed EGA grass green (0,176,0)"
+  }
+]

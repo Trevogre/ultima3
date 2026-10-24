@@ -1,0 +1,109 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body style="margin: 0; background: #171717; color: white; font: 16px sans-serif">
+    <div>
+      <select id="set">
+        <option>Standard</option>
+        <option>PC EGA</option></select
+      ><button id="depth">Grass depth On/Off</button><button id="overhead">Overhead</button><button id="angle">Angled</button
+      ><button id="zoom">Zoom out/in</button><button id="orbit">Rotate 90°</button><span id="direction"></span>
+    </div>
+    <canvas></canvas>
+    <script type="module">
+      import * as T from 'three';
+      import { GraphicsSet } from '/src/ui/graphics.ts';
+      import { GrassDepth } from '/src/ui/grassDepth.ts';
+      import { CameraMovement } from '/src/ui/cameraMovement.ts';
+      import { Key } from '/src/game/io.ts';
+      const renderer = new T.WebGLRenderer({ canvas: document.querySelector('canvas'), antialias: false });
+      renderer.setSize(900, 650);
+      renderer.setClearColor('#222');
+      const scene = new T.Scene(),
+        camera = new T.OrthographicCamera(-2, 2, 1.45, -1.45, 0.1, 100);
+      let yaw = 0,
+        tilt = Math.PI / 4,
+        zoom = 1,
+        enabled = true,
+        gfx;
+      const movement = new CameraMovement(),
+        grass = new GrassDepth();
+      scene.add(grass.mesh);
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 64;
+      const texture = new T.CanvasTexture(canvas);
+      texture.colorSpace = T.SRGBColorSpace;
+      texture.magFilter = texture.minFilter = T.NearestFilter;
+      texture.wrapS = texture.wrapT = T.RepeatWrapping;
+      texture.repeat.set(2, 2);
+      scene.add(new T.Mesh(new T.PlaneGeometry(2, 2), new T.MeshBasicMaterial({ map: texture })));
+      const pawn = new T.Mesh(new T.BoxGeometry(0.08, 0.08, 0.12), new T.MeshBasicMaterial({ color: '#fff' }));
+      pawn.position.z = 0.06;
+      scene.add(pawn);
+      function render() {
+        camera.position.set(10 * Math.sin(yaw) * Math.sin(tilt), -10 * Math.cos(yaw) * Math.sin(tilt), 10 * Math.cos(tilt));
+        camera.up.set(-Math.sin(yaw) * Math.cos(tilt), Math.cos(yaw) * Math.cos(tilt), Math.sin(tilt));
+        camera.lookAt(0, 0, 0);
+        camera.zoom = zoom;
+        camera.updateProjectionMatrix();
+        grass.faceCamera(camera, tilt, 225 * zoom);
+        movement.update(yaw, true);
+        document.querySelector('#direction').textContent =
+          ' W moves ' + { [Key.Up]: 'North', [Key.Left]: 'West', [Key.Down]: 'South', [Key.Right]: 'East' }[movement.key('w')];
+        renderer.render(scene, camera);
+      }
+      async function load() {
+        gfx = await GraphicsSet.load(document.querySelector('#set').value, '/graphics/');
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        gfx.drawShape(ctx, 2, 0, 0, 64);
+        texture.needsUpdate = true;
+        grass.set(
+          Array.from({ length: 4 }, () => ({ base: 2 })),
+          gfx,
+          enabled,
+        );
+        render();
+      }
+      document.querySelector('#set').onchange = load;
+      document.querySelector('#depth').onclick = () => {
+        enabled = !enabled;
+        grass.set(
+          Array.from({ length: 4 }, () => ({ base: 2 })),
+          gfx,
+          enabled,
+        );
+        render();
+      };
+      document.querySelector('#overhead').onclick = () => {
+        tilt = 0;
+        render();
+      };
+      document.querySelector('#angle').onclick = () => {
+        tilt = Math.PI / 4;
+        render();
+      };
+      document.querySelector('#zoom').onclick = () => {
+        zoom = zoom === 1 ? 0.1 : 1;
+        render();
+      };
+      document.querySelector('#orbit').onclick = () => {
+        yaw += Math.PI / 2;
+        render();
+      };
+      window.addEventListener('keydown', (e) => {
+        if (!/^[wasd]$/i.test(e.key)) return;
+        e.preventDefault();
+        const k = movement.key(e.key);
+        if (k === Key.Up) pawn.position.y += 0.1;
+        if (k === Key.Down) pawn.position.y -= 0.1;
+        if (k === Key.Left) pawn.position.x -= 0.1;
+        if (k === Key.Right) pawn.position.x += 0.1;
+        render();
+      });
+      await load();
+    </script>
+  </body>
+</html>

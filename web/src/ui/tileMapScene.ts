@@ -29,6 +29,7 @@ import { useCharacterCutouts } from './characterMask.ts';
 import { addZoomFiltering } from './zoomFiltering.ts';
 import { FogEdges } from './fogEdges.ts';
 import { CameraMovement } from './cameraMovement.ts';
+import { GrassDepth } from './grassDepth.ts';
 import { SunShadows } from './sunShadows.ts';
 import { WaterSurface } from './waterSurface.ts';
 import { cardGroundLift } from './cardGroundLift.ts';
@@ -52,6 +53,7 @@ export class TileMapScene {
   readonly effectContext: CanvasRenderingContext2D;
   private characterCutouts = false;
   private readonly movement = new CameraMovement();
+  private readonly grass = new GrassDepth();
   private readonly filters: ReturnType<typeof addZoomFiltering>[] = [];
   private readonly shading = { value: 1 };
   private readonly fog = new FogEdges();
@@ -239,13 +241,14 @@ export class TileMapScene {
     this.scene.add(this.shoreline.mesh);
     this.water = new WaterSurface(this.inverted);
     this.scene.add(this.water.mesh);
-    this.scene.add(this.fog.mesh);
+    this.scene.add(this.fog.mesh, this.grass.mesh);
     this.camera = new OrthographicCamera(-side / 2, side / 2, side / 2, -side / 2, 0.1, 500);
     this.updateCamera();
   }
 
   /** Batch the entire landscape in one draw call, using a small animated tile atlas. */
   setLandscape(landscape: Landscape | null, gfx: GraphicsSet, cells: ViewCell[]): void {
+    this.grass.set(cells, gfx, this.options.grassDepth);
     this.water.set(landscape, cells, gfx, this.options);
     this.fog.set(landscape, cells, this.options.softFog, this.options.recessedWater);
     this.trees.set(landscape, cells, gfx, this.treeCardsActive);
@@ -343,6 +346,7 @@ export class TileMapScene {
     this.partyCards.forEach(({ mesh }) => {
       mesh.visible = split;
     });
+    this.grass.faceCamera(this.camera, this.tilt, (this.rect.w / this.visibleSide) * this.zoom);
     this.faceActors();
   }
 
@@ -400,6 +404,7 @@ export class TileMapScene {
     this.buildings.setDaylight(colour);
     this.trees.setDaylight(colour);
     this.water.material.color.setRGB(...colour);
+    this.grass.setDaylight(colour);
     this.invalidate();
   }
 
@@ -506,6 +511,7 @@ export class TileMapScene {
     this.camera.lookAt(x, y, 0);
     this.camera.zoom = this.zoom;
     this.camera.updateProjectionMatrix();
+    this.grass.faceCamera(this.camera, this.tilt, (this.rect.w / this.visibleSide) * this.zoom);
     this.faceActors();
     this.buildings.faceCamera(this.camera, this.tilt);
     this.trees.faceCamera(this.camera, this.tilt);
@@ -534,6 +540,7 @@ export class TileMapScene {
   }
 
   dispose(): void {
+    this.grass.dispose();
     this.sunShadows.dispose();
     this.water.dispose();
     this.fog.dispose();

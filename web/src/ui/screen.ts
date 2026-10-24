@@ -1063,6 +1063,14 @@ export class Screen implements GameIO {
           disabled,
           hint: 'East-to-west sun casts card silhouettes. Long at dawn/dusk; no sun shadows at night.',
         },
+        {
+          key: 'K',
+          label: `Grass depth: ${onOff(this.view3D.grassDepth)}`,
+          disabled,
+          hint: this.gfx.grass
+            ? 'Short grass cards; fade overhead and far away. Original grass stays beneath.'
+            : 'No reviewed grass cutout for this set; grass remains flat.',
+        },
         { key: 'M', label: `Mouse camera: ${onOff(this.view3D.mouseCamera)}`, disabled },
         {
           key: 'S',
@@ -1117,8 +1125,9 @@ export class Screen implements GameIO {
             U: 'waterHighlights',
             A: 'alphaWater',
             J: 'sunShadows',
+            K: 'grassDepth',
           } as const
-        )[key as 'D' | 'C' | 'L' | 'T' | 'W' | 'N' | 'M' | 'F' | 'Y' | 'S' | 'E' | 'Z' | 'G' | 'H' | 'V' | 'U' | 'A' | 'J'];
+        )[key as 'D' | 'C' | 'L' | 'T' | 'W' | 'N' | 'M' | 'F' | 'Y' | 'S' | 'E' | 'Z' | 'G' | 'H' | 'V' | 'U' | 'A' | 'J' | 'K'];
         if (setting) this.set3DSettings({ ...this.view3D, [setting]: !this.view3D[setting] });
         else if (key === 'Q') {
           const modes = ['Crisp', 'Stable', 'Auto'] as const;

@@ -21,6 +21,7 @@
  * `FullUpdate()` advanced every idle tick in the original.
  */
 
+import { GRASS_LAYOUTS, type GrassPatch } from './grassLayouts.ts';
 import { VEGETATION_LAYOUTS, type VegetationLayout } from './vegetationLayouts.ts';
 import { characterCard, clearCharacterBackground } from './characterMask.ts';
 import { DUNGEON_STYLES, paintDungeonSheet, type DungeonStyle } from './dungeonArt.ts';
@@ -215,6 +216,7 @@ export class GraphicsSet {
     readonly forestCard: HTMLImageElement | null = null,
     readonly treeCards: HTMLImageElement | null = null,
     readonly brushCards: HTMLImageElement | null = null,
+    readonly grass: { image: HTMLImageElement; patches: readonly GrassPatch[] } | null = null,
     readonly vegetation: { image: HTMLImageElement; layout: VegetationLayout } | null = null,
   ) {
     this.tileSize = tiles.width / TILE_COLUMNS;
@@ -275,6 +277,7 @@ export class GraphicsSet {
     const treeCards = await tryLoad('TreeCards', ['png'], false);
     const brushCards = await tryLoad('BrushCards', ['png'], false);
     const vegetationCards = await tryLoad('VegetationCards', ['png'], false);
+    const grassCards = await tryLoad('GrassCards', ['png'], false);
     return new GraphicsSet(
       tiles,
       applyMask(tiles, mask),
@@ -290,6 +293,7 @@ export class GraphicsSet {
       forestCard,
       treeCards,
       brushCards,
+      grassCards && GRASS_LAYOUTS[name] ? { image: grassCards, patches: GRASS_LAYOUTS[name] } : null,
       vegetationCards && VEGETATION_LAYOUTS[name] ? { image: vegetationCards, layout: VEGETATION_LAYOUTS[name] } : null,
     );
   }

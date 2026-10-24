@@ -27,6 +27,7 @@ export interface View3DSettings {
   alphaWater: boolean;
   sunShadows: boolean;
   cameraRelative: boolean;
+  grassDepth: boolean;
 }
 
 export const DEFAULT_3D_SETTINGS: Readonly<View3DSettings> = {
@@ -56,6 +57,7 @@ export const DEFAULT_3D_SETTINGS: Readonly<View3DSettings> = {
   waterHighlights: true,
   alphaWater: false,
   sunShadows: true,
+  grassDepth: false,
 };
 
 const DEPTH_OPTIONS = {
@@ -66,6 +68,7 @@ const DEPTH_OPTIONS = {
   waterHighlights: true,
   alphaWater: false,
   sunShadows: true,
+  grassDepth: false,
   enabled: true,
   characters: true,
   buildings: true,

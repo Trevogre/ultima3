@@ -610,3 +610,10 @@ input and targeting prompts retain existing meanings. The four view sectors
 switch beyond 45° plus a 6° buffer and switch back below 45° minus 6°, avoiding
 jitter. Camera mode changes reset the sector. Presentation presets preserve
 this input preference.
+
+### Grass depth
+
+**3D Settings → Grass depth** optionally raises existing grass marks as tiny
+cards, initially for Standard and PC EGA. It defaults off and has no effect on
+other sets. Cards fade overhead and when zoomed out, preserve the flat ground,
+and cast no individual shadows. See [grass review](docs/grass-depth/README.md).
