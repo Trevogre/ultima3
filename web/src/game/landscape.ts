@@ -12,7 +12,7 @@ export interface Landscape {
   wraps: boolean;
 }
 
-/** Whole-map scenery only. Reading it never expands exploration or exposes distant actors. */
+/** Explored scenery only. Reading it never expands exploration or exposes distant actors. */
 export function buildLandscape(world: World, view: Viewport): Landscape {
   const side = world.mapSize;
   const wraps = world.onSurface || world.party.location === Location.Ambrosia;
@@ -44,7 +44,11 @@ export function buildLandscape(world: World, view: Viewport): Landscape {
     const x = i % side;
     const y = Math.floor(i / side);
     const type = value & 0xfc;
-    const discovered = known.has(i) || world.autoMap.squareSeen(world.current.id, x, y);
+    const explored = world.autoMap.squareSeen(world.current.id, x, y);
+    // Charted landmarks are hints on the separate cloth map, not permission
+    // to reveal terrain in the game view. Camera movement cannot explore.
+    if (!visible.has(i) && !explored) return Shape.Void;
+    const discovered = known.has(i) || explored;
     switch (type) {
       case MapValue.Dungeon:
         if (!discovered) return Shape.Mountains;

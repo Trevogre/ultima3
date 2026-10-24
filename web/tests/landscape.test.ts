@@ -3,6 +3,7 @@ import { newWorld } from './helpers.ts';
 import { buildLandscape, landscapeOffset } from '../src/game/landscape.ts';
 import { buildViewport } from '../src/game/viewport.ts';
 import { MapValue, Shape } from '../src/game/tiles.ts';
+import { recordView } from '../src/game/automap.ts';
 import { Location } from '../src/game/party.ts';
 
 function flatWorld() {
@@ -48,16 +49,19 @@ describe('whole-map landscape', () => {
     expect(moved.shapes[32 * 64 + 32]).toBe(Shape.Void);
   });
 
-  it('shows remote terrain without recording it as explored or changing the game', () => {
+  it('hides unexplored terrain without recording it as explored or changing the game', () => {
     const world = flatWorld();
     world.putXYVal(MapValue.Forest, 4, 4);
     const before = world.current.tiles.slice();
     const seen = world.autoMap.toText();
     const land = buildLandscape(world, buildViewport(world));
     expect(land.shapes).toHaveLength(4096);
-    expect(land.shapes[4 * 64 + 4]).toBe(Shape.Forest);
+    expect(land.shapes[4 * 64 + 4]).toBe(Shape.Void);
+
     expect(world.current.tiles).toEqual(before);
     expect(world.autoMap.toText()).toBe(seen);
+    world.autoMap.markSquares(world.current.id, [[4, 4]]);
+    expect(buildLandscape(world, buildViewport(world)).shapes[4 * 64 + 4]).toBe(Shape.Forest);
     expect([world.x, world.y]).toEqual([32, 32]);
   });
 
@@ -68,6 +72,10 @@ describe('whole-map landscape', () => {
     world.monsters.setTileUnder(0, MapValue.Brush);
     world.putXYVal(MapValue.Orc, 3, 4);
     world.putXYVal(MapValue.Frigate, 6, 6);
+    world.autoMap.markSquares(world.current.id, [
+      [3, 4],
+      [6, 6],
+    ]);
     const land = buildLandscape(world, buildViewport(world));
     expect(land.shapes[4 * 64 + 3]).toBe(Shape.Brush);
     expect(land.shapes[6 * 64 + 6]).toBe(Shape.Water);
@@ -81,9 +89,9 @@ describe('whole-map landscape', () => {
     world.putXYVal(MapValue.MoonGate, 5, 4);
     const view = buildViewport(world);
     const hidden = buildLandscape(world, view);
-    expect(hidden.shapes[4 * 64 + 3]).toBe(Shape.Mountains);
-    expect(hidden.shapes[4 * 64 + 4]).toBe(Shape.Grass);
-    expect(hidden.shapes[4 * 64 + 5]).toBe(Shape.Grass);
+    expect(hidden.shapes[4 * 64 + 3]).toBe(Shape.Void);
+    expect(hidden.shapes[4 * 64 + 4]).toBe(Shape.Void);
+    expect(hidden.shapes[4 * 64 + 5]).toBe(Shape.Void);
     world.autoMap.markSquares(world.current.id, [
       [3, 4],
       [4, 4],
@@ -104,7 +112,10 @@ describe('whole-map landscape', () => {
     world.y = (dy + 20) % 64;
     world.putXYVal(MapValue.Town, dx, dy);
     world.putXYVal(MapValue.MoonGate, gx, gy);
-    world.autoMap.markSquares(world.current.id, [[dx, dy]]);
+    world.autoMap.markSquares(world.current.id, [
+      [dx, dy],
+      [gx, gy],
+    ]);
     world.gatesKnown = [0];
     const land = buildLandscape(world, buildViewport(world));
     expect(land.shapes[dy * 64 + dx]).toBe(Shape.Forest);
@@ -124,6 +135,25 @@ describe('whole-map landscape', () => {
     const view = buildViewport(world);
     expect(buildLandscape(world, view).shapes[31 * 64 + 32]).toBe(Shape.Dungeon);
     expect(view.cells[5 * 11 + 7].base).toBe(Shape.Void);
+  });
+
+  it('remembers visible terrain across movement and saved exploration, including wrapping edges', () => {
+    const world = flatWorld();
+    world.x = world.y = 0;
+    const view = buildViewport(world);
+    recordView(world, view);
+    const saved = world.autoMap.toText();
+    const visible = buildLandscape(world, view);
+    expect(visible.shapes[63 * 64 + 63]).toBe(Shape.Grass);
+    expect(visible.shapes[20 * 64 + 20]).toBe(Shape.Void);
+    world.x = world.y = 32;
+    world.autoMap.clear();
+    world.autoMap.fromText(saved);
+    const moved = buildLandscape(world, buildViewport(world));
+    expect(moved.shapes[63 * 64 + 63]).toBe(Shape.Grass);
+    expect(moved.shapes[32 * 64 + 32]).toBe(Shape.Grass);
+    expect(moved.shapes[20 * 64 + 20]).toBe(Shape.Void);
+    expect(world.autoMap.toText()).toBe(saved);
   });
 
   it('places neighbours across the overworld seam next to the party', () => {

@@ -123,6 +123,12 @@ floors and transparent character/effect quads, preserving creature visibility.
 In towns and castles, the original current line-of-sight mask also applies to
 the landscape: hidden tiles stay black, including explored rooms outside current
 sight. Distant terrain and billboarding never override this mask.
+Outdoor distant terrain uses the saved automap exploration mask: currently
+visible and previously explored squares render normally; unknown squares are
+black in every tile set. Camera rotation and zoom never discover terrain.
+**#** opens the separate map; its Sosaria coast chart remains a cloth-map hint,
+not explored terrain. Existing saves retain their exploration; saves without
+exploration data reveal only current sight until the party explores.
 Secret locations stay concealed until visible or discovered; displaying distant
 terrain never records it as explored. Wrapping maps place their seam far from
 the party.
