@@ -9,7 +9,7 @@ import argparse
 import hashlib
 import json
 import math
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps, ImageFilter
 
 ROOT = Path(__file__).resolve().parents[1]
 DOC = ROOT / 'docs/generated/van-gogh'
@@ -61,39 +61,41 @@ for y in range(64,192):
     for x in range(1024):
         r,g,b,a=old.getpixel((x,y)); light=max(r,g,b)/255
         ui.putpixel((x,y),(round(245*light),round(203*light),round(108*light),a))
-# Gold-edged cobalt enamel frame junctions, matching the existing Piece slots.
+# Generated Starry Night impasto material, fitted to the original Piece slots.
+# Mirror a swatch so repeated straight pieces meet on identical edge pixels.
+starry=Image.open(DOC / 'starry-border-draft.png').convert('RGBA')
+sw,sh=starry.size
+swatch=starry.crop((int(sw*.17),int(sh*.16),int(sw*.43),int(sh*.42))).resize((32,32),Image.Resampling.LANCZOS)
+texture=Image.new('RGBA',(64,64))
+texture.paste(swatch,(0,0));texture.paste(ImageOps.mirror(swatch),(32,0))
+texture.paste(ImageOps.flip(swatch),(0,32));texture.paste(ImageOps.flip(ImageOps.mirror(swatch)),(32,32))
+# One painted golden star supplies junctions/caps, rather than geometric metal.
+star=starry.crop((int(sw*.505),int(sh*.035),int(sw*.585),int(sh*.115))).resize((46,46),Image.Resampling.LANCZOS)
+star_mask=Image.new('L',(46,46));ImageDraw.Draw(star_mask).ellipse((1,1,44,44),fill=255)
+star_mask=star_mask.filter(ImageFilter.GaussianBlur(1))
 paths={0:['right','down'],1:['left','right','down'],2:['left','down'],
        3:['up','right','down'],4:['up','right','down','left'],5:['up','left','down'],
        6:['up','right'],7:['up','left','right'],8:['up','left'],9:['left','right'],
        10:['up','down'],11:['right'],12:['left']}
 for slot,directions in paths.items():
-    tile=Image.new('RGBA',(64,64),(0,0,0,255)); d=ImageDraw.Draw(tile)
-    texture=menu.resize((64,64),Image.Resampling.LANCZOS)
-    mask=Image.new('L',(64,64)); md=ImageDraw.Draw(mask)
+    tile=Image.new('RGBA',(64,64),(0,0,0,255))
+    mask=Image.new('L',(64,64));md=ImageDraw.Draw(mask)
     endpoints={'left':(0,32),'right':(64,32),'up':(32,0),'down':(32,64)}
     for direction in directions:
-        end=endpoints[direction]
-        md.line((32,32,*end),fill=255,width=22)
-    tile.paste(texture,(0,0),mask);d=ImageDraw.Draw(tile)
-    for direction in directions:
-        ex,ey=endpoints[direction]
-        if direction in ['left','right']:
-            for yy in [21,43]: d.line((32,yy,ex,yy),fill='#d9a833',width=2)
-            d.line((32,24,ex,24),fill='#f8e9aa',width=1)
-        else:
-            for xx in [21,43]: d.line((xx,32,xx,ey),fill='#d9a833',width=2)
-            d.line((24,32,24,ey),fill='#f8e9aa',width=1)
-    if len(directions)!=2 or slot in [0,2,6,8]:
-        for petal in range(8):
-            angle=petal*math.pi/4
-            cx,cy=32+math.cos(angle)*7,32+math.sin(angle)*7
-            d.ellipse((cx-2,cy-3,cx+2,cy+3),fill='#e8bc48')
-        d.ellipse((29,29,35,35),fill='#775420')
+        band={'left':(0,9,32,54),'right':(32,9,63,54),'up':(9,0,54,32),'down':(9,32,54,63)}[direction]
+        md.rectangle(band,fill=255)
+    md.ellipse((9,9,54,54),fill=255)
+    # Dark blue outer paint grounds the luminous brush strokes against black.
+    tile.paste('#14244b',(0,0,64,64),mask.filter(ImageFilter.MaxFilter(3)))
+    tile.paste(texture,(0,0),mask)
+    if slot not in [9,10]:
+        tile.paste(star,(9,9),star_mask)
     ui.paste(tile,(slot*64,0))
 ui.save(OUT / 'Van Gogh-UI.png')
 files=sorted(OUT.glob('Van Gogh-*.png'))
 manifest=json.loads((DOC/'manifest.json').read_text())
 manifest['interiorGenerator']='OpenAI built-in image_gen; tools/prepare-van-gogh-interiors.py'
+manifest['border']='Generated Starry Night impasto swirls and star junctions; original functional UI slots preserved'
 manifest['font']='Rasterized Georgia Bold at 40px with a shared baseline into 32px cells; no font software bundled'
 manifest['files']={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in files}
 (DOC/'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')

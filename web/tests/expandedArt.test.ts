@@ -239,6 +239,25 @@ describe('opt-in Van Gogh art package', () => {
     expect(VEGETATION_LAYOUTS['Van Gogh']).toEqual(VEGETATION_LAYOUTS.Standard);
   });
 
+  it('joins substantial starry border strokes without seams and keeps painted star junctions', () => {
+    const ui = rgba('UI');
+    let width = 0;
+    for (let n = 0; n < 64; n++) {
+      expect(ui(9 * 64, n)).toEqual(ui(10 * 64 - 1, n));
+      expect(ui(10 * 64 + n, 0)).toEqual(ui(10 * 64 + n, 63));
+      if (
+        ui(9 * 64, n)
+          .subarray(0, 3)
+          .some((v) => v > 30)
+      )
+        width++;
+    }
+    expect(width).toBeGreaterThan(40);
+    const star = ui(32, 32);
+    expect(star[0]).toBeGreaterThan(120);
+    expect(star[1]).toBeGreaterThan(100);
+    expect(star[3]).toBe(255);
+  });
   it('ships readable complete serif lettering and painted interior materials rather than VGA fallbacks', () => {
     const font = rgba('Font'),
       materials = rgba('DungeonMaterials');

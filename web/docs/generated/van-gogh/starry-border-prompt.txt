@@ -1,0 +1,23 @@
+Generated with OpenAI built-in image_gen on 2026-10-24.
+Output: starry-border-draft.png. Original generation retained separately.
+
+Prompt:
+Create a game UI material texture: a seamless all-over square crop of lavish
+impasto oil painting inspired by Vincent van Gogh's The Starry Night. Deep
+midnight indigo and ultramarine base, strong flowing turquoise and cobalt curved
+brush strokes, slender ochre and luminous buttery-gold curling strokes, scattered
+little warm yellow star halos integrated into the paint. This will be cropped
+into narrow but substantial ornamental game HUD borders; readable flowing strokes
+and small scattered stars at all positions are important. NOT a framed picture,
+NOT a full UI mockup. No central scene, no landscape, no buildings, no horizon,
+no text, no lettering, no icons, no straight geometric gold rails, no metallic
+filigree. Fill the entire image edge-to-edge with densely painted blue swirls and
+restrained scattered golden star marks. Blue must dominate, warm gold accents
+about 15 percent. Handmade and expressive, richly textured painterly surface,
+crisp details suitable for a high quality bespoke fantasy game border. Square
+texture, opaque background.
+
+Packing: prepare-van-gogh-interiors.py mirrors a paint swatch to make straight
+pieces join seamlessly, and fits a painted star crop into junctions and end caps.
+The frame stroke grows from 22/64 to 46/64 of a cell, retaining the original Piece
+mapping and all functional UI rows. Font, menus, dungeon art and tile art unchanged.
