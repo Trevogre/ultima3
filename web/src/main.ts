@@ -339,6 +339,24 @@ async function start(): Promise<void> {
     true,
   );
 
+  const tileNotice = document.createElement('div');
+  tileNotice.id = 'tile-set-notice';
+  tileNotice.setAttribute('role', 'status');
+  tileNotice.setAttribute('aria-live', 'polite');
+  tileNotice.style.cssText =
+    'position:absolute;bottom:12%;left:50%;transform:translateX(-50%);z-index:3;pointer-events:none;padding:8px 14px;background:#111e;color:#fff;border:1px solid #888;border-radius:4px;font:16px sans-serif;white-space:nowrap;';
+  tileNotice.hidden = true;
+  document.getElementById('stage')!.append(tileNotice);
+  let tileNoticeTimer: ReturnType<typeof setTimeout> | undefined;
+  const showTileNotice = () => {
+    clearTimeout(tileNoticeTimer);
+    tileNotice.textContent = `Tiles: ${screen.tileSetName}`;
+    tileNotice.hidden = false;
+    tileNoticeTimer = setTimeout(() => {
+      tileNotice.hidden = true;
+    }, 1800);
+  };
+
   // Presentation only: capture before Keyboard so cycling never spends a turn.
   window.addEventListener(
     'keydown',
@@ -349,7 +367,7 @@ async function start(): Promise<void> {
       if (document.querySelector('dialog[open], input:focus, textarea:focus, [contenteditable="true"]:focus')) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      if (!event.repeat) void screen.nextTileSet();
+      if (!event.repeat) void screen.nextTileSet().then(showTileNotice);
     },
     true,
   );
