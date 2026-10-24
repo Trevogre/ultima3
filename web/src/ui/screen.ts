@@ -1032,7 +1032,7 @@ export class Screen implements GameIO {
           disabled,
           hint:
             this.gfx.forestCard || this.gfx.brushCards
-              ? 'Separate tree cutouts over grass at angled views. Players stay in front.'
+              ? 'Tree/brush cutouts over grass. Nearer foliage can cover characters.'
               : 'This set has no reviewed cutout; forests stay flat.',
         },
         {

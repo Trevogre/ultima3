@@ -85,7 +85,7 @@ export class BuildingBillboards {
       transparent: true,
       alphaTest: 0.01,
       depthTest: true,
-      depthWrite: kind === 'buildings',
+      depthWrite: true,
       side: DoubleSide,
       toneMapped: false,
     });
@@ -103,10 +103,9 @@ export class BuildingBillboards {
     this.filter = addZoomFiltering(this.material, this.texture, 8, 1, true);
     this.mesh = new InstancedMesh(this.geometry, this.material, MAX_CARDS);
     this.mesh.frustumCulled = false;
-    // Buildings establish scenery depth before vegetation draws. Nearer tree
-    // pixels cover buildings; farther tree pixels fail the depth test. Trees
-    // do not write depth, so the later actor pass keeps players visible.
-    // Opaque terrain cubes still occlude all cards normally.
+    // Buildings establish depth before vegetation; alpha-tested foliage then
+    // writes its own depth so nearer leaves can also occlude character cards.
+    // Transparent holes write no depth, and foreground cubes still occlude all cards.
     this.mesh.renderOrder = kind === 'trees' ? 0.9 : 0.8;
     this.mesh.count = 0;
   }

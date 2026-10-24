@@ -51,7 +51,7 @@ The [forest feasibility audit](docs/forest-audit/README.md) compares both
 forest and grass sheet frames across all twelve sets. No populated forest
 frame has usable existing transparency. Optional **3D Settings → Trees/brush: Cards**
 uses [reviewed cutouts](docs/forest-cards/README.md) for nine sets, over each set’s
-grass. Trees remain behind players; terrain cubes still occlude them. The setting
+grass. Nearer foliage can cover characters; transparent gaps show through, and terrain cubes still occlude both. The setting
 defaults off, and overhead views and unsupported sets retain original flat tiles.
 No replacement artwork or runtime background removal is used.
 

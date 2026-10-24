@@ -5,8 +5,8 @@
 Enable **Settings / Pause → 3D Settings → Trees: Cards** (G). It defaults off;
 turning it on is an individual Custom presentation override. A straight-down
 view uses the original forest tile. Angled views use the selected set’s grass
-under a separate transparent tree card. Players draw in front of tree cards;
-opaque mountains and walls still occlude them. Only already-visible scenery
+under a separate transparent tree card. Trees, brush and characters overlap by depth: nearer foliage can cover the
+party while transparent gaps remain clear. Mountains and walls occlude them. Only already-visible scenery
 is used, including contact shadows when enabled.
 
 Supported: Standard, Lairware, Nintendo, PC Ultima V, Apple II Color,
@@ -38,8 +38,8 @@ rotates or tilts. Each card retains the source pixel scale and colours. No
 missing foliage is filled in; the bottom tree remains clipped at the original
 tile boundary. Other sets keep their reviewed cluster cards.
 
-Each tree gets a smaller contact shadow at its own base. Players remain in
-front. Straight-down views continue to use the untouched original tile.
+Each tree gets a smaller contact shadow at its own base. Nearer foliage can
+occlude characters. Straight-down views continue to use the untouched original tile.
 
 ## Brush cards
 
@@ -60,7 +60,7 @@ silhouettes are traced; the seven cluster masks remove only their reviewed
 edge-connected exterior colour, preserving enclosed details. Source RGB
 preservation is asserted, and source/output hashes are in `brush-manifest.json`.
 No original sheet is changed. Overhead views retain the original brush tiles;
-players stay in front of cards and foreground cubes still occlude them.
+nearer foliage can occlude characters, and foreground cubes still occlude both.
 
 ## Per-set ground anchors
 

@@ -56,7 +56,7 @@ describe('optional reviewed tree cards', () => {
     }
   });
 
-  it('uses only filtered forest locations and draws behind actors without hiding them in the depth buffer', () => {
+  it('uses filtered forest locations and writes cutout depth so foreground foliage can occlude actors', () => {
     vi.stubGlobal('document', {
       createElement: () => ({ width: 0, height: 0, getContext: () => ({ imageSmoothingEnabled: false, clearRect() {}, drawImage() {} }) }),
     });
@@ -66,11 +66,12 @@ describe('optional reviewed tree cards', () => {
     expect(trees.mesh.count).toBe(1);
     const material = trees.mesh.material as MeshBasicMaterial;
     expect(material.depthTest).toBe(true);
-    expect(material.depthWrite).toBe(false);
+    expect(material.depthWrite).toBe(true);
+    expect(material.alphaTest).toBeGreaterThan(0);
     expect(trees.mesh.renderOrder).toBeLessThan(1);
     const buildings = new BuildingBillboards({ value: false });
     // Buildings must write depth before trees draw, allowing nearer trees to
-    // cover cities without making tree depth hide the later player cards.
+    // cover cities. Foliage also writes depth for the later character pass.
     expect(buildings.mesh.renderOrder).toBeLessThan(trees.mesh.renderOrder);
     expect((buildings.mesh.material as MeshBasicMaterial).depthWrite).toBe(true);
     buildings.dispose();
