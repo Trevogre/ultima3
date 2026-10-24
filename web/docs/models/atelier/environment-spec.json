@@ -1,0 +1,26 @@
+{
+  "name": "atelier-environment",
+  "license": "MIT",
+  "source": "web/tools/models/build_atelier_environment.py",
+  "provenance": "Original locally authored mesh geometry and vertex-painted colour. No third-party assets, sprite backgrounds or provider generation.",
+  "stage": "Initial production opt-in through Models / Layout: Composed; further art review remains active",
+  "variants": {
+    "tree": ["Tall cypress", "Broad olive", "Open Scots pine", "Gnarled oak", "Wind-shaped coastal cypress"],
+    "brush": ["Leafy heather", "Spreading fern", "Flowering gorse", "Dry bracken", "Low juniper"],
+    "grass": 5,
+    "rock": 5,
+    "reed": 3
+  },
+  "distantMeshes": "One lower-detail mesh for each tree and brush variant",
+  "limits": { "trianglesPerMesh": 10000, "height": 3.5 },
+  "orientation": "Blender +Z up / glTF +Y up. Runtime restores +Z and grounds mesh-local bounds; review-grid node translations are discarded.",
+  "review": [
+    "Blender tree silhouettes",
+    "actual GLB structural inspection",
+    "production renderer and actual game menu",
+    "unknown terrain / local-only limits",
+    "terrain support heights",
+    "LOD selection and stable placements",
+    "day/night and camera angles"
+  ]
+}
