@@ -185,6 +185,7 @@ export class ThreeRenderer {
         this.renderer.setScissor(r.x, height - r.y - r.h, r.w, r.h);
         this.renderer.setScissorTest(true);
         this.renderer.clear();
+        this.map.prepareSight();
         this.renderer.render(this.map.scene, this.map.camera);
         // Menus and their hints stay in screen space over the transformed map.
         this.renderer.setViewport(0, 0, width, height);

@@ -34,7 +34,14 @@
         <option>Classic</option>
       </select></label
     ><label><input type="checkbox" id="door" />Close hall door</label><button id="corner">Stand at junction</button
-    ><button id="reset">Return to hall</button><button id="zoom">Zoom</button>
+    ><button id="approach">Approach junction</button><button id="reset">Return to hall</button><button id="zoom">Zoom</button
+    ><button id="orbit">Rotate</button><button id="tilt">Tilt</button
+    ><label
+      >Style<select id="style">
+        <option>Cards</option>
+        <option>Models</option>
+      </select></label
+    >
   </header>
   <p>Real town-view pipeline in an isolated fixture. NPCs: one down the hall, one around the corner. No saves or preferences.</p>
   <main>
@@ -86,9 +93,16 @@
       const view = buildViewport(w),
         landscape = buildLandscape(w, view),
         wide = townSightActors(w, view);
-      map.setOptions({ ...DEFAULT_3D_SETTINGS, townSightlines: w.townSightlines, fixedCamera: false });
+      map.setOptions({
+        ...DEFAULT_3D_SETTINGS,
+        townSightlines: w.townSightlines,
+        fixedCamera: false,
+        renderStyle: document.querySelector('#style').value,
+      });
       map.beginFrame();
+      map.setSightRegion(view.sightRegion);
       map.setDaylight([1, 1, 1]);
+      map.setSun(4, 12, true);
       map.setLandscape(landscape, gfx, view.cells);
       map.setActorLayout(view.cells, false);
       map.setTownSightFigures(wide ?? [], gfx);
@@ -99,7 +113,11 @@
         if (c.overlay !== undefined && c.overlay !== Shape.Door)
           gfx.drawShape(map.actorContext, c.overlay, x, y, 64, { masked: true, card: true });
       });
+      if (document.querySelector('#style').value === 'Models')
+        map.setModelActors(wide ?? modelActors(w, view, 'line'), 'review', 64, false);
       map.changed();
+      map.prepareSight();
+      renderer.shadowMap.enabled = map.modelShadows;
       renderer.render(map.scene, map.camera);
       ctx.fillStyle = '#000';
       ctx.fillRect(0, 0, 576, 576);
@@ -115,6 +133,20 @@
         }
       for (const a of wide ?? modelActors(w, view, 'line'))
         if (a.worldX < 48 && a.worldY < 48) gfx.drawShape(ctx, a.shape, a.worldX * size, a.worldY * size, size, { masked: true });
+      if (view.sightRegion) {
+        ctx.save();
+        ctx.globalCompositeOperation = 'destination-in';
+        ctx.beginPath();
+        view.sightRegion.polygon.forEach((p, i) => {
+          if (i) ctx.lineTo((p.x + 0.5) * size, (p.y + 0.5) * size);
+          else ctx.moveTo((p.x + 0.5) * size, (p.y + 0.5) * size);
+        });
+        ctx.closePath();
+        for (const i of view.sightRegion.surfaces) ctx.rect((i % 64) * size, Math.floor(i / 64) * size, size, size);
+        ctx.fillStyle = '#fff';
+        ctx.fill();
+        ctx.restore();
+      }
       ctx.strokeStyle = '#fff2a4';
       ctx.lineWidth = 2;
       ctx.strokeRect(w.x * size, w.y * size, size, size);
@@ -122,9 +154,23 @@
         `${w.townSightlines ? 'Sightlines' : 'Classic'}: ${count} visible cells. Gold outline: party. Black: outside current sight. Closed door blocks the hall; the distant north wing stays hidden until the junction.`;
     }
     document.querySelector('#mode').onchange = draw;
+    document.querySelector('#style').onchange = draw;
+    document.querySelector('#orbit').onclick = () => {
+      map.orbit(Math.PI / 6 / 0.006, 0);
+      draw();
+    };
+    document.querySelector('#tilt').onclick = () => {
+      map.orbit(0, (map.tilt > 0.5 ? -map.tilt : Math.PI / 4) / 0.006);
+      draw();
+    };
     document.querySelector('#door').onchange = draw;
     document.querySelector('#corner').onclick = () => {
       w.x = 31;
+      w.y = 25;
+      draw();
+    };
+    document.querySelector('#approach').onclick = () => {
+      w.x = 27;
       w.y = 25;
       draw();
     };

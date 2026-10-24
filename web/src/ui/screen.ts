@@ -1242,7 +1242,7 @@ export class Screen implements GameIO {
         {
           key: 'V',
           label: `Town visibility: ${this.view3D.townSightlines ? 'Sightlines' : 'Classic'}`,
-          hint: 'Sightlines sees down open halls. Walls, closed doors and solid corners block sight. Applies to towns and castles.',
+          hint: 'Continuous sightlines clip tiles and figures at wall edges. Doors update sight when opened. Classic keeps the original tile visibility.',
         },
         { key: 'M', label: 'Mouse settings' },
         { key: 'P', label: 'Presentation', hint: `Current: ${presentationPreset(this.view3D)}. Adjust individual options in 3D Settings.` },
@@ -2526,6 +2526,7 @@ export class Screen implements GameIO {
     if (!this.view) return;
     const map = this.presentation.map;
     map.beginFrame();
+    map.setSightRegion(this.view.sightRegion);
     map.setGroundEffectsDepthTest(this.tileSetName === 'Van Gogh');
     const outdoors = (world.combat?.previousLocation ?? world.party.location) !== Location.Dungeon;
     const dayPhase = Math.floor(world.daylightTurn / 12);

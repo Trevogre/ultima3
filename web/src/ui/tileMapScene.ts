@@ -1,3 +1,5 @@
+import { SightClip } from './sightClip.ts';
+import type { SightRegion } from '../game/sightPolygon.ts';
 import {
   CanvasTexture,
   DoubleSide,
@@ -55,6 +57,15 @@ export interface ScreenRect {
 /** Batched whole-map scenery plus local terrain and visibility-limited actor quads. */
 export class TileMapScene {
   readonly scene = new Scene();
+  private readonly sight = new SightClip();
+  private continuousSight = false;
+  setSightRegion(region?: SightRegion): void {
+    this.continuousSight = !!region;
+    this.sight.set(region);
+  }
+  prepareSight(): void {
+    this.sight.apply(this.scene);
+  }
   private readonly models = new ModelScene();
   readonly camera: OrthographicCamera;
   readonly rect: ScreenRect;
@@ -408,7 +419,7 @@ export class TileMapScene {
     this.lava.mesh.visible = this.lava.bursts.mesh.visible = true;
     this.lava.set(landscape, cells, gfx, this.options, location);
     this.water.set(landscape, cells, gfx, this.options);
-    this.fog.set(landscape, cells, this.options.softFog, this.options.recessedWater);
+    this.fog.set(landscape, cells, this.options.softFog && !this.continuousSight, this.options.recessedWater);
     this.trees.set(landscape, cells, gfx, this.treeCardsActive);
     if (this.options.contactShadows) this.trees.forEachFootprint((x, y, size) => this.shadows.add(x, y, size));
     this.buildings.set(landscape, cells, gfx, this.options.buildings);
@@ -776,6 +787,7 @@ export class TileMapScene {
   }
 
   dispose(): void {
+    this.sight.dispose();
     this.windows.dispose();
     this.townFigures.dispose();
     this.entranceFaces.dispose();

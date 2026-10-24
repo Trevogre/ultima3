@@ -13,7 +13,7 @@
 
 import { World } from './world.ts';
 import { Location } from './party.ts';
-import { townSightMask } from './townSight.ts';
+import { buildSightRegion, type SightRegion } from './sightPolygon.ts';
 import { Shape, MapValue, isLetter, monsterVariantShape } from './tiles.ts';
 
 export const VIEW_SIZE = 11;
@@ -46,6 +46,8 @@ export interface Viewport {
   originY: number;
   /** Optional full-town current sight. Never exploration memory or camera visibility. */
   townSight?: Viewport;
+  /** Continuous town boundary used by the enhanced renderer. */
+  sightRegion?: SightRegion;
 }
 
 /**
@@ -279,7 +281,8 @@ export function buildViewport(world: World, x = world.x, y = world.y): Viewport 
       const shape = blockers[cy * side + cx];
       return shape === Shape.Wall || shape === Shape.Door || shape === Shape.Forest || shape === Shape.Mountains || shape === Shape.Void;
     };
-    const visible = townSightMask(side, x, y, blocked);
+    const sightRegion = buildSightRegion(side, x, y, blocked);
+    const visible = sightRegion.visible;
     shapes.forEach((_, i) => {
       if (!visible[i]) shapes[i] = Shape.Void;
     });
@@ -291,7 +294,7 @@ export function buildViewport(world: World, x = world.x, y = world.y): Viewport 
         cy = originY + Math.floor(i / VIEW_SIZE);
       return cx < 0 || cy < 0 || cx >= side || cy >= side ? { base: Shape.Void } : { ...townSight.cells[cy * side + cx] };
     });
-    view = { cells, originX, originY, townSight };
+    view = { cells, originX, originY, townSight, sightRegion };
   } else {
     const shapes = fillShapes(world, x - VIEW_CENTRE, y - VIEW_CENTRE);
     applyLineOfSight(shapes);
