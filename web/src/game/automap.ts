@@ -277,6 +277,7 @@ export function nextMapMode(mode: MapMode): MapMode {
  * did. Nothing is recorded in a dungeon (the auto-map's cells are) or in a fight.
  */
 export function recordView(world: World, view: Viewport): void {
+  view = view.townSight ?? view;
   const where = world.party.location;
   if (where === Location.Dungeon || where === Location.Combat || world.current.size !== MAP_SIDE) return;
   // Sosaria and Ambrosia join at their edges; a town or castle does not, though the view near its edge shows the far

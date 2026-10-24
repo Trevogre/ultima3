@@ -87,3 +87,17 @@ export class ModelHeadings {
     return yaw;
   }
 }
+
+/** Rebase the optional full-town sight view into the same party-centred scene. */
+export function townSightActors(world: World, view: Viewport): ModelActor[] | null {
+  if (!view.townSight) return null;
+  const wide = view.townSight,
+    half = (Math.sqrt(wide.cells.length) - 1) / 2;
+  return modelActors(world, wide, 'line')
+    .filter((actor) => actor.shape !== Shape.Door)
+    .map((actor) => ({
+      ...actor,
+      x: actor.x + half - world.x,
+      y: actor.y + world.y - half,
+    }));
+}

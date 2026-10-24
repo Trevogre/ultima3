@@ -16,6 +16,7 @@ import {
 import type { GraphicsSet } from './graphics.ts';
 import { type Landscape, landscapeOffset } from '../game/landscape.ts';
 import { Shape } from '../game/tiles.ts';
+import { TownSightFigures } from './townSightFigures.ts';
 import { dungeonFaces, type LocalMapLocation } from './dungeonEntrances.ts';
 import { DungeonEntranceFaces } from './dungeonEntranceFaces.ts';
 import type { ViewCell } from '../game/viewport.ts';
@@ -74,6 +75,7 @@ export class TileMapScene {
   private readonly materials: MeshBasicMaterial[] = [];
   private readonly inverted = { value: false };
   private readonly doors = new DoorCards(this.inverted);
+  private readonly townFigures = new TownSightFigures(this.inverted);
   private doorMode = false;
   private readonly buildings = new BuildingBillboards(this.inverted);
   private readonly trees = new BuildingBillboards(this.inverted, 'trees');
@@ -122,6 +124,15 @@ export class TileMapScene {
   setModelActors(actors: ModelActor[], context: string, side: number, wraps: boolean): void {
     if (this.modelMode) this.models.setActors(actors, context, side, wraps);
   }
+  setTownSightFigures(actors: ModelActor[], gfx: GraphicsSet): void {
+    const distant = this.modelMode
+      ? []
+      : actors.filter((a) => Math.abs(a.x) > this.visibleSide / 2 || Math.abs(a.y) > this.visibleSide / 2);
+    this.townFigures.set(distant, gfx, this.options, this.tilt);
+    this.townFigures.face(this.camera, this.tilt, this.options, this.solidCells);
+    if (this.options.contactShadows && this.options.characters && this.tilt > 0.001)
+      for (const actor of distant) if (castsContactShadow(actor.shape, actor.ground)) this.shadows.add(actor.x, actor.y, actor.size);
+  }
   triggerModelAction(id: string, action: 'attack' | 'cast', yaw?: number): void {
     this.models.trigger(id, action, yaw);
     this.invalidate();
@@ -136,7 +147,7 @@ export class TileMapScene {
     readonly inspectionMode = false,
   ) {
     this.visibleSide = side;
-    this.scene.add(this.models.group, this.entranceFaces.mesh);
+    this.scene.add(this.models.group, this.entranceFaces.mesh, this.townFigures.group);
     const size = side * 2 * cell;
     this.rect = { x: cell, y: cell, w: size, h: size };
     const contexts = [false, true, true].map((transparent, layer) => {
@@ -521,6 +532,7 @@ export class TileMapScene {
 
   /** Tint only the map; menus, status text and the moon indicators stay bright. */
   setDaylight(colour: [number, number, number]): void {
+    this.townFigures.setDaylight(colour);
     this.entranceFaces.material.color.setRGB(...colour);
     this.doors.material.color.setRGB(...colour);
     this.models.setDaylight(colour);
@@ -662,6 +674,7 @@ export class TileMapScene {
     this.grass.faceCamera(this.camera, this.tilt, (this.rect.w / this.visibleSide) * this.zoom);
     if (this.modelMode) this.grass.mesh.visible = false;
     this.faceActors();
+    this.townFigures.face(this.camera, this.tilt, this.options, this.solidCells);
     this.buildings.faceCamera(this.camera, this.tilt);
     this.trees.faceCamera(this.camera, this.tilt);
     this.sunShadows.faceCards(this.camera.quaternion, this.tilt, this.buildings.cardRotation);
@@ -717,6 +730,7 @@ export class TileMapScene {
   }
 
   dispose(): void {
+    this.townFigures.dispose();
     this.entranceFaces.dispose();
     this.doors.dispose();
     this.models.dispose();

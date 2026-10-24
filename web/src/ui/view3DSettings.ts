@@ -31,6 +31,7 @@ export interface View3DSettings {
   sunShadows: boolean;
   cameraRelative: boolean;
   grassDepth: boolean;
+  townSightlines: boolean;
 }
 
 export const DEFAULT_3D_SETTINGS: Readonly<View3DSettings> = {
@@ -63,6 +64,7 @@ export const DEFAULT_3D_SETTINGS: Readonly<View3DSettings> = {
   alphaWater: false,
   sunShadows: true,
   grassDepth: false,
+  townSightlines: false,
 };
 
 const DEPTH_OPTIONS = {

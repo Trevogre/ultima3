@@ -26,6 +26,7 @@ export function buildLandscape(world: World, view: Viewport): Landscape {
   const visible = new Set<number>();
   const { locationX, locationY, moonX, moonY } = world.resources.misc;
   const knownGates = new Set(world.gatesKnown.map((phase) => moonY[phase] * side + moonX[phase]));
+  view = view.townSight ?? view;
   const viewSide = Math.sqrt(view.cells.length);
   view.cells.forEach((cell, i) => {
     if (cell.base === Shape.Void) return;

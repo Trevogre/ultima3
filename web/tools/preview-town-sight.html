@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" />
+  <title>Town visibility comparison</title>
+  <style>
+    body {
+      margin: 12px;
+      background: #171b24;
+      color: #eee;
+      font: 16px system-ui;
+    }
+    header {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+    }
+    main {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    canvas {
+      background: #000;
+    }
+    p {
+      max-width: 1100px;
+    }
+  </style>
+  <header>
+    <label
+      >Visibility
+      <select id="mode">
+        <option>Sightlines</option>
+        <option>Classic</option>
+      </select></label
+    ><label><input type="checkbox" id="door" />Close hall door</label><button id="corner">Stand at junction</button
+    ><button id="reset">Return to hall</button><button id="zoom">Zoom</button>
+  </header>
+  <p>Real town-view pipeline in an isolated fixture. NPCs: one down the hall, one around the corner. No saves or preferences.</p>
+  <main>
+    <canvas id="native" aria-label="3D town visibility"></canvas
+    ><canvas id="plan" width="576" height="576" aria-label="Current town line of sight"></canvas>
+  </main>
+  <p id="report"></p>
+  <script type="module">
+    import * as T from 'three';
+    import { World } from '/src/game/world.ts';
+    import { Location } from '/src/game/party.ts';
+    import { MapValue, Shape } from '/src/game/tiles.ts';
+    import { resourcesFromBundle } from '/src/data/resources.ts';
+    import { buildViewport } from '/src/game/viewport.ts';
+    import { buildLandscape } from '/src/game/landscape.ts';
+    import { modelActors, townSightActors } from '/src/ui/modelActors.ts';
+    import { GraphicsSet } from '/src/ui/graphics.ts';
+    import { TileMapScene } from '/src/ui/tileMapScene.ts';
+    import { DEFAULT_3D_SETTINGS } from '/src/ui/view3DSettings.ts';
+    const w = new World(resourcesFromBundle(await (await fetch('/data/resources.json')).json()));
+    w.newGame();
+    w.enterMap(402);
+    w.party.location = Location.Town;
+    w.monsters.bytes.fill(0);
+    w.current.tiles.fill(MapValue.Wall);
+    w.x = 16;
+    w.y = 25;
+    for (let x = 10; x <= 46; x++) for (let y = 24; y <= 26; y++) w.putXYVal(MapValue.Floor, x, y);
+    for (let y = 10; y <= 26; y++) for (let x = 30; x <= 32; x++) w.putXYVal(MapValue.Floor, x, y);
+    for (const [i, x, y] of [
+      [0, 28, 25],
+      [1, 31, 13],
+    ]) {
+      w.monsters.setType(i, MapValue.Guard);
+      w.monsters.setPosition(i, x, y);
+      w.monsters.setTileUnder(i, MapValue.Floor);
+      w.putXYVal(MapValue.Guard, x, y);
+    }
+    const renderer = new T.WebGLRenderer({ canvas: document.querySelector('#native'), antialias: true });
+    renderer.setSize(600, 576);
+    renderer.outputColorSpace = T.SRGBColorSpace;
+    const map = new TileMapScene(32, 11, () => {}, true);
+    const gfx = await GraphicsSet.load('Van Gogh', '/graphics/');
+    const ctx = document.querySelector('#plan').getContext('2d');
+    function draw() {
+      w.townSightlines = document.querySelector('#mode').value === 'Sightlines';
+      for (let y = 24; y <= 26; y++)
+        w.putXYVal(document.querySelector('#door').checked ? (y === 25 ? MapValue.LetterI : MapValue.Wall) : MapValue.Floor, 23, y);
+      const view = buildViewport(w),
+        landscape = buildLandscape(w, view),
+        wide = townSightActors(w, view);
+      map.setOptions({ ...DEFAULT_3D_SETTINGS, townSightlines: w.townSightlines, fixedCamera: false });
+      map.beginFrame();
+      map.setDaylight([1, 1, 1]);
+      map.setLandscape(landscape, gfx, view.cells);
+      map.setActorLayout(view.cells, false);
+      map.setTownSightFigures(wide ?? [], gfx);
+      view.cells.forEach((c, i) => {
+        const x = 32 + (i % 11) * 64,
+          y = 32 + Math.floor(i / 11) * 64;
+        gfx.drawShape(map.terrainContext, map.forestGround(c.base, gfx), x, y, 64);
+        if (c.overlay !== undefined && c.overlay !== Shape.Door)
+          gfx.drawShape(map.actorContext, c.overlay, x, y, 64, { masked: true, card: true });
+      });
+      map.changed();
+      renderer.render(map.scene, map.camera);
+      ctx.fillStyle = '#000';
+      ctx.fillRect(0, 0, 576, 576);
+      const size = 12;
+      let count = 0;
+      for (let y = 0; y < 48; y++)
+        for (let x = 0; x < 48; x++) {
+          const s = landscape.shapes[y * 64 + x];
+          if (s !== Shape.Void) {
+            gfx.drawShape(ctx, s, x * size, y * size, size);
+            count++;
+          }
+        }
+      for (const a of wide ?? modelActors(w, view, 'line'))
+        if (a.worldX < 48 && a.worldY < 48) gfx.drawShape(ctx, a.shape, a.worldX * size, a.worldY * size, size, { masked: true });
+      ctx.strokeStyle = '#fff2a4';
+      ctx.lineWidth = 2;
+      ctx.strokeRect(w.x * size, w.y * size, size, size);
+      document.querySelector('#report').textContent =
+        `${w.townSightlines ? 'Sightlines' : 'Classic'}: ${count} visible cells. Gold outline: party. Black: outside current sight. Closed door blocks the hall; the distant north wing stays hidden until the junction.`;
+    }
+    document.querySelector('#mode').onchange = draw;
+    document.querySelector('#door').onchange = draw;
+    document.querySelector('#corner').onclick = () => {
+      w.x = 31;
+      w.y = 25;
+      draw();
+    };
+    document.querySelector('#reset').onclick = () => {
+      w.x = 16;
+      w.y = 25;
+      draw();
+    };
+    document.querySelector('#zoom').onclick = () => {
+      map.zoomBy(map.zoom < 0.5 ? -800 : 800);
+      draw();
+    };
+    map.orbit(0, Math.PI / 4 / 0.006);
+    draw();
+    map.zoomBy(1000);
+    draw();
+  </script>
+</html>

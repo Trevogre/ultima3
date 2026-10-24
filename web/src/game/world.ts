@@ -775,6 +775,9 @@ export class World {
     return this.timer === 'slow' ? originalMs * 2 + 2000 : originalMs;
   }
 
+  /** Optional presentation sight rays for towns; original visibility remains the default. */
+  townSightlines = false;
+
   /**
    * Diagonal moves: may the party move, attack and fire diagonally? Off by
    * default, as on the Apple II, where only monsters could (a small edge

@@ -1,0 +1,33 @@
+Town visibility: Classic / Sightlines
+
+Settings or Pause > Visuals > Town visibility toggles the mode immediately.
+Classic is the default and retains the original 11x11 visibility algorithm.
+The choice is remembered in display preferences, independently of Classic,
+Depth, or model presentation presets. No game-save migration is needed.
+
+Sightlines traces grid rays across the current town or castle. Open squares
+use centre-to-centre rays; opaque tiles also test their exposed near faces so
+a continuous hall wall remains visible at a grazing angle. Opaque wall/door/mountain/forest surfaces are visible, but hide what
+is behind them. Diagonal rays touching a wall edge are blocked, preventing
+corner peeking. NPCs do not block sight; their underlying terrain does.
+Low counters and letter barriers block movement but allow vision over them.
+The original entry/movement, combat, AI, targeting and lighting rules remain.
+Overworld, Ambrosia, combat and first-person dungeon visibility are unchanged.
+
+There is no artificial 11x11 cutoff for current town sight in 3D. The local
+composition stays 11x11 for existing effects and classic drawing, while the
+optional full-town filtered view feeds the expanded scenery and distant NPCs
+in card and model modes. Native cards use their existing art, ground heights,
+depth tests and adjacent-wall clearance. A visible distant figure disappears
+as soon as a wall or closed door blocks it. No raw-map actor list is rendered.
+
+The automap records only sight-admitted squares. Exploration memory does not
+expose town rooms in the game view: walking away or closing a door still
+hides them. Town edges do not wrap in Sightlines. The legacy mode keeps its
+original behavior and is restored exactly when the option is turned off.
+
+Tests cover straight and oblique halls, long halls/NPCs beyond the old window,
+doors, L-shaped corners, opaque faces, hidden explored rooms, non-wrapping
+edges, default migration, preset preservation and restoration of Classic.
+Use tools/preview-town-sight.html for a save-free comparison, including a
+long hall, closed-door toggle and a hidden wing revealed at the junction.

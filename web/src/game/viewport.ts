@@ -13,6 +13,7 @@
 
 import { World } from './world.ts';
 import { Location } from './party.ts';
+import { townSightMask } from './townSight.ts';
 import { Shape, MapValue, isLetter, monsterVariantShape } from './tiles.ts';
 
 export const VIEW_SIZE = 11;
@@ -43,6 +44,8 @@ export interface Viewport {
   /** Map coordinates of the top-left cell. (`stx`, `sty`.) */
   originX: number;
   originY: number;
+  /** Optional full-town current sight. Never exploration memory or camera visibility. */
+  townSight?: Viewport;
 }
 
 /**
@@ -50,11 +53,11 @@ export interface Viewport {
  * and convert each to a shape. Letters "I" that are not part of a word are
  * drawn as doors.
  */
-function fillShapes(world: World, x: number, y: number): Uint8Array {
-  const shapes = new Uint8Array(VIEW_SIZE * VIEW_SIZE);
+function fillShapes(world: World, originX: number, originY: number, side = VIEW_SIZE): Uint8Array {
+  const shapes = new Uint8Array(side * side);
   let offset = 0;
-  for (let ym = y - VIEW_CENTRE; ym <= y + VIEW_CENTRE; ym++) {
-    for (let xm = x - VIEW_CENTRE; xm <= x + VIEW_CENTRE; xm++) {
+  for (let ym = originY; ym < originY + side; ym++) {
+    for (let xm = originX; xm < originX + side; xm++) {
       const val = world.getXYVal(xm, ym);
       shapes[offset] = monsterVariantShape(val);
 
@@ -123,7 +126,15 @@ function applyLineOfSight(shapes: Uint8Array): void {
  * monster's `tileUnder`. Other objects (chests, horses, ships) encode or
  * imply their background.
  */
-function applyOverlays(world: World, shapes: Uint8Array, originX: number, originY: number): ViewCell[] {
+function applyOverlays(
+  world: World,
+  shapes: Uint8Array,
+  originX: number,
+  originY: number,
+  side = VIEW_SIZE,
+  partyX = VIEW_CENTRE,
+  partyY = VIEW_CENTRE,
+): ViewCell[] {
   const cells: ViewCell[] = Array.from(shapes, (s) => ({ base: s }));
   const monsters = world.monsters;
   const isBall = (s: number) => s >= Shape.MagicBall && s <= Shape.FireBall;
@@ -137,8 +148,8 @@ function applyOverlays(world: World, shapes: Uint8Array, originX: number, origin
       xm = world.constrain(xm);
       ym = world.constrain(ym);
     }
-    if (xm < 0 || xm >= VIEW_SIZE || ym < 0 || ym >= VIEW_SIZE) continue;
-    const offset = ym * VIEW_SIZE + xm;
+    if (xm < 0 || xm >= side || ym < 0 || ym >= side) continue;
+    const offset = ym * side + xm;
     const s = shapes[offset];
     if (s === Shape.Void || isBall(s)) continue;
     cells[offset] = { base: monsters.tileUnder(i) >> 1, overlay: s };
@@ -148,8 +159,8 @@ function applyOverlays(world: World, shapes: Uint8Array, originX: number, origin
   for (let offset = 0; offset < cells.length; offset++) {
     const cell = cells[offset];
     if (cell.overlay !== undefined) continue;
-    const xm = offset % VIEW_SIZE;
-    const ym = Math.floor(offset / VIEW_SIZE);
+    const xm = offset % side;
+    const ym = Math.floor(offset / side);
     const s = cell.base;
     switch (s) {
       case Shape.Jester: // Jester in Lord British's castle stands on water
@@ -190,12 +201,12 @@ function applyOverlays(world: World, shapes: Uint8Array, originX: number, origin
 
   // The party itself, unless a spell ball is being drawn over it.
   if (world.party.location !== Location.Combat) {
-    const centre = cells[CENTRE_OFFSET];
+    const centre = cells[partyY * side + partyX];
     if (!isBall(centre.overlay ?? centre.base)) {
       centre.overlay = world.party.shape;
       centre.flip = world.party.shape === Shape.Horse && world.horseFacingEast;
       centre.party = world.party.shape === 0x7e; // on foot (the ranger figure)
-      if (centre.party) markFollowers(world, cells, originX + VIEW_CENTRE, originY + VIEW_CENTRE);
+      if (centre.party) markFollowers(world, cells, originX + partyX, originY + partyY, side, partyX, partyY);
     }
   }
   return cells;
@@ -225,7 +236,15 @@ function buildCombatViewport(world: World): Viewport {
  * on the squares the leader came through (`world.trail`). Squares hidden
  * by line of sight, or off the view, show nothing.
  */
-function markFollowers(world: World, cells: ViewCell[], x: number, y: number): void {
+function markFollowers(
+  world: World,
+  cells: ViewCell[],
+  x: number,
+  y: number,
+  viewSide = VIEW_SIZE,
+  centreX = VIEW_CENTRE,
+  centreY = VIEW_CENTRE,
+): void {
   const living = [0, 1, 2, 3].filter((m) => world.party.memberSlot(m) >= 0 && world.memberAlive(m));
   const size = world.mapSize;
   const wrap = (d: number) => ((((d + size / 2) % size) + size) % size) - size / 2; // shortest way round a wrapping map
@@ -235,10 +254,10 @@ function markFollowers(world: World, cells: ViewCell[], x: number, y: number): v
     const ddx = wrap(pos.x - x);
     const ddy = wrap(pos.y - y);
     if (Math.abs(ddx) > 3 || Math.abs(ddy) > 3) return; // a moongate or whirlpool left this square behind
-    const vx = ddx + VIEW_CENTRE;
-    const vy = ddy + VIEW_CENTRE;
-    if (vx < 0 || vx >= VIEW_SIZE || vy < 0 || vy >= VIEW_SIZE) return;
-    const cell = cells[vy * VIEW_SIZE + vx];
+    const vx = ddx + centreX;
+    const vy = ddy + centreY;
+    if (vx < 0 || vx >= viewSide || vy < 0 || vy >= viewSide) return;
+    const cell = cells[vy * viewSide + vx];
     if (cell.base === Shape.Void) return;
     cell.follower = member;
   });
@@ -249,8 +268,32 @@ export function buildViewport(world: World, x = world.x, y = world.y): Viewport 
   let view: Viewport;
   if (world.combat) {
     view = buildCombatViewport(world);
+  } else if (world.townSightlines && world.inTownOrCastle) {
+    const side = world.mapSize;
+    const shapes = fillShapes(world, 0, 0, side);
+    const blockers = shapes.slice();
+    for (let i = 0; i < 32; i++)
+      if (world.monsters.type(i)) blockers[world.monsters.y(i) * side + world.monsters.x(i)] = world.monsters.tileUnder(i) >> 1;
+    const blocked = (cx: number, cy: number) => {
+      if (cx < 0 || cy < 0 || cx >= side || cy >= side) return true;
+      const shape = blockers[cy * side + cx];
+      return shape === Shape.Wall || shape === Shape.Door || shape === Shape.Forest || shape === Shape.Mountains || shape === Shape.Void;
+    };
+    const visible = townSightMask(side, x, y, blocked);
+    shapes.forEach((_, i) => {
+      if (!visible[i]) shapes[i] = Shape.Void;
+    });
+    const townSight: Viewport = { cells: applyOverlays(world, shapes, 0, 0, side, x, y), originX: 0, originY: 0 };
+    const originX = x - VIEW_CENTRE,
+      originY = y - VIEW_CENTRE;
+    const cells = Array.from({ length: VIEW_SIZE * VIEW_SIZE }, (_, i): ViewCell => {
+      const cx = originX + (i % VIEW_SIZE),
+        cy = originY + Math.floor(i / VIEW_SIZE);
+      return cx < 0 || cy < 0 || cx >= side || cy >= side ? { base: Shape.Void } : { ...townSight.cells[cy * side + cx] };
+    });
+    view = { cells, originX, originY, townSight };
   } else {
-    const shapes = fillShapes(world, x, y);
+    const shapes = fillShapes(world, x - VIEW_CENTRE, y - VIEW_CENTRE);
     applyLineOfSight(shapes);
     const originX = x - VIEW_CENTRE;
     const originY = y - VIEW_CENTRE;
@@ -271,6 +314,8 @@ export function buildViewport(world: World, x = world.x, y = world.y): Viewport 
       view.cells[vy * VIEW_SIZE + vx] = ball.hit
         ? { ...cell, hit: { frame: ball.hit, shape: ball.shape } }
         : { base: cell.base, overlay: ball.shape };
+      if (view.townSight && ball.x >= 0 && ball.y >= 0 && ball.x < world.mapSize && ball.y < world.mapSize)
+        view.townSight.cells[ball.y * world.mapSize + ball.x] = view.cells[vy * VIEW_SIZE + vx];
     }
   }
   return view;

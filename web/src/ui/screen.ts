@@ -44,7 +44,7 @@ import { PlayerRecord, levelUpDue, statusLetter } from '../game/player.ts';
 import { commandMenu, hasMagic } from '../game/context.ts';
 import { memberShape } from '../game/combat.ts';
 import { TILE_SETS, helpPages, PAGE_ROWS, PAGE_WIDTH } from './help.ts';
-import { modelActors } from './modelActors.ts';
+import { modelActors, townSightActors } from './modelActors.ts';
 import { drawPaintedHit, usesGroundHit } from './hitEffects.ts';
 import { MODEL_SETS, MODEL_SET_INFO, nextModelSet } from './modelSets.ts';
 import { journalCard, journalSnapshot, journalTop, wordCard, type JournalLine } from '../game/journal.ts';
@@ -996,10 +996,13 @@ export class Screen implements GameIO {
     this.presentation.map.audioOn = !muted;
   }
 
-  /** Apply display preferences without changing the world or the saved game. */
+  /** Apply display preferences without changing game rules or the saved game. */
   set3DSettings(settings: View3DSettings): void {
+    const changedSight = this.world.townSightlines !== settings.townSightlines;
+    this.world.townSightlines = settings.townSightlines;
     this.view3D = { ...settings };
     this.presentation.map.setOptions(this.view3D);
+    if (changedSight && this.view) this.redrawMap();
     this.viewDirty = true;
   }
 
@@ -1201,6 +1204,11 @@ export class Screen implements GameIO {
           disabled: !this.presentation.supports3D,
           hint: 'F7 cycles model sets independently of the tile set.',
         },
+        {
+          key: 'V',
+          label: `Town visibility: ${this.view3D.townSightlines ? 'Sightlines' : 'Classic'}`,
+          hint: 'Sightlines sees down open halls. Walls, closed doors and solid corners block sight. Applies to towns and castles.',
+        },
         { key: 'M', label: 'Mouse settings' },
         { key: 'P', label: 'Presentation', hint: `Current: ${presentationPreset(this.view3D)}. Adjust individual options in 3D Settings.` },
         { key: 'L', label: `Scanlines: ${onOff(this.scanlines)}` },
@@ -1208,6 +1216,7 @@ export class Screen implements GameIO {
       async (key) => {
         if (key === 'T') await this.chooseTiles();
         else if (key === 'G') await this.chooseModelSet();
+        else if (key === 'V') this.set3DSettings({ ...this.view3D, townSightlines: !this.view3D.townSightlines });
         else if (key === 'M') await this.mouseSettingsMenu();
         else if (key === 'P') {
           const picked = await this.runMenu('Presentation', [
@@ -2407,15 +2416,17 @@ export class Screen implements GameIO {
     map.setSun(dayPhase, dayTimer, outdoors);
     map.setCombat(!!world.combat);
     map.setLandscape(
-      world.combat || !this.view3D.distantTerrain ? null : buildLandscape(world, this.view),
+      world.combat || (!this.view3D.distantTerrain && !this.view.townSight) ? null : buildLandscape(world, this.view),
       gfx,
       this.view.cells,
       world.combat ? undefined : { mapId: world.current.id, originX: this.view.originX, originY: this.view.originY, side: world.mapSize },
     );
     map.setActorLayout(this.view.cells, this.partyStyle === 'grid');
+    const sightActors = townSightActors(world, this.view);
+    map.setTownSightFigures(sightActors ?? [], gfx);
     if (map.modelMode)
       map.setModelActors(
-        modelActors(world, this.view, world.inTownOrCastle ? 'line' : 'grid'),
+        sightActors ?? modelActors(world, this.view, world.inTownOrCastle ? 'line' : 'grid'),
         `${world.current.id}:${world.combat ? 'combat' : 'map'}`,
         world.combat ? VIEW_SIZE : world.mapSize,
         !world.combat && (world.onSurface || world.party.location === Location.Ambrosia),
