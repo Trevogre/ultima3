@@ -1,7 +1,7 @@
 # Continuous town sightlines
 
-Select **Settings / Pause → 3D Settings → Sight: Continuous** (key **4**, then
-**Enter**), or **Visuals → Town visibility: Sightlines**. Both controls change the
+Select **Settings / Pause → 3D Settings → Sight: Continuous** (key **4**),
+or **Visuals → Town visibility: Sightlines**. Both controls change the
 same remembered preference immediately. The existing
 Classic choice retains the original visibility algorithm. The continuous clip
 operates in the WebGL map renderer, with cards and model presentations, including

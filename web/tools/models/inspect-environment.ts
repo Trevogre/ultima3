@@ -1,5 +1,6 @@
 import { readFileSync, writeFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
+import { format } from 'prettier';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { environmentFromGLTF } from '../../src/ui/atelierEnvironment.ts';
 const file = new URL('../../public/models/atelier/environment.glb', import.meta.url),
@@ -33,5 +34,8 @@ const report = {
   verification:
     'Actual GLB parsed with the runtime loader: required variants, colours, finite geometry, grounded local bounds and per-mesh triangle budgets. Blender staging translations excluded. Visual review and runtime GPU checks are separate.',
 };
-writeFileSync(new URL('../../docs/models/atelier/environment-inspection.json', import.meta.url), JSON.stringify(report, null, 2) + '\n');
+writeFileSync(
+  new URL('../../docs/models/atelier/environment-inspection.json', import.meta.url),
+  await format(JSON.stringify(report), { parser: 'json' }),
+);
 console.log(`${meshes.length} verified environment meshes, ${bytes.length} bytes, sha256 ${report.sha256}`);
