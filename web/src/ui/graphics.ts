@@ -12,7 +12,7 @@
  *          objects over terrain; the Mac kept it in a separate "-Mask" image
  *          (black opaque, white clear), which this port baked into the sheets
  *          that had one. A "-Mask" file is still honoured if a set ships one.
- *          Sets with neither draw creatures opaque, as their machines did.
+ *          Classic keeps opaque legacy figures; 3D cards derive exterior-only alpha.
  *   Font   96 glyphs in one row, starting at ASCII 0x20 (space).
  *   UI     16 columns x 3 rows of border pieces, cursor frames, moon phases.
  *
@@ -21,6 +21,7 @@
  * `FullUpdate()` advanced every idle tick in the original.
  */
 
+import { characterCard, clearCharacterBackground } from './characterMask.ts';
 import { DUNGEON_STYLES, paintDungeonSheet, type DungeonStyle } from './dungeonArt.ts';
 import { MOON_STYLES, MOON_CELL, paintMoons } from './moonArt.ts';
 import { displayOf, type DisplayStyle } from './display.ts';
@@ -176,6 +177,7 @@ export class GraphicsSet {
   private animSkip = 5;
 
   /** The sheet over black: what terrain is drawn from, so a transparent pixel never shows the last frame. */
+  private readonly characterCards = new Map<string, HTMLCanvasElement>();
   private readonly opaqueTiles: HTMLCanvasElement;
 
   private constructor(
@@ -313,12 +315,29 @@ export class GraphicsSet {
     dx: number,
     dy: number,
     size: number,
-    opts: { masked?: boolean; flip?: boolean; altFrame?: boolean } = {},
+    opts: { masked?: boolean; flip?: boolean; altFrame?: boolean; card?: boolean } = {},
   ): void {
-    const src: CanvasImageSource = opts.masked ? this.maskedTiles : this.opaqueTiles;
+    let src: CanvasImageSource = opts.masked ? this.maskedTiles : this.opaqueTiles;
     // Doors are the alternate frame of the letter "I"; `altFrame` forces the
     // second frame (used for the "HIT" balls).
-    const rect = shape === Shape.Door ? this.tileRect(Shape.Door >> 1, true) : this.tileRect(shape >> 1, opts.altFrame ? true : undefined);
+    let rect = shape === Shape.Door ? this.tileRect(Shape.Door >> 1, true) : this.tileRect(shape >> 1, opts.altFrame ? true : undefined);
+    if (opts.masked && opts.card && characterCard(shape)) {
+      const key = `${rect.x}:${rect.y}`;
+      let card = this.characterCards.get(key);
+      if (!card) {
+        card = document.createElement('canvas');
+        card.width = rect.w;
+        card.height = rect.h;
+        const cardContext = card.getContext('2d', { willReadFrequently: true })!;
+        cardContext.drawImage(src, rect.x, rect.y, rect.w, rect.h, 0, 0, rect.w, rect.h);
+        const image = cardContext.getImageData(0, 0, rect.w, rect.h);
+        clearCharacterBackground(image.data, rect.w, rect.h, this.display.lightGround ? 255 : 0);
+        cardContext.putImageData(image, 0, 0);
+        this.characterCards.set(key, card);
+      }
+      src = card;
+      rect = { ...rect, x: 0, y: 0 };
+    }
     const scrollPx = this.scroll.get(shape) ?? 0;
     const flip = opts.flip ?? false;
     if (flip) {

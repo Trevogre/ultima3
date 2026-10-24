@@ -2343,7 +2343,12 @@ export class Screen implements GameIO {
       } else if (ctx === this.presentation.map.actorContext && isBuilding(c.overlay)) {
         if (!this.view3D.buildings) this.gfx.drawShape(effectContext, c.overlay, dx, dy, tile, { masked: true });
       } else {
-        this.gfx.drawShape(ctx, c.overlay, dx, dy, tile, { masked: true, flip: c.flip, altFrame: c.altFrame });
+        this.gfx.drawShape(ctx, c.overlay, dx, dy, tile, {
+          masked: true,
+          card: ctx === this.presentation.map.actorContext,
+          flip: c.flip,
+          altFrame: c.altFrame,
+        });
         if (ctx === this.presentation.map.actorContext) this.presentation.map.addActorShadow(dx, dy, tile, c.overlay);
       }
     }
@@ -2379,8 +2384,8 @@ export class Screen implements GameIO {
     const p = this.world.member(m);
     if (p.status === 'D' || p.status === 'A') return;
     const shape = memberShape(this.world, p.classLetter);
-    if (p.status === 'P') ctx.drawImage(this.greenFigure(shape, size), x, y);
-    else this.gfx.drawShape(ctx, shape, x, y, size, { masked: true });
+    if (p.status === 'P') ctx.drawImage(this.greenFigure(shape, size, ctx === this.presentation.map.actorContext), x, y);
+    else this.gfx.drawShape(ctx, shape, x, y, size, { masked: true, card: ctx === this.presentation.map.actorContext });
     if (ctx === this.presentation.map.actorContext) this.presentation.map.addActorShadow(x, y, size, shape);
   }
 
@@ -2388,8 +2393,8 @@ export class Screen implements GameIO {
   private greenFigures = new Map<string, HTMLCanvasElement>();
 
   /** A member figure with every pixel turned green, its shading kept as brightness. */
-  private greenFigure(shape: number, size: number): HTMLCanvasElement {
-    const key = `${shape}:${size}`;
+  private greenFigure(shape: number, size: number, card = false): HTMLCanvasElement {
+    const key = `${shape}:${size}:${card}`;
     const cached = this.greenFigures.get(key);
     if (cached) return cached;
     const off = document.createElement('canvas');
@@ -2397,7 +2402,7 @@ export class Screen implements GameIO {
     off.height = size;
     const octx = off.getContext('2d', { willReadFrequently: true })!;
     octx.imageSmoothingEnabled = false;
-    this.gfx.drawShape(octx, shape, 0, 0, size, { masked: true });
+    this.gfx.drawShape(octx, shape, 0, 0, size, { masked: true, card });
     const image = octx.getImageData(0, 0, size, size);
     const d = image.data;
     for (let i = 0; i < d.length; i += 4) {
