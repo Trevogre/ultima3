@@ -128,6 +128,36 @@ describe('opt-in Van Gogh art package', () => {
         expect(pixel[3]).toBe(255);
       }
   });
+  it('keeps sea-creature poses at matching scales without adjacent-frame bleed', () => {
+    const atlas = rgba('Tiles');
+    for (const index of [13, 14]) {
+      const widths: number[] = [];
+      const centres: number[] = [];
+      for (const frame of [0, 1]) {
+        const xs: number[] = [];
+        for (let y = 5; y < 110; y++)
+          for (let x = 0; x < 128; x++) {
+            const [r, g, b] = atlas(frame * 128 + x, index * 128 + y);
+            const foreground = index === 13 ? g > 150 && r > 90 && g > b * 1.35 : g > 150 && b > 190 && r < 100;
+            if (foreground) xs.push(x);
+          }
+        const left = Math.min(...xs),
+          right = Math.max(...xs);
+        widths.push(right - left + 1);
+        centres.push((right + left) / 2);
+        expect(right - left + 1).toBeGreaterThan(75);
+        expect(right - left + 1).toBeLessThan(106);
+      }
+      expect(Math.abs(widths[0] - widths[1])).toBeLessThan(10);
+      expect(Math.abs(centres[0] - centres[1])).toBeLessThan(10);
+    }
+    // The sea serpent must not include the cyan jellyfish in the next row.
+    for (const frame of [0, 1])
+      for (let x = 0; x < 128; x++) {
+        const [r, g, b] = atlas(frame * 128 + x, 14 * 128 - 1);
+        expect(r < 100 && g > 150 && b > 190).toBe(false);
+      }
+  });
   it('animates only flag cloth and retains blue doors, stone edges and the painted ground', () => {
     const atlas = rgba('Tiles'),
       cards = rgba('BuildingCards'),

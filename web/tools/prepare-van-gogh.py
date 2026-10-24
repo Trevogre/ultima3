@@ -52,6 +52,14 @@ for frame in range(2):
     whirlpool.putalpha(255)
     put(12,frame,whirlpool)
 
+# Sea creatures share the same 88px columns as the whirlpool/ships. The
+# generic 103px/74px split stretches frame A and compresses frame B, and the
+# generic row seams include pixels from the creature or ship underneath.
+for index,top,bottom in [(13,1019,1091),(14,1091,1171)]:
+    for frame in range(2):
+        tile=draft.crop((frame*88,top,(frame+1)*88,bottom))
+        put(index,frame,tile.resize((N,N),Image.Resampling.LANCZOS))
+
 # Both ship rows use equal 88px cells rather than the general column seams.
 # Reuse one complete painting per ship: generated alternate hulls/masts differ.
 # Only existing red flag-cloth strokes move; no boat geometry or water shifts.
@@ -261,6 +269,15 @@ for row,index in enumerate([6,7]):
         building_review.alpha_composite(card.resize((256,256)),((2+frame)*256,row*280+24))
 ImageDraw.Draw(building_review).text((8,4),'Town / castle: flat A, flat B, card A, card B',fill='white')
 building_review.convert('RGB').save(DOC/'building-review.png')
+
+# Compare the complete sea-creature animation pairs at equal display sizes.
+# One row per subject, two frames per row; no interpolation in the review.
+sea_review=Image.new('RGBA',(4*N,4*N+20),'#777777')
+for row,index in enumerate([13,14]):
+    for frame in range(2):
+        sea_review.alpha_composite(get(index,frame).resize((2*N,2*N),Image.Resampling.NEAREST),(frame*2*N,row*2*N+20))
+ImageDraw.Draw(sea_review).text((8,4),'Serpent / Man-O-War: frame A, frame B',fill='white')
+sea_review.convert('RGB').save(DOC/'sea-creature-review.png')
 
 # Neutral background inspection sheet makes alpha holes visible in review.
 review=Image.new('RGBA',atlas.size,'#777777'); review.alpha_composite(atlas)
