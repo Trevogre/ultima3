@@ -16,7 +16,7 @@ import {
   SRGBColorSpace,
 } from 'three';
 import type { GraphicsSet } from './graphics.ts';
-import { type Landscape, landscapeOffset } from '../game/landscape.ts';
+import { type Landscape, landscapeOffset, localLandscape } from '../game/landscape.ts';
 import { Shape } from '../game/tiles.ts';
 import { TownSightFigures } from './townSightFigures.ts';
 import { dungeonFaces, type LocalMapLocation } from './dungeonEntrances.ts';
@@ -66,7 +66,7 @@ export class TileMapScene {
   prepareSight(): void {
     this.sight.apply(this.scene);
   }
-  private readonly models = new ModelScene();
+  private readonly models = new ModelScene(() => this.onCardModeChange?.());
   readonly camera: OrthographicCamera;
   readonly rect: ScreenRect;
   readonly terrainContext: CanvasRenderingContext2D;
@@ -136,6 +136,9 @@ export class TileMapScene {
   onAudioToggle: (() => void) | null = null;
   get classicView(): boolean {
     return !this.options.enabled;
+  }
+  get compositionStatus(): string {
+    return this.models.compositionStatus;
   }
   get modelMode(): boolean {
     return this.options.renderStyle === 'Models';
@@ -335,6 +338,8 @@ export class TileMapScene {
     doors: DoorState[] = [],
     doorContext?: object,
   ): void {
+    const composedLocal = this.modelMode && this.options.worldLayout === 'Composed' && !this.options.distantTerrain;
+    if (landscape && composedLocal) landscape = localLandscape(landscape);
     const faces =
       this.options.buildings && this.options.mountains && (this.modelMode || this.tilt > 0.001)
         ? dungeonFaces(landscape, cells, location)
@@ -403,9 +408,9 @@ export class TileMapScene {
         this.sunShadows.trees.mesh,
       ])
         mesh.visible = false;
-      this.landscapeSide = landscape?.side ?? 0;
-      this.fitX = landscape ? (landscape.wraps ? -0.5 : (landscape.side - 1) / 2 - landscape.partyX) : 0;
-      this.fitY = landscape ? (landscape.wraps ? 0.5 : landscape.partyY - (landscape.side - 1) / 2) : 0;
+      this.landscapeSide = composedLocal ? 0 : (landscape?.side ?? 0);
+      this.fitX = landscape && !composedLocal ? (landscape.wraps ? -0.5 : (landscape.side - 1) / 2 - landscape.partyX) : 0;
+      this.fitY = landscape && !composedLocal ? (landscape.wraps ? 0.5 : landscape.partyY - (landscape.side - 1) / 2) : 0;
       this.groundEffects.forEach((mesh, i) => {
         mesh.position.z = terrainElevation(cells[i].base, this.options.recessedWater) + 0.01;
       });
@@ -491,6 +496,7 @@ export class TileMapScene {
 
   setOptions(options: View3DSettings): void {
     this.models.setSet(options.modelSet);
+    this.models.setLayout(options.worldLayout, options.distantTerrain);
     const changedMode = options.fixedCamera !== this.options.fixedCamera;
     const changedAngle = options.fixedAngle !== this.options.fixedAngle;
     const changedRotation = options.fixedRotation !== this.options.fixedRotation;
@@ -723,6 +729,7 @@ export class TileMapScene {
     this.camera.lookAt(x, y, 0);
     this.camera.zoom = this.zoom;
     this.camera.updateProjectionMatrix();
+    this.models.faceCamera(this.camera, (this.rect.w / this.visibleSide) * this.zoom);
     this.grass.faceCamera(this.camera, this.tilt, (this.rect.w / this.visibleSide) * this.zoom);
     if (this.modelMode) this.grass.mesh.visible = false;
     this.faceActors();

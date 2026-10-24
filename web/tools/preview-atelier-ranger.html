@@ -71,9 +71,8 @@
   <p id="status">Loading the skinned GLB and original 64×64 map…</p>
   <canvas id="review" aria-label="Animated ranger and composition study"></canvas>
   <p class="note">
-    Work in progress, separate from the game. Drag to orbit; wheel to zoom; WASD to walk. Click an animation to audition it. Ground is
-    composition scaffolding; authored trees, buildings, painterly surfaces and final animation polish are still to come. No saves or
-    preferences are changed.
+    Work in progress. Drag to orbit; wheel to zoom; WASD to walk. The composed environment is shared with the game; this skinned ranger is
+    still an animation/art study. Buildings, character polish and weapon handling remain in progress. No saves or preferences are changed.
   </p>
   <script type="module">
     import * as T from 'three';
@@ -81,6 +80,9 @@
     import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
     import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
     import { SkinnedModel } from '/src/ui/skinnedModel.ts';
+    import { ComposedWorldScene } from '/src/ui/composedWorldScene.ts';
+    import { readWorldCompositionOverrides } from '/src/game/worldCompositionOverrides.ts';
+    import { loadEnvironment } from '/src/ui/atelierEnvironment.ts';
     import { composeWorld } from '/src/game/worldComposition.ts';
     import { World } from '/src/game/world.ts';
     import { resourcesFromBundle } from '/src/data/resources.ts';
@@ -194,11 +196,24 @@
       mesh.receiveShadow = true;
       land.add(mesh);
     }
-    ground('Composed');
+    ground('Tiled');
+    const environment = await loadEnvironment();
+    const scenery = new ComposedWorldScene(() => {}, environment);
+    const landscape = { mapId: world.current.id, side, partyX: 0, partyY: 0, wraps: false, shapes };
+    const overrides = readWorldCompositionOverrides(await (await fetch('/data/world-layouts.json')).json());
+    scenery.set(landscape, [], true, true, new Set(), overrides[String(world.current.id)]);
+    scenery.setDaylight([1, 1, 1]);
+    scene.add(scenery.group);
+    land.visible = false;
+    let sceneryDirty = true;
+    controls.addEventListener('change', () => {
+      sceneryDirty = true;
+    });
     const asset = await new GLTFLoader().loadAsync('/models/atelier/ranger.glb');
     const ranger = new SkinnedModel(asset, 0.7, true);
     scene.add(ranger.root);
-    const spawn = composed.cells.find((c) => c.terrain === Shape.Grass && c.shore) ?? composed.cells.find((c) => c.terrain === Shape.Grass);
+    const spawn =
+      composed.cells.find((c) => c.index === 30 * side + 19) ?? composed.cells.find((c) => c.terrain === Shape.Grass && c.shore);
     const start = { x: spawn.index % side, y: -Math.floor(spawn.index / side) };
     ranger.root.position.set(start.x, start.y, 0);
     function closeView() {
@@ -239,10 +254,15 @@
       camera.position.copy(controls.target).add(new T.Vector3(0, -side * 1.3, side * 1.8));
       controls.update();
     };
-    document.querySelector('#layout').onchange = (e) => ground(e.target.value);
+    document.querySelector('#layout').onchange = (e) => {
+      const useComposed = e.target.value === 'Composed';
+      scenery.group.visible = useComposed;
+      land.visible = !useComposed;
+      sceneryDirty = true;
+    };
     document.querySelector('#turn').onclick = () => (ranger.root.rotation.z += Math.PI / 4);
     const status = document.querySelector('#status');
-    status.textContent = `Loaded ${asset.animations.map((a) => a.name).join(' / ')} · 18-joint skinned ranger · ${composed.cells.length} original map cells · ${composed.cells.reduce((n, c) => n + c.placements.length, 0)} planned scenery placements (not yet rendered).`;
+    status.textContent = `Loaded ${asset.animations.map((a) => a.name).join(' / ')} · 18-joint skinned ranger · ${composed.cells.length} original map cells · ${environment.size} authored environment meshes · ${composed.cells.reduce((n, c) => n + c.placements.length, 0)} composed scenery placements with LOD.`;
     function resize() {
       renderer.setSize(innerWidth, Math.max(300, innerHeight - 155), false);
       camera.aspect = canvas.width / canvas.height;
@@ -275,8 +295,19 @@
         const active = moving ? 'walk' : state,
           progress = ((clock - actionStart) % 2) / 2;
         ranger.pose(clock, active, progress, 0);
+        if (scenery.group.visible)
+          ranger.root.position.z = scenery.supportHeight(ranger.root.position.x, ranger.root.position.y, Shape.Grass);
+        else ranger.root.position.z = 0;
+        scenery.animate(clock);
       }
       controls.update();
+      if (sceneryDirty) {
+        sceneryDirty = false;
+        const distance = camera.position.distanceTo(controls.target);
+        scenery.faceCamera(camera, canvas.clientHeight / (2 * Math.tan((camera.fov * Math.PI) / 360) * distance));
+      }
+      sun.target.position.copy(ranger.root.position);
+      sun.position.copy(ranger.root.position).add(new T.Vector3(-8, -10, 14));
       renderer.render(scene, camera);
     }
     requestAnimationFrame(frame);

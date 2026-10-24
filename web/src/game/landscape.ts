@@ -112,3 +112,16 @@ export function landscapeOffset(value: number, party: number, side: number, wrap
   const d = value - party;
   return wraps ? ((((d + side / 2) % side) + side) % side) - side / 2 : d;
 }
+
+/** Restrict presentation to the original local footprint without changing its stable map coordinates. */
+export function localLandscape(landscape: Landscape, radius = 5): Landscape {
+  const { side, partyX, partyY, wraps } = landscape;
+  const shapes = landscape.shapes.slice();
+  for (let i = 0; i < shapes.length; i++)
+    if (
+      Math.abs(landscapeOffset(i % side, partyX, side, wraps)) > radius ||
+      Math.abs(landscapeOffset(Math.floor(i / side), partyY, side, wraps)) > radius
+    )
+      shapes[i] = Shape.Void;
+  return { ...landscape, shapes };
+}

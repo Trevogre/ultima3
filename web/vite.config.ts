@@ -43,7 +43,7 @@ export default defineConfig({
         ],
       },
       workbox: {
-        globPatterns: ['**/*.{js,css,html,png,gif,jpg,wav,mp3,mov,json,webmanifest}', 'music/orchestra/*.txt'],
+        globPatterns: ['**/*.{js,css,html,png,gif,jpg,wav,mp3,mov,json,glb,webmanifest}', 'music/orchestra/*.txt'],
         maximumFileSizeToCacheInBytes: 8 * 1024 * 1024,
         // The Flatpak repository under /flatpak/ is fetched by flatpak and Discover, and a browser that has the
         // worker must get those files too, not be handed the game instead.

@@ -1,3 +1,6 @@
+import type { EnvironmentLibrary } from './atelierEnvironment.ts';
+import { ComposedWorldScene } from './composedWorldScene.ts';
+import type { OrthographicCamera } from 'three';
 import {
   BoxGeometry,
   BufferAttribute,
@@ -33,6 +36,20 @@ import { ModelMotion } from './modelAnimation.ts';
 /** Separate solid-mesh presentation, sharing only the visibility-filtered map. */
 export class ModelScene {
   readonly group = new Group();
+  private readonly composed: ComposedWorldScene;
+  private layout: 'Tiled' | 'Composed' = 'Tiled';
+  private expanded = true;
+  get compositionStatus(): string {
+    return this.composed.status;
+  }
+  setLayout(layout: 'Tiled' | 'Composed', expanded: boolean): void {
+    if (layout !== this.layout && layout === 'Composed') this.composed.retry();
+    this.layout = layout;
+    this.expanded = expanded;
+  }
+  faceCamera(camera: OrthographicCamera, pixelsPerTile: number): void {
+    this.composed.faceCamera(camera, pixelsPerTile);
+  }
   readonly sun = new DirectionalLight(0xffedc7, 2.0);
   private readonly ambient = new HemisphereLight(0xdce9ee, 0x505b3a, 2.0);
   private readonly material = new MeshLambertMaterial({ vertexColors: true, flatShading: true });
@@ -67,9 +84,13 @@ export class ModelScene {
   private lowered = true;
   shadowEnabled = false;
 
-  constructor() {
+  constructor(invalidate: () => void = () => {}, library?: EnvironmentLibrary) {
+    this.composed = new ComposedWorldScene(invalidate, library);
+    this.composed.setFaceted(true);
+    this.group.add(this.composed.group);
     this.groundGeometry.setAttribute('paintSlot', this.groundPaintSlots);
     this.group.visible = false;
+    this.ambient.position.set(0, 0, 1);
     this.ground.frustumCulled = this.unknown.frustumCulled = false;
     this.ground.receiveShadow = true;
     this.ground.count = this.unknown.count = 0;
@@ -99,6 +120,7 @@ export class ModelScene {
   setSet(set: ModelSet): void {
     if (set === this.modelSet) return;
     this.modelSet = set;
+    this.composed.setFaceted(set === 'Low-poly');
     this.paint.enable(MODEL_ASSET_SETS[set].painted);
     this.cliffs.material = set === 'Van Gogh' ? this.paintedMaterial : this.material;
     for (const batch of this.batches.values()) {
@@ -165,6 +187,8 @@ export class ModelScene {
     cliffHosts: ReadonlySet<number> = new Set(),
   ): void {
     this.lowered = lowered;
+    const composed = this.layout === 'Composed' && this.composed.set(landscape, cells, lowered, this.expanded, cliffHosts);
+    this.composed.group.visible = composed;
     this.cliffs.count = 0;
     this.cliffs.frustumCulled = false;
     this.cliffs.castShadow = this.cliffs.receiveShadow = true;
@@ -185,23 +209,26 @@ export class ModelScene {
         this.unknown.setMatrixAt(this.unknown.count++, this.matrix);
         return;
       }
-      this.ground.setMatrixAt(this.ground.count, this.matrix);
-      this.groundPaintSlots.setX(
-        this.ground.count,
-        shape === Shape.Water
-          ? 1
-          : shape === Shape.Grass ||
-              shape === Shape.Forest ||
-              shape === Shape.Brush ||
-              shape === Shape.Town ||
-              shape === Shape.Castle ||
-              shape === Shape.Shrine
-            ? 0
-            : shape === Shape.Lava
-              ? 4
-              : 2,
-      );
-      this.ground.setColorAt(this.ground.count++, this.colour.setHex(modelGroundColour(shape)));
+      if (!composed || shape === Shape.Lava) {
+        this.ground.setMatrixAt(this.ground.count, this.matrix);
+        this.groundPaintSlots.setX(
+          this.ground.count,
+          shape === Shape.Water
+            ? 1
+            : shape === Shape.Grass ||
+                shape === Shape.Forest ||
+                shape === Shape.Brush ||
+                shape === Shape.Town ||
+                shape === Shape.Castle ||
+                shape === Shape.Shrine
+              ? 0
+              : shape === Shape.Lava
+                ? 4
+                : 2,
+        );
+        this.ground.setColorAt(this.ground.count++, this.colour.setHex(modelGroundColour(shape)));
+      }
+      if (composed && ([Shape.Forest, Shape.Brush, Shape.Mountains] as number[]).includes(shape) && !cliffHosts.has(index)) return;
       if (shape >= 76 && shape <= 114 && shape !== Shape.Door) this.addSign(shape, x, y, gfx);
       else if (shape !== Shape.ForceField && hasTerrainModel(shape)) {
         if (shape === Shape.Mountains && cliffHosts.has(index) && this.cliffs.count < 32) {
@@ -343,7 +370,15 @@ export class ModelScene {
   private poseActors(): void {
     for (const { rig, motion, actor } of this.actors.values()) {
       const pose = motion.sample(this.clock);
-      rig.root.position.set(pose.x, pose.y, actor.ground === Shape.Water && this.lowered ? -0.22 : 0);
+      rig.root.position.set(
+        pose.x,
+        pose.y,
+        this.composed.group.visible
+          ? this.composed.supportHeight(pose.x, pose.y, actor.ground)
+          : actor.ground === Shape.Water && this.lowered
+            ? -0.22
+            : 0,
+      );
       rig.root.rotation.z = motion.yaw;
       rig.root.scale.setScalar(actor.size);
       rig.pose(this.clock, pose.state, pose.progress, motion.phase);
@@ -356,12 +391,13 @@ export class ModelScene {
     this.clock += dt;
     this.paint.time.value = this.clock;
     this.poseActors();
+    this.composed.animate(this.clock);
     for (const item of this.wind) {
       this.matrix.makeRotationX(Math.sin(this.clock * 1.3 + item.x * 0.7 + item.y) * 0.015).setPosition(item.x, item.y, item.z);
       item.mesh.setMatrixAt(item.index, this.matrix);
       item.mesh.instanceMatrix.needsUpdate = true;
     }
-    return this.ground.count > 0 || this.actors.size > 0;
+    return this.composed.group.visible || this.ground.count > 0 || this.actors.size > 0;
   }
 
   private changed(): void {
@@ -372,6 +408,7 @@ export class ModelScene {
   }
 
   setDaylight(colour: [number, number, number]): void {
+    this.composed.setDaylight(colour);
     this.material.color.setRGB(...colour);
     this.paintedMaterial.color.setRGB(...colour);
     this.flagMaterial.color.setRGB(colour[0] * 0.25, colour[1] * 0.5, colour[2] * 0.85);
@@ -388,6 +425,7 @@ export class ModelScene {
   }
 
   dispose(): void {
+    this.composed.dispose();
     this.clearActors();
     this.cliffGeometry.dispose();
     this.cliffs.dispose();

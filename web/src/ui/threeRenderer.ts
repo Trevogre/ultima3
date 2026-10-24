@@ -9,7 +9,7 @@ import {
   MeshBasicMaterial,
   NearestFilter,
   NoToneMapping,
-  PCFSoftShadowMap,
+  PCFShadowMap,
   OrthographicCamera,
   PlaneGeometry,
   Scene,
@@ -128,7 +128,7 @@ export class ThreeRenderer {
       this.renderer.outputColorSpace = SRGBColorSpace;
       this.renderer.toneMapping = NoToneMapping;
       this.renderer.autoClear = false;
-      this.renderer.shadowMap.type = PCFSoftShadowMap;
+      this.renderer.shadowMap.type = PCFShadowMap;
       this.controls = new MapCameraControls(canvas, this.map);
       this.fallback = null;
       canvas.addEventListener('webglcontextlost', this.onLost);

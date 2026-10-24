@@ -21,7 +21,12 @@
           <option>Macintosh B&amp;W</option>
         </select></label
       >
-      <button id="orbit">Rotate 90°</button><button id="overhead">Overhead</button><button id="angle">45° tilt</button>
+      <label
+        >World layout<select id="layout">
+          <option>Tiled</option>
+          <option>Composed</option>
+        </select></label
+      ><button id="orbit">Rotate 90°</button><button id="overhead">Overhead</button><button id="angle">45° tilt</button>
       <button id="zoom">Zoom</button><button id="night">Day/night</button><button id="move">Walk east</button>
       <button id="hit">Hit frame</button>
       <label
@@ -48,7 +53,7 @@
       const renderer = new T.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
       renderer.setSize(900, 900);
       renderer.outputColorSpace = T.SRGBColorSpace;
-      renderer.shadowMap.type = T.PCFSoftShadowMap;
+      renderer.shadowMap.type = T.PCFShadowMap;
       const map = new TileMapScene(32, 11, () => {}, true);
       const landscape = { side: 19, partyX: 9, partyY: 9, wraps: false, shapes: new Uint8Array(19 * 19).fill(Shape.Grass) };
       for (let y = 0; y < 19; y++)
@@ -85,6 +90,7 @@
           ...DEFAULT_3D_SETTINGS,
           renderStyle: style,
           modelSet: document.querySelector('#models').value,
+          worldLayout: document.querySelector('#layout').value,
           fixedCamera: false,
           treeCards: true,
         });
@@ -138,14 +144,20 @@
         map.changed();
         render();
         document.querySelector('#result').textContent =
-          `${style} · ${document.querySelector('#tiles').value} · heading follows movement; orbit only changes the camera.`;
+          `${style} · ${document.querySelector('#tiles').value} · ${document.querySelector('#layout').value}: ${map.compositionStatus} · heading follows movement; orbit only changes the camera.`;
       }
+      let pendingDraw = false;
+      map.onCardModeChange = () => {
+        pendingDraw = true;
+      };
       function render() {
         renderer.shadowMap.enabled = map.modelShadows;
+        map.prepareSight();
         renderer.render(map.scene, map.camera);
       }
       document.querySelector('#tiles').onchange = load;
       document.querySelector('#models').onchange = draw;
+      document.querySelector('#layout').onchange = draw;
       document.querySelector('#style').onchange = draw;
       document.querySelector('#orbit').onclick = () => {
         map.orbit(Math.PI / 2 / 0.006, 0);
@@ -189,8 +201,13 @@
         select.value = select.value === 'Van Gogh' ? 'Low-poly' : 'Van Gogh';
         draw();
       });
+      if (new URLSearchParams(location.search).get('layout') === 'Composed') document.querySelector('#layout').value = 'Composed';
       await load();
       function loop(time) {
+        if (pendingDraw && gfx) {
+          pendingDraw = false;
+          draw();
+        }
         map.animate(time, !paused);
         render();
         requestAnimationFrame(loop);
