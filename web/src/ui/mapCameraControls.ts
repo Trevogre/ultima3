@@ -12,6 +12,8 @@ export class MapCameraControls {
   private readonly fit = document.createElement('button');
   private readonly mode = document.createElement('button');
   private readonly classic = document.createElement('button');
+  private readonly music = document.createElement('button');
+  private readonly effects = document.createElement('button');
   private readonly audio = document.createElement('button');
   private readonly toolbar = document.createElement('div');
   private readonly observer: ResizeObserver;
@@ -37,7 +39,17 @@ export class MapCameraControls {
       this.map.onCameraModeToggle?.();
       this.canvas.focus();
     });
-    this.classic.type = this.audio.type = 'button';
+    this.classic.type = this.audio.type = this.music.type = this.effects.type = 'button';
+    this.music.id = 'map-music-toggle';
+    this.effects.id = 'map-effects-toggle';
+    this.music.addEventListener('click', () => {
+      this.map.onMusicToggle?.();
+      this.canvas.focus();
+    });
+    this.effects.addEventListener('click', () => {
+      this.map.onEffectsToggle?.();
+      this.canvas.focus();
+    });
     this.classic.id = 'map-classic-toggle';
     this.audio.id = 'map-audio-toggle';
     this.classic.addEventListener('click', () => {
@@ -48,14 +60,14 @@ export class MapCameraControls {
       this.map.onAudioToggle?.();
       this.canvas.focus();
     });
-    for (const button of [this.fit, this.reset, this.mode, this.classic, this.audio]) {
+    for (const button of [this.fit, this.reset, this.mode, this.classic, this.music, this.effects, this.audio]) {
       button.style.cssText =
         'padding:5px 8px;background:#111e;color:#fff;border:1px solid #888;border-radius:3px;font:12px sans-serif;cursor:pointer;';
       button.addEventListener('keydown', (event) => event.stopPropagation());
     }
     this.reset.addEventListener('click', this.onReset);
     this.fit.addEventListener('click', this.onFit);
-    this.toolbar.append(this.mode, this.fit, this.reset, this.classic, this.audio);
+    this.toolbar.append(this.mode, this.fit, this.reset, this.classic, this.music, this.effects, this.audio);
     canvas.after(this.toolbar);
     canvas.addEventListener('pointerdown', this.onDown);
     canvas.addEventListener('pointermove', this.onMove);
@@ -85,6 +97,15 @@ export class MapCameraControls {
     this.classic.textContent = this.map.classicView ? '3D' : 'Classic';
     this.classic.title = this.map.classicView ? 'Return to 3D view' : 'Switch to the original Classic view';
     this.classic.setAttribute('aria-label', this.classic.title);
+    for (const [button, name, on] of [
+      [this.music, 'Music', this.map.musicOn],
+      [this.effects, 'FX', this.map.effectsOn],
+    ] as const) {
+      button.textContent = `${name}: ${on ? 'On' : 'Off'}`;
+      button.title = `${on ? 'Turn off' : 'Turn on'} ${name === 'FX' ? 'sound effects' : 'music'}${this.map.audioOn ? '' : ' (master audio is muted)'}`;
+      button.setAttribute('aria-label', button.title);
+      button.setAttribute('aria-pressed', String(on));
+    }
     this.audio.textContent = this.map.audioOn ? '🔊' : '🔇';
     this.audio.title = this.map.audioOn ? 'Mute game audio' : 'Unmute game audio';
     this.audio.setAttribute('aria-label', this.audio.title);

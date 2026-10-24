@@ -112,6 +112,10 @@ export class TileMapScene {
   private combat = false;
   private explorationZoom = 1;
   audioOn = true;
+  musicOn = true;
+  effectsOn = true;
+  onMusicToggle: (() => void) | null = null;
+  onEffectsToggle: (() => void) | null = null;
   onPresentationToggle: (() => void) | null = null;
   onAudioToggle: (() => void) | null = null;
   get classicView(): boolean {

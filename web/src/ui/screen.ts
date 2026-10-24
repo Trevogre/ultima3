@@ -325,6 +325,16 @@ export class Screen implements GameIO {
       this.set3DSettings({ ...this.view3D, enabled: !this.view3D.enabled });
       this.onSettingsChange?.();
     };
+    this.presentation.map.onMusicToggle = () => {
+      this.musicPlayer.enabled = !this.musicPlayer.enabled;
+      if (this.musicPlayer.enabled) this.musicPlayer.unlock();
+      this.onSettingsChange?.();
+    };
+    this.presentation.map.onEffectsToggle = () => {
+      this.world.soundEnabled = !this.world.soundEnabled;
+      if (this.world.soundEnabled) this.sounds.unlock();
+      this.onSettingsChange?.();
+    };
     this.presentation.map.onAudioToggle = () => {
       this.setAudioMuted(!this.audioMuted);
       if (!this.audioMuted) {
@@ -2762,6 +2772,8 @@ export class Screen implements GameIO {
       const p = this.underPaused;
       covers.push({ x: p.x, y: p.y, w: p.image.width, h: p.image.height });
     }
+    this.presentation.map.musicOn = this.musicPlayer.enabled;
+    this.presentation.map.effectsOn = this.world.soundEnabled;
     this.presentation.map.audioOn = !this.audioMuted;
     this.presentation.present({
       toolbarVisible:
