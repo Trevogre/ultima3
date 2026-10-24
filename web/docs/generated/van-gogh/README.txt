@@ -28,6 +28,8 @@ surroundings on the ground beneath the card. The covered foundation uses
 this set's existing grass, rather than removing the surrounding painting.
 Characters use the atlas's own alpha. building-review.png compares both
 flat and standing frames. Tests check the shipped PNG pixels directly.
+The whirlpool row uses two equal 88×77 source crops, preventing unequal
+animation scaling and bleed from the neighbouring vortex and serpent row.
 
 This is a first art pass, not a claim that every generated silhouette is
 final. UI, font and first-person dungeon art currently use the existing

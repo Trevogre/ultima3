@@ -42,6 +42,15 @@ function rgba(file: string) {
 }
 
 describe('opt-in Van Gogh art package', () => {
+  it('keeps both whirlpool frames inside their row, without the green serpent tile bleeding below', () => {
+    const atlas = rgba('Tiles');
+    for (const frame of [0, 1])
+      for (let x = 0; x < 128; x++) {
+        const pixel = atlas(frame * 128 + x, 13 * 128 - 1);
+        expect(pixel[2]).toBeGreaterThan(pixel[1]);
+        expect(pixel[3]).toBe(255);
+      }
+  });
   it('animates only flag cloth and retains blue doors, stone edges and the painted ground', () => {
     const atlas = rgba('Tiles'),
       cards = rgba('BuildingCards'),

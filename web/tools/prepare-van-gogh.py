@@ -33,6 +33,14 @@ def get(index, frame=0):
     x, y = (index//16*2+frame)*N, index%16*N
     return atlas.crop((x,y,x+N,y+N))
 
+# The whirlpool pair also uses equal 88px columns in this generated row.
+# Generic atlas seams included the next vortex and the serpent row below it.
+for frame in range(2):
+    whirlpool=draft.crop((frame*88,941,(frame+1)*88,1018))
+    whirlpool=whirlpool.resize((N,N),Image.Resampling.LANCZOS)
+    whirlpool.putalpha(255)
+    put(12,frame,whirlpool)
+
 # Trim the draft's thin grid rules from continuous terrain. The unused second
 # water/floor frames must remain terrain too, rather than generated empty art.
 for index in [0,1,4,8,32,33,35,37]:
