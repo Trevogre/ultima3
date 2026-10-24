@@ -7,7 +7,19 @@ import { MOUNTAIN_STEPS } from './terrainDepth.ts';
 
 /** One tile wide and deep, standing one tile above the original ground plane. */
 export function terrainCubeGeometry(): BoxGeometry {
-  return new BoxGeometry(1, 1, 1).translate(0, 0, 0.5);
+  const geometry = new BoxGeometry(1, 1, 1).translate(0, 0, 0.5);
+  const position = geometry.getAttribute('position');
+  const normal = geometry.getAttribute('normal');
+  const uv = geometry.getAttribute('uv');
+  // Three's box UVs assume Y-up; the map is Z-up. Reorient each vertical
+  // face so V follows height and U reads left-to-right from outside.
+  for (let i = 0; i < position.count; i++) {
+    const nx = normal.getX(i),
+      ny = normal.getY(i);
+    if (normal.getZ(i) !== 0) continue; // retain the original top/bottom art
+    uv.setXY(i, 0.5 + ny * position.getX(i) - nx * position.getY(i), position.getZ(i));
+  }
+  return geometry;
 }
 
 export class TerrainCubes {

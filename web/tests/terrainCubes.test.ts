@@ -9,7 +9,7 @@ import { Location } from '../src/game/party.ts';
 import { newWorld } from './helpers.ts';
 
 describe('terrain cubes', () => {
-  it('fills exactly one tile above ground and repeats the upright top texture on every face', () => {
+  it('fills one tile above ground, with upright side art and unchanged top art', () => {
     const geometry = terrainCubeGeometry();
     geometry.computeBoundingBox();
     expect(geometry.boundingBox!.min.toArray()).toEqual([-0.5, -0.5, 0]);
@@ -17,13 +17,18 @@ describe('terrain cubes', () => {
     const uv = geometry.getAttribute('uv');
     const plane = new PlaneGeometry(1, 1);
     const reference = plane.getAttribute('uv');
-    for (let face = 0; face < 6; face++)
-      for (let vertex = 0; vertex < 4; vertex++) {
-        expect([uv.getX(face * 4 + vertex), uv.getY(face * 4 + vertex)]).toEqual([reference.getX(vertex), reference.getY(vertex)]);
-      }
     const position = geometry.getAttribute('position');
+    const normals = geometry.getAttribute('normal');
+    for (let i = 0; i < position.count; i++) {
+      if (normals.getZ(i) !== 0) continue;
+      // The top of every side texture follows world Z, not Three's default Y.
+      expect(uv.getY(i)).toBe(position.getZ(i));
+      const right = normals.getY(i) * position.getX(i) - normals.getX(i) * position.getY(i);
+      expect(uv.getX(i)).toBe(right + 0.5);
+    }
     // The +Z face matches the original flat tile's XY coordinates and UVs.
     for (let vertex = 0; vertex < 4; vertex++) {
+      expect([uv.getX(16 + vertex), uv.getY(16 + vertex)]).toEqual([reference.getX(vertex), reference.getY(vertex)]);
       expect([position.getX(16 + vertex), position.getY(16 + vertex), position.getZ(16 + vertex)]).toEqual([
         plane.getAttribute('position').getX(vertex),
         plane.getAttribute('position').getY(vertex),
