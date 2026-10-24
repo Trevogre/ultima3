@@ -459,6 +459,11 @@ export class TileMapScene {
     this.changed();
   }
 
+  /** Painterly hit rings belong to the floor, including behind solid model figures. */
+  setGroundEffectsDepthTest(enabled: boolean): void {
+    this.materials[2].depthTest = enabled;
+  }
+
   changed(): void {
     for (const texture of this.textures) texture.needsUpdate = true;
     this.invalidate();

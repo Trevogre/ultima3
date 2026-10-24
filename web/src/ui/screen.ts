@@ -45,6 +45,7 @@ import { commandMenu, hasMagic } from '../game/context.ts';
 import { memberShape } from '../game/combat.ts';
 import { TILE_SETS, helpPages, PAGE_ROWS, PAGE_WIDTH } from './help.ts';
 import { modelActors } from './modelActors.ts';
+import { drawPaintedHit, usesGroundHit } from './hitEffects.ts';
 import { journalCard, journalSnapshot, journalTop, wordCard, type JournalLine } from '../game/journal.ts';
 import { TIPS, tipPages, type Tip } from '../game/tips.ts';
 import { CHEATS } from '../game/cheats.ts';
@@ -271,9 +272,9 @@ export class Screen implements GameIO {
     if (this.tileSetName === 'Standard' || this.tileSetName === 'Van Gogh') return this.world.inTownOrCastle ? 'line' : 'grid';
     return 'symbol';
   }
-  /** Standard alone shows the red burst on a hit instead of the HIT tile. */
+  /** Modern art sets keep the figure visible over a ground hit effect. */
   private get burstTiles(): boolean {
-    return this.tileSetName === 'Standard';
+    return usesGroundHit(this.tileSetName);
   }
   private readonly gamepads: GamepadReader;
   /** The menu window being shown, drawn over the map every frame. */
@@ -2366,6 +2367,7 @@ export class Screen implements GameIO {
     if (!this.view) return;
     const map = this.presentation.map;
     map.beginFrame();
+    map.setGroundEffectsDepthTest(this.tileSetName === 'Van Gogh');
     const outdoors = (world.combat?.previousLocation ?? world.party.location) !== Location.Dungeon;
     map.setDaylight(this.view3D.dayNight && outdoors ? daylightColour(world.moonPhase[0], world.moonTimer[0]) : [1, 1, 1]);
     map.setSun(world.moonPhase[0], world.moonTimer[0], outdoors);
@@ -2400,7 +2402,7 @@ export class Screen implements GameIO {
   private drawViewportActors(ctx: CanvasRenderingContext2D, c: ViewCell, dx: number, dy: number, tile: number, effectContext = ctx): void {
     if (ctx === this.presentation.map.actorContext && this.presentation.map.modelMode) {
       if (c.hit) {
-        if (this.burstTiles) this.drawBurst(dx, dy, tile, c.hit.frame, effectContext);
+        if (this.burstTiles) this.drawBurst(dx, dy, tile, c.hit.frame, effectContext, c.hit.shape);
         else this.gfx.drawShape(effectContext, c.hit.shape, dx, dy, tile, { masked: true, altFrame: true });
       }
       return;
@@ -2415,6 +2417,7 @@ export class Screen implements GameIO {
     ) {
       this.drawViewportActors(this.presentation.map.sunActorContext, c, dx, dy, tile);
     }
+    if (c.hit && this.tileSetName === 'Van Gogh' && ctx === this.ctx) this.drawBurst(dx, dy, tile, c.hit.frame, ctx, c.hit.shape);
     if (c.follower !== undefined && this.partyStyle === 'line') this.drawMember(c.follower, dx, dy, tile, ctx);
     if (c.hit && !this.burstTiles) {
       this.gfx.drawShape(ctx, c.hit.shape, dx, dy, tile, { masked: true, altFrame: true });
@@ -2441,7 +2444,8 @@ export class Screen implements GameIO {
         if (ctx === this.presentation.map.actorContext) this.presentation.map.addActorShadow(dx, dy, tile, c.overlay);
       }
     }
-    if (c.hit) this.drawBurst(dx, dy, tile, c.hit.frame, effectContext);
+    if (c.hit && !(this.tileSetName === 'Van Gogh' && ctx === this.ctx))
+      this.drawBurst(dx, dy, tile, c.hit.frame, effectContext, c.hit.shape);
   }
 
   /**
@@ -2528,7 +2532,11 @@ export class Screen implements GameIO {
    * Frames 1 and 2 are filled discs, a bright rim round a darker centre;
    * frame 3 is a ring, so the target shows through as the burst passes.
    */
-  private drawBurst(dx: number, dy: number, tile: number, frame: number, ctx = this.ctx): void {
+  private drawBurst(dx: number, dy: number, tile: number, frame: number, ctx = this.ctx, shape: number = Shape.FireBall): void {
+    if (this.tileSetName === 'Van Gogh') {
+      drawPaintedHit(ctx, this.gfx, dx, dy, tile, frame, shape);
+      return;
+    }
     const gp = tile / 16;
     const radius = [0, 2.6, 4.6, 6.8][frame] ?? 6.8;
     const inner = frame === 3 ? 4.6 : frame === 2 ? 3.0 : 0; // hollow, or the darker centre
