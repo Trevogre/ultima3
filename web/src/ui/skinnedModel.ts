@@ -1,5 +1,6 @@
 import {
   Box3,
+  Color,
   type Skeleton,
   AnimationMixer,
   Group,
@@ -25,6 +26,9 @@ export class SkinnedModel implements AnimatedModel {
   private lastTime: number | null = null;
   private readonly materials: Material[] = [];
   private readonly skeletons = new Set<Skeleton>();
+  private readonly baseColours = new Map<Material, Color>();
+  private daylight: [number, number, number] = [1, 1, 1];
+  private poisoned = false;
   constructor(asset: GLTF, scale = 0.5, zUp = true) {
     for (const name of Object.values(CLIPS))
       if (!asset.animations.some((clip) => clip.name === name)) throw new Error(`Skinned model is missing ${name}`);
@@ -37,7 +41,10 @@ export class SkinnedModel implements AnimatedModel {
       // Independent materials allow actor tinting. Geometry remains immutable/shared.
       const original = object.material as Material | Material[];
       object.material = Array.isArray(original) ? original.map((m) => m.clone()) : original.clone();
-      this.materials.push(...(Array.isArray(object.material) ? (object.material as Material[]) : [object.material as Material]));
+      const owned: Material[] = Array.isArray(object.material) ? (object.material as Material[]) : [object.material as Material];
+      this.materials.push(...owned);
+      for (const material of owned)
+        if ('color' in material && material.color instanceof Color) this.baseColours.set(material, material.color.clone());
       object.castShadow = object.receiveShadow = true;
       if ((object as SkinnedMesh).isSkinnedMesh) {
         object.frustumCulled = false;
@@ -74,12 +81,18 @@ export class SkinnedModel implements AnimatedModel {
     this.mixer.update(dt);
   }
   setPoisoned(value: boolean): void {
-    for (const material of this.materials) {
-      if ('color' in material) {
-        const coloured = material as Material & { color: { setHex: (hex: number) => void } };
-        coloured.color.setHex(value ? 0x87bd79 : 0xffffff);
-      }
-    }
+    this.poisoned = value;
+    this.tint();
+  }
+  setDaylight(colour: [number, number, number]): void {
+    this.daylight = [...colour];
+    this.tint();
+  }
+  private tint(): void {
+    const light = new Color().setRGB(...this.daylight),
+      poison = new Color(this.poisoned ? 0x87bd79 : 0xffffff);
+    for (const [material, base] of this.baseColours)
+      (material as Material & { color: Color }).color.copy(base).multiply(light).multiply(poison);
   }
   dispose(): void {
     this.mixer.stopAllAction();

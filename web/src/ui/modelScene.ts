@@ -1,4 +1,7 @@
 import type { EnvironmentLibrary } from './atelierEnvironment.ts';
+import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
+import { hasAtelierCharacter, loadAtelierRanger } from './atelierCharacters.ts';
+import { SkinnedModel } from './skinnedModel.ts';
 import { ComposedWorldScene } from './composedWorldScene.ts';
 import type { OrthographicCamera } from 'three';
 import {
@@ -37,6 +40,21 @@ import { ModelMotion } from './modelAnimation.ts';
 export class ModelScene {
   readonly group = new Group();
   private readonly composed: ComposedWorldScene;
+  private ranger: GLTF | null = null;
+  private rangerLoading = false;
+  private rangerFailed = false;
+  private disposed = false;
+  private daylight: [number, number, number] = [1, 1, 1];
+  get characterStatus(): string {
+    if (this.modelSet !== 'Composed') return 'Replacement character art awaits visual approval.';
+    return this.rangerFailed
+      ? 'Ranger unavailable; prior model retained. Switch sets to retry.'
+      : this.rangerLoading
+        ? 'Loading rigged ranger…'
+        : this.ranger
+          ? 'Rigged ranger with five animation states.'
+          : 'Authored ranger loads when visible.';
+  }
   private layout: 'Tiled' | 'Composed' = 'Tiled';
   private expanded = true;
   get compositionStatus(): string {
@@ -84,7 +102,11 @@ export class ModelScene {
   private lowered = true;
   shadowEnabled = false;
 
-  constructor(invalidate: () => void = () => {}, library?: EnvironmentLibrary) {
+  constructor(
+    private readonly invalidate: () => void = () => {},
+    library?: EnvironmentLibrary,
+    private readonly loadRanger: () => Promise<GLTF> = loadAtelierRanger,
+  ) {
     this.composed = new ComposedWorldScene(invalidate, library);
     this.composed.setFaceted(true);
     this.group.add(this.composed.group);
@@ -120,9 +142,12 @@ export class ModelScene {
   setSet(set: ModelSet): void {
     if (set === this.modelSet) return;
     this.modelSet = set;
+    this.layout = set === 'Composed' ? 'Composed' : 'Tiled';
+    if (set === 'Composed') this.composed.retry();
+    this.rangerFailed = false;
     this.composed.setFaceted(set === 'Low-poly');
     this.paint.enable(MODEL_ASSET_SETS[set].painted);
-    this.cliffs.material = set === 'Van Gogh' ? this.paintedMaterial : this.material;
+    this.cliffs.material = set !== 'Low-poly' ? this.paintedMaterial : this.material;
     for (const batch of this.batches.values()) {
       this.group.remove(batch);
       batch.geometry.dispose();
@@ -133,6 +158,37 @@ export class ModelScene {
     this.scenery.clear();
     this.wind.length = 0;
     this.clearActors();
+  }
+  private requestRanger(): void {
+    if (this.ranger || this.rangerLoading || this.rangerFailed || this.disposed) return;
+    this.rangerLoading = true;
+    void this.loadRanger()
+      .then((asset) => {
+        if (this.disposed) return;
+        this.ranger = asset;
+        this.rangerLoading = false;
+        // Swap only currently admitted actors, retaining their movement/action clocks.
+        if (this.modelSet === 'Composed')
+          for (const entry of this.actors.values()) {
+            if (!hasAtelierCharacter(entry.actor.shape)) continue;
+            const rig = new SkinnedModel(asset);
+            rig.root.name = entry.actor.id;
+            rig.setPoisoned(!!entry.actor.poisoned);
+            rig.setDaylight(this.daylight);
+            this.group.remove(entry.rig.root);
+            entry.rig.dispose();
+            entry.rig = rig;
+            this.group.add(rig.root);
+          }
+        this.poseActors();
+        this.invalidate();
+      })
+      .catch(() => {
+        if (this.disposed) return;
+        this.rangerLoading = false;
+        this.rangerFailed = true;
+        this.invalidate();
+      });
   }
   private clearActors(): void {
     for (const { rig } of this.actors.values()) {
@@ -157,7 +213,7 @@ export class ModelScene {
     if (!batch) {
       batch = new InstancedMesh(
         MODEL_ASSET_SETS[this.modelSet].scenery(shape),
-        this.modelSet === 'Van Gogh' ? this.paintedMaterial : this.material,
+        this.modelSet !== 'Low-poly' ? this.paintedMaterial : this.material,
         4096,
       );
       batch.count = 0;
@@ -237,7 +293,7 @@ export class ModelScene {
         if (shape === Shape.Forest || shape === Shape.Brush)
           this.wind.push({ mesh: this.batch(shape), index: this.batch(shape).count - 1, x, y, z });
         if (shape === Shape.Town || shape === Shape.Castle)
-          this.addFlag(x + (this.modelSet === 'Van Gogh' && shape === Shape.Town ? -0.33 : 0), y + 0.06, 1.25);
+          this.addFlag(x + (this.modelSet !== 'Low-poly' && shape === Shape.Town ? -0.33 : 0), y + 0.06, 1.25);
       }
     };
     if (landscape) {
@@ -275,7 +331,7 @@ export class ModelScene {
       const canvas = document.createElement('canvas');
       canvas.width = canvas.height = 64;
       const ctx = canvas.getContext('2d')!;
-      if (this.modelSet === 'Van Gogh') {
+      if (this.modelSet !== 'Low-poly') {
         ctx.fillStyle = '#743c20';
         ctx.fillRect(0, 0, 64, 64);
         ctx.fillStyle = '#efcc78';
@@ -311,7 +367,7 @@ export class ModelScene {
         if (top) for (let j = i; j < i + 3; j++) uv.setXY(j, position.getX(j) + 0.5, position.getY(j) + 0.5);
       }
       geometry.addGroup(start, position.count - start, last);
-      const mesh = new InstancedMesh(geometry, [this.modelSet === 'Van Gogh' ? this.paintedMaterial : this.material, material], 4096);
+      const mesh = new InstancedMesh(geometry, [this.modelSet !== 'Low-poly' ? this.paintedMaterial : this.material, material], 4096);
       mesh.count = 0;
       mesh.frustumCulled = false;
       mesh.receiveShadow = true;
@@ -341,6 +397,7 @@ export class ModelScene {
       }
     this.flags.count = this.sceneryFlags;
     for (const actor of actors) {
+      if (this.modelSet === 'Composed' && hasAtelierCharacter(actor.shape)) this.requestRanger();
       let entry = this.actors.get(actor.id);
       const yaw = this.headings.heading(actor, side, wraps);
       if (entry && entry.actor.shape !== actor.shape) {
@@ -350,7 +407,11 @@ export class ModelScene {
         entry = undefined;
       }
       if (!entry) {
-        const rig = MODEL_ASSET_SETS[this.modelSet].actor(actor.shape, this.modelSet === 'Van Gogh' ? this.paintedMaterial : this.material);
+        const rig =
+          this.modelSet === 'Composed' && this.ranger && hasAtelierCharacter(actor.shape)
+            ? new SkinnedModel(this.ranger)
+            : MODEL_ASSET_SETS[this.modelSet].actor(actor.shape, this.modelSet !== 'Low-poly' ? this.paintedMaterial : this.material);
+        rig.setDaylight?.(this.daylight);
         rig.root.name = actor.id;
         entry = { rig, motion: new ModelMotion(actor, yaw), actor };
         this.actors.set(actor.id, entry);
@@ -408,6 +469,8 @@ export class ModelScene {
   }
 
   setDaylight(colour: [number, number, number]): void {
+    this.daylight = [...colour];
+    for (const { rig } of this.actors.values()) rig.setDaylight?.(colour);
     this.composed.setDaylight(colour);
     this.material.color.setRGB(...colour);
     this.paintedMaterial.color.setRGB(...colour);
@@ -425,6 +488,7 @@ export class ModelScene {
   }
 
   dispose(): void {
+    this.disposed = true;
     this.composed.dispose();
     this.clearActors();
     this.cliffGeometry.dispose();

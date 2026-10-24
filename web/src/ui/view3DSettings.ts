@@ -5,7 +5,6 @@ import { readModelSet, type ModelSet } from './modelSets.ts';
 export interface View3DSettings {
   renderStyle: 'Cards' | 'Models';
   modelSet: ModelSet;
-  worldLayout: 'Tiled' | 'Composed';
   enabled: boolean;
   characters: boolean;
   buildings: boolean;
@@ -41,7 +40,6 @@ export interface View3DSettings {
 export const DEFAULT_3D_SETTINGS: Readonly<View3DSettings> = {
   renderStyle: 'Cards',
   modelSet: 'Low-poly',
-  worldLayout: 'Tiled',
   enabled: true,
   characters: true,
   buildings: true,
@@ -130,7 +128,6 @@ export function read3DSettings(value: unknown): View3DSettings {
       key === 'zoomFiltering' ||
       key === 'renderStyle' ||
       key === 'modelSet' ||
-      key === 'worldLayout' ||
       key === 'lavaStyle'
     )
       continue;
@@ -140,7 +137,7 @@ export function read3DSettings(value: unknown): View3DSettings {
   if (Reflect.get(value, 'lavaStyle') === 'Surface') settings.lavaStyle = 'Surface';
   const filtering: unknown = Reflect.get(value, 'zoomFiltering');
   settings.modelSet = readModelSet(Reflect.get(value, 'modelSet'));
-  if (Reflect.get(value, 'worldLayout') === 'Composed') settings.worldLayout = 'Composed';
+  if (Reflect.get(value, 'worldLayout') === 'Composed') settings.modelSet = 'Composed';
   if (Reflect.get(value, 'renderStyle') === 'Models') settings.renderStyle = 'Models';
   if (filtering === 'Crisp' || filtering === 'Stable' || filtering === 'Auto') settings.zoomFiltering = filtering;
   const angle: unknown = Reflect.get(value, 'fixedAngle');

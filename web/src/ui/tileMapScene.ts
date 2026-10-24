@@ -140,6 +140,9 @@ export class TileMapScene {
   get compositionStatus(): string {
     return this.models.compositionStatus;
   }
+  get characterStatus(): string {
+    return this.models.characterStatus;
+  }
   get modelMode(): boolean {
     return this.options.renderStyle === 'Models';
   }
@@ -338,7 +341,7 @@ export class TileMapScene {
     doors: DoorState[] = [],
     doorContext?: object,
   ): void {
-    const composedLocal = this.modelMode && this.options.worldLayout === 'Composed' && !this.options.distantTerrain;
+    const composedLocal = this.modelMode && this.options.modelSet === 'Composed' && !this.options.distantTerrain;
     if (landscape && composedLocal) landscape = localLandscape(landscape);
     const faces =
       this.options.buildings && this.options.mountains && (this.modelMode || this.tilt > 0.001)
@@ -496,7 +499,7 @@ export class TileMapScene {
 
   setOptions(options: View3DSettings): void {
     this.models.setSet(options.modelSet);
-    this.models.setLayout(options.worldLayout, options.distantTerrain);
+    this.models.setLayout(options.modelSet === 'Composed' ? 'Composed' : 'Tiled', options.distantTerrain);
     const changedMode = options.fixedCamera !== this.options.fixedCamera;
     const changedAngle = options.fixedAngle !== this.options.fixedAngle;
     const changedRotation = options.fixedRotation !== this.options.fixedRotation;

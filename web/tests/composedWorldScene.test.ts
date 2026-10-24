@@ -56,11 +56,18 @@ describe('authored composed scenery', () => {
       if (name.startsWith('rock-')) expect(Array.from(g.getAttribute('composedWind').array).every((n) => n === 0)).toBe(true);
     }
   });
-  it('keeps Tiled as the migration default and preserves the layout through presentation presets', () => {
-    for (const value of [{}, { worldLayout: true }, { worldLayout: 'invalid' }]) expect(read3DSettings(value).worldLayout).toBe('Tiled');
-    expect(read3DSettings({ worldLayout: 'Composed' }).worldLayout).toBe('Composed');
+  it('migrates the former composed layout into the third set and preserves it through presentation presets', () => {
+    for (const value of [{}, { worldLayout: true }, { worldLayout: 'invalid' }]) expect(read3DSettings(value).modelSet).toBe('Low-poly');
+    expect(read3DSettings({ worldLayout: 'Composed', modelSet: 'Van Gogh' }).modelSet).toBe('Composed');
+    expect(read3DSettings({ modelSet: 'Composed', fixedAngle: 25, fixedRotation: 15 })).toMatchObject({
+      modelSet: 'Composed',
+      fixedAngle: 25,
+      fixedRotation: 15,
+    });
+    expect(read3DSettings({ modelSet: 'Van Gogh', worldLayout: 'Tiled' }).modelSet).toBe('Van Gogh');
+    expect(read3DSettings({ worldLayout: 'Composed' })).not.toHaveProperty('worldLayout');
     for (const preset of ['Classic', 'Depth', 'Models'] as const)
-      expect(applyPresentationPreset({ ...DEFAULT_3D_SETTINGS, worldLayout: 'Composed' }, preset).worldLayout).toBe('Composed');
+      expect(applyPresentationPreset({ ...DEFAULT_3D_SETTINGS, modelSet: 'Composed' }, preset).modelSet).toBe('Composed');
   });
   it('builds continuous upward-facing known ground, retains lava, and does not fill the unknown map', () => {
     const landscape: Landscape = {
@@ -200,14 +207,13 @@ describe('authored composed scenery', () => {
     const scene = new ModelScene(() => {}, assets);
     try {
       const landscape: Landscape = { side: 3, partyX: 1, partyY: 1, wraps: false, shapes: new Uint8Array(9).fill(Shape.Forest) };
-      scene.setSet('Van Gogh');
-      scene.setLayout('Composed', true);
+      scene.setSet('Composed');
       scene.setLandscape(landscape, [], {} as GraphicsSet, true);
       scene.faceCamera(camera(), 64);
       expect(scene.group.getObjectByName('composed:tree-0')).toBeDefined();
       const composed = scene.group.children.find((g) => g.getObjectByName('composed:tree-0'))!;
       expect(composed.visible).toBe(true);
-      scene.setLayout('Tiled', true);
+      scene.setSet('Van Gogh');
       scene.setLandscape(landscape, [], {} as GraphicsSet, true);
       expect(composed.visible).toBe(false);
     } finally {

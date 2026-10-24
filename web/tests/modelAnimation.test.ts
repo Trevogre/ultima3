@@ -20,7 +20,8 @@ describe('independent animated 3D sets', () => {
     expect(applyPresentationPreset(saved, 'Classic').modelSet).toBe('Van Gogh');
     expect(applyPresentationPreset(saved, 'Depth')).toMatchObject({ modelSet: 'Van Gogh', fixedAngle: 30, fixedRotation: 120 });
     expect(nextModelSet('Low-poly')).toBe('Van Gogh');
-    expect(nextModelSet('Van Gogh')).toBe('Low-poly');
+    expect(nextModelSet('Van Gogh')).toBe('Composed');
+    expect(nextModelSet('Composed')).toBe('Low-poly');
     expect(Object.keys(MODEL_ASSET_SETS)).toEqual([...MODEL_SETS]);
   });
   it('provides fuller, UV-mapped scenery rather than only recolouring the low-poly meshes', () => {

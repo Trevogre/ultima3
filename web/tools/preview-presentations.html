@@ -21,19 +21,21 @@
           <option>Macintosh B&amp;W</option>
         </select></label
       >
-      <label
-        >World layout<select id="layout">
-          <option>Tiled</option>
-          <option>Composed</option>
-        </select></label
-      ><button id="orbit">Rotate 90°</button><button id="overhead">Overhead</button><button id="angle">45° tilt</button>
+      <button id="orbit">Rotate 90°</button><button id="overhead">Overhead</button><button id="angle">45° tilt</button>
       <button id="zoom">Zoom</button><button id="night">Day/night</button><button id="move">Walk east</button>
       <button id="hit">Hit frame</button>
       <label
         >3D set
         <select id="models">
+          <option>Composed</option>
           <option>Van Gogh</option>
           <option>Low-poly</option>
+        </select></label
+      >
+      <label
+        >Hero<select id="hero">
+          <option>Ranger</option>
+          <option>Fighter</option>
         </select></label
       >
       <button id="attack">Attack</button><button id="cast">Cast</button><button id="pause">Pause animation</button>
@@ -47,6 +49,7 @@
       import { TileMapScene } from '/src/ui/tileMapScene.ts';
       import { DEFAULT_3D_SETTINGS } from '/src/ui/view3DSettings.ts';
       import { Shape } from '/src/game/tiles.ts';
+      import { nextModelSet } from '/src/ui/modelSets.ts';
       import { drawBuildingGround, isBuilding } from '/src/ui/billboardArt.ts';
       import { drawPaintedHit } from '/src/ui/hitEffects.ts';
       const canvas = document.querySelector('canvas');
@@ -90,7 +93,6 @@
           ...DEFAULT_3D_SETTINGS,
           renderStyle: style,
           modelSet: document.querySelector('#models').value,
-          worldLayout: document.querySelector('#layout').value,
           fixedCamera: false,
           treeCards: true,
         });
@@ -116,8 +118,8 @@
         });
         const actors = [
           {
-            id: 'fighter',
-            shape: 136,
+            id: 'hero',
+            shape: document.querySelector('#hero').value === 'Ranger' ? 156 : 136,
             x: step * 0.25 - 0.25,
             y: -1.25,
             worldX: 9 + step,
@@ -144,7 +146,7 @@
         map.changed();
         render();
         document.querySelector('#result').textContent =
-          `${style} · ${document.querySelector('#tiles').value} · ${document.querySelector('#layout').value}: ${map.compositionStatus} · heading follows movement; orbit only changes the camera.`;
+          `${style} · ${document.querySelector('#tiles').value} · ${map.compositionStatus} · ${map.characterStatus} · heading follows movement; orbit only changes the camera.`;
       }
       let pendingDraw = false;
       map.onCardModeChange = () => {
@@ -157,8 +159,8 @@
       }
       document.querySelector('#tiles').onchange = load;
       document.querySelector('#models').onchange = draw;
-      document.querySelector('#layout').onchange = draw;
       document.querySelector('#style').onchange = draw;
+      document.querySelector('#hero').onchange = draw;
       document.querySelector('#orbit').onclick = () => {
         map.orbit(Math.PI / 2 / 0.006, 0);
         draw();
@@ -187,8 +189,8 @@
         hit = (hit + 1) % 4;
         draw();
       };
-      document.querySelector('#attack').onclick = () => map.triggerModelAction('fighter', 'attack');
-      document.querySelector('#cast').onclick = () => map.triggerModelAction('wizard', 'cast');
+      document.querySelector('#attack').onclick = () => map.triggerModelAction('hero', 'attack');
+      document.querySelector('#cast').onclick = () => map.triggerModelAction('hero', 'cast');
       let paused = false;
       document.querySelector('#pause').onclick = () => {
         paused = !paused;
@@ -198,10 +200,10 @@
         if (event.key !== 'F7' || event.repeat) return;
         event.preventDefault();
         const select = document.querySelector('#models');
-        select.value = select.value === 'Van Gogh' ? 'Low-poly' : 'Van Gogh';
+        select.value = nextModelSet(select.value);
         draw();
       });
-      if (new URLSearchParams(location.search).get('layout') === 'Composed') document.querySelector('#layout').value = 'Composed';
+      if (new URLSearchParams(location.search).get('layout') === 'Composed') document.querySelector('#models').value = 'Composed';
       await load();
       function loop(time) {
         if (pendingDraw && gfx) {

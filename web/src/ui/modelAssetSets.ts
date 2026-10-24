@@ -15,4 +15,5 @@ export interface ModelAssetSet {
 export const MODEL_ASSET_SETS: Record<ModelSet, ModelAssetSet> = {
   'Low-poly': { painted: false, scenery: modelGeometry, actor: (shape, material) => new ModelRig(shape, 'Low-poly', material) },
   'Van Gogh': { painted: true, scenery: painterlyGeometry, actor: (shape, material) => new ModelRig(shape, 'Van Gogh', material) },
+  Composed: { painted: true, scenery: painterlyGeometry, actor: (shape, material) => new ModelRig(shape, 'Van Gogh', material) },
 };

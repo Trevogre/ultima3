@@ -1050,23 +1050,12 @@ export class Screen implements GameIO {
             key: 'X',
             label: `3D set: ${this.view3D.modelSet}`,
             disabled,
-            hint: 'F7 cycles independent model sets. Animations run continuously; F6 still selects sprites.',
+            hint: this.view3D.modelSet === 'Composed' ? this.presentation.map.characterStatus : 'F7 cycles model sets; F6 selects sprites.',
           },
           {
             key: '4',
             label: `Sight: ${this.view3D.townSightlines ? 'Continuous' : 'Classic'}`,
             hint: 'Town sight clips partial tiles at wall edges. Doors update sight when opened.',
-          },
-          {
-            key: '3',
-            label: `Layout: ${this.view3D.worldLayout}`,
-            disabled: disabled || this.view3D.renderStyle !== 'Models',
-            hint:
-              this.view3D.worldLayout === 'Composed'
-                ? this.presentation.map.compositionStatus.startsWith('Unavailable')
-                  ? this.presentation.map.compositionStatus
-                  : 'Authored vegetation, shared shores and stable variations. Uses only known terrain.'
-                : 'Composed uses authored 3D plants and connected ground. Movement and discovery remain unchanged.',
           },
           {
             key: 'C',
@@ -1222,9 +1211,8 @@ export class Screen implements GameIO {
             lavaBubbles: !this.view3D.lavaBubbles || this.view3D.lavaStyle === 'Rising',
             lavaStyle: this.view3D.lavaBubbles && this.view3D.lavaStyle === 'Rising' ? 'Surface' : 'Rising',
           });
-        } else if (key === '3')
-          this.set3DSettings({ ...this.view3D, worldLayout: this.view3D.worldLayout === 'Tiled' ? 'Composed' : 'Tiled' });
-        else if (key === 'P') this.set3DSettings({ ...this.view3D, renderStyle: this.view3D.renderStyle === 'Cards' ? 'Models' : 'Cards' });
+        } else if (key === 'P')
+          this.set3DSettings({ ...this.view3D, renderStyle: this.view3D.renderStyle === 'Cards' ? 'Models' : 'Cards' });
         else if (key === 'X') await this.chooseModelSet();
         else if (key === 'Q') {
           const modes = ['Crisp', 'Stable', 'Auto'] as const;
@@ -2557,7 +2545,7 @@ export class Screen implements GameIO {
     map.setSun(dayPhase, dayTimer, outdoors);
     map.setCombat(!!world.combat);
     map.setLandscape(
-      world.combat || (!this.view3D.distantTerrain && !this.view.townSight && !(map.modelMode && this.view3D.worldLayout === 'Composed'))
+      world.combat || (!this.view3D.distantTerrain && !this.view.townSight && !(map.modelMode && this.view3D.modelSet === 'Composed'))
         ? null
         : buildLandscape(world, this.view),
       gfx,

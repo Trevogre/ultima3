@@ -10,6 +10,7 @@ export interface AnimatedModel {
   readonly root: Group;
   pose(time: number, state: ModelAction, progress: number, phase: number): void;
   setPoisoned(value: boolean): void;
+  setDaylight?(colour: [number, number, number]): void;
   dispose(): void;
 }
 export function humanoidShape(shape: number): boolean {
@@ -38,7 +39,7 @@ export class ModelRig {
     set: ModelSet,
     material: Material,
   ) {
-    const smooth = set === 'Van Gogh';
+    const smooth = set !== 'Low-poly';
     this.human = humanoidShape(shape);
     const add = (parent: Group, g: BufferGeometry, c: number, slot: number, x = 0, y = 0, z = 0) => {
       this.geometries.add(g);
