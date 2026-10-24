@@ -24,6 +24,12 @@ atlas = Image.new('RGBA', (12*N, 16*N))
 for col in range(12):
     for row in range(16):
         cell = draft.crop((xs[col], ys[row], xs[col+1], ys[row+1]))
+        if col == 3:
+            # This generated column's last four pixels belong to the adjacent
+            # force field, not the alternate NPC frame. Keep the existing cell
+            # dimensions/anchors: clear that gutter before resampling, so its
+            # opaque stripe and antialiasing cannot bleed into the NPC atlas.
+            cell.paste((0,0,0,0),(79,0,cell.width,cell.height))
         atlas.paste(cell.resize((N, N), Image.Resampling.LANCZOS), (col*N, row*N))
 
 def put(index, frame, im):

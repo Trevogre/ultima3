@@ -42,6 +42,11 @@ function rgba(file: string) {
 }
 
 describe('opt-in Van Gogh art package', () => {
+  it('keeps the neighbouring force-field stripe out of alternate NPC frames', () => {
+    const atlas = rgba('Tiles');
+    for (let index = 16; index <= 23; index++)
+      for (let y = 0; y < 128; y++) for (const x of [126, 127]) expect(atlas(3 * 128 + x, (index % 16) * 128 + y)[3]).toBe(0);
+  });
   it('keeps both whirlpool frames inside their row, without the green serpent tile bleeding below', () => {
     const atlas = rgba('Tiles');
     for (const frame of [0, 1])
