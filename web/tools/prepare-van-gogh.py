@@ -52,6 +52,23 @@ for frame in range(2):
     whirlpool.putalpha(255)
     put(12,frame,whirlpool)
 
+# Both ship rows use equal 88px cells rather than the general column seams.
+# Reuse one complete painting per ship: generated alternate hulls/masts differ.
+# Only existing red flag-cloth strokes move; no boat geometry or water shifts.
+ship_specs = {11: (0,862,88,940), 15: (0,1172,88,1248)}
+for index,crop in ship_specs.items():
+    base=draft.crop(crop).resize((N,N),Image.Resampling.LANCZOS)
+    alternate=base.copy()
+    def red_flag(pixel):
+        r,g,b,a=pixel
+        return a>0 and r>150 and r>g*1.8 and r>b*1.7
+    for y in range(26):
+        for x in range(82,124):
+            sy=max(0,min(25,y+round(2*math.sin((x-82)*0.22+0.8))))
+            if red_flag(base.getpixel((x,y))) and red_flag(base.getpixel((x,sy))):
+                alternate.putpixel((x,y),base.getpixel((x,sy)))
+    put(index,0,base);put(index,1,alternate)
+
 # Trim the draft's thin grid rules from continuous terrain. The unused second
 # water/floor frames must remain terrain too, rather than generated empty art.
 for index in [0,1,4,8,32,33,35,37]:

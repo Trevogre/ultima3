@@ -86,3 +86,9 @@ The fixed 3D door uses Van Gogh-DoorCard.png: the native front-panel crop
 letter remnant, blue side jamb and bottom grid rule before fitting the panel
 to a tile-wide opening. The original overhead tile and door orientation are
 unchanged. Derived card pixels are copied without repainting.
+
+Frigate and pirate boats use reviewed equal-width 88px source cells with
+row-specific top/bottom seams. Both animation frames reuse one fixed hull,
+mast and sail painting; only existing red flag-cloth strokes animate. This
+also removes neighboring ship/whirlpool bleed. Source art is retained in the
+draft and the boat corrections are reproducible in prepare-van-gogh.py.

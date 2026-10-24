@@ -98,6 +98,27 @@ describe('opt-in Van Gogh art package', () => {
     for (let index = 16; index <= 23; index++)
       for (let y = 0; y < 128; y++) for (const x of [126, 127]) expect(atlas(3 * 128 + x, (index % 16) * 128 + y)[3]).toBe(0);
   });
+  it('keeps frigate and pirate hulls, masts, sails and backgrounds fixed while only red flag cloth animates', () => {
+    const atlas = rgba('Tiles');
+    for (const index of [11, 15]) {
+      let changed = 0;
+      for (let y = 0; y < 128; y++)
+        for (let x = 0; x < 128; x++) {
+          const a = atlas(x, index * 128 + y),
+            b = atlas(128 + x, index * 128 + y);
+          if (!a.equals(b)) {
+            expect(x >= 82 && x < 124 && y < 26).toBe(true);
+            expect(a[0]).toBeGreaterThan(150);
+            expect(a[0]).toBeGreaterThan(a[1] * 1.8);
+            expect(a[0]).toBeGreaterThan(a[2] * 1.7);
+            changed++;
+          }
+        }
+      expect(changed).toBeGreaterThan(20);
+    }
+    // The frigate's bottom edge must not include the blue whirlpool below it.
+    for (const x of [8, 32, 64, 96, 120]) expect(atlas(x, 11 * 128 + 127)[2]).toBeLessThan(120);
+  });
   it('keeps both whirlpool frames inside their row, without the green serpent tile bleeding below', () => {
     const atlas = rgba('Tiles');
     for (const frame of [0, 1])
