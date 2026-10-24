@@ -11,6 +11,8 @@ export interface View3DSettings {
   fixedRotation: number;
   dayNight: boolean;
   contactShadows: boolean;
+  steppedMountains: boolean;
+  recessedWater: boolean;
 }
 
 export const DEFAULT_3D_SETTINGS: Readonly<View3DSettings> = {
@@ -26,6 +28,8 @@ export const DEFAULT_3D_SETTINGS: Readonly<View3DSettings> = {
   fixedRotation: 5,
   dayNight: true,
   contactShadows: true,
+  steppedMountains: true,
+  recessedWater: true,
 };
 
 const DEPTH_OPTIONS = {
@@ -38,6 +42,8 @@ const DEPTH_OPTIONS = {
   fixedCamera: true,
   dayNight: true,
   contactShadows: true,
+  steppedMountains: true,
+  recessedWater: true,
 } as const;
 
 export type PresentationPreset = 'Classic' | 'Depth';

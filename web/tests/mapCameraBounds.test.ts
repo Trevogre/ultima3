@@ -15,7 +15,7 @@ describe('gameplay camera coverage', () => {
         camera.updateMatrixWorld();
         for (const x of [-5.5, 5.5])
           for (const y of [-5.5, 5.5])
-            for (const z of [0, 1]) {
+            for (const z of [-0.2, 0, 1.2]) {
               const projected = new Vector3(x, y, z).project(camera);
               expect(Math.abs(projected.x)).toBeLessThanOrEqual(0.91);
               expect(Math.abs(projected.y)).toBeLessThanOrEqual(0.91);

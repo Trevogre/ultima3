@@ -48,12 +48,12 @@ describe('terrain cubes', () => {
       Shape.Grass,
       Shape.Void,
     ].map((base) => ({ base }));
-    cubes.set(null, cells, DEFAULT_3D_SETTINGS);
+    cubes.set(null, cells, { ...DEFAULT_3D_SETTINGS, steppedMountains: false });
     expect(cubes.mesh.count).toBe(3);
     const matrix = new Matrix4();
     cubes.mesh.getMatrixAt(0, matrix);
     expect(new Vector3().setFromMatrixPosition(matrix).toArray()).toEqual([-1, 1, 0]);
-    cubes.set(null, cells, { ...DEFAULT_3D_SETTINGS, walls: false });
+    cubes.set(null, cells, { ...DEFAULT_3D_SETTINGS, walls: false, steppedMountains: false });
     expect(cubes.mesh.count).toBe(1);
     expect([cubes.slots.getX(0), cubes.slots.getY(0)]).toEqual([8, 15]);
     cubes.set(null, cells, { ...DEFAULT_3D_SETTINGS, mountains: false });

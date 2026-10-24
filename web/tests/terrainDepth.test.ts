@@ -1,0 +1,94 @@
+import { describe, expect, it } from 'vitest';
+import { Matrix4, MeshBasicMaterial } from 'three';
+import { Shape } from '../src/game/tiles.ts';
+import { MOUNTAIN_STEPS, terrainElevation, isCoastalLand, WATER_DEPTH } from '../src/ui/terrainDepth.ts';
+import { TerrainCubes } from '../src/ui/terrainCubes.ts';
+import { Shoreline } from '../src/ui/shoreline.ts';
+import { applyPresentationPreset, DEFAULT_3D_SETTINGS, read3DSettings } from '../src/ui/view3DSettings.ts';
+import { newWorld } from './helpers.ts';
+import { MapValue } from '../src/game/tiles.ts';
+import { Location } from '../src/game/party.ts';
+import { buildViewport } from '../src/game/viewport.ts';
+import { buildLandscape } from '../src/game/landscape.ts';
+
+describe('optional terrain depth', () => {
+  it('stacks mountain tiers within one tile using the original atlas tile on each tier', () => {
+    const material = new MeshBasicMaterial();
+    const cubes = new TerrainCubes(material);
+    const cells = [{ base: Shape.Mountains }];
+    cubes.set(null, cells, DEFAULT_3D_SETTINGS);
+    expect(cubes.mesh.count).toBe(3);
+    const matrix = new Matrix4();
+    MOUNTAIN_STEPS.forEach((step, i) => {
+      cubes.mesh.getMatrixAt(i, matrix);
+      expect(matrix.elements[0]).toBeCloseTo(step.width);
+      expect(matrix.elements[5]).toBeCloseTo(step.width);
+      expect(matrix.elements[10]).toBeCloseTo(step.height);
+      expect(matrix.elements[14]).toBeCloseTo(step.base);
+      expect([cubes.slots.getX(i), cubes.slots.getY(i)]).toEqual([Shape.Mountains, 15]);
+    });
+    cubes.set(null, cells, { ...DEFAULT_3D_SETTINGS, steppedMountains: false });
+    expect(cubes.mesh.count).toBe(1);
+    cubes.set(null, cells, { ...DEFAULT_3D_SETTINGS, mountains: false });
+    expect(cubes.mesh.count).toBe(0);
+    cubes.dispose();
+    material.dispose();
+  });
+
+  it('lowers only water and restores original heights when disabled', () => {
+    expect(terrainElevation(Shape.Water, true)).toBe(-0.2);
+    expect(terrainElevation(Shape.Water, false)).toBe(0);
+    for (const shape of [Shape.Void, Shape.Grass, Shape.Floor, Shape.Lava, Shape.MoonGate]) expect(terrainElevation(shape, true)).toBe(0);
+  });
+
+  it('creates shoreline sides only next to known water, with correct wrapping', () => {
+    const shapes = [Shape.Grass, Shape.Void, Shape.Water, Shape.Void, Shape.Void, Shape.Void, Shape.Void, Shape.Void, Shape.Void];
+    expect(isCoastalLand(shapes, 3, 0, false)).toBe(false);
+    expect(isCoastalLand(shapes, 3, 0, true)).toBe(true);
+    expect(isCoastalLand(shapes, 3, 1, false)).toBe(false);
+    expect(isCoastalLand(shapes, 3, 2, true)).toBe(false);
+    const material = new MeshBasicMaterial();
+    const shore = new Shoreline(material);
+    const cells = [Shape.Grass, Shape.Water, Shape.Void, Shape.Void].map((base) => ({ base }));
+    shore.set(null, cells, true);
+    expect(shore.mesh.count).toBe(1);
+    expect([shore.slots.getX(0), shore.slots.getY(0)]).toEqual([Shape.Grass, 15]);
+    shore.geometry.computeBoundingBox();
+    expect(shore.geometry.boundingBox!.min.z).toBeCloseTo(-WATER_DEPTH);
+    expect(shore.geometry.boundingBox!.max.z).toBeCloseTo(0);
+    expect(shore.geometry.drawRange).toEqual({ start: 0, count: 24 });
+    shore.set(null, cells, false);
+    expect(shore.mesh.count).toBe(0);
+    shore.dispose();
+    material.dispose();
+  });
+
+  it('preserves explicit Off preferences and enables both enhancements with Depth', () => {
+    const off = read3DSettings({ steppedMountains: false, recessedWater: false });
+    expect(off).toMatchObject({ steppedMountains: false, recessedWater: false });
+    expect(applyPresentationPreset(off, 'Depth')).toMatchObject({ steppedMountains: true, recessedWater: true });
+    expect(read3DSettings({})).toMatchObject({ steppedMountains: true, recessedWater: true });
+  });
+
+  it('does not derive shorelines from water hidden behind town walls in either terrain mode', () => {
+    const world = newWorld();
+    world.enterMap(402);
+    world.party.location = Location.Town;
+    world.current.tiles.fill(MapValue.Floor);
+    world.monsters.bytes.fill(0);
+    world.x = world.y = 32;
+    for (let y = 0; y < 64; y++) {
+      world.putXYVal(MapValue.Wall, 33, y);
+      world.putXYVal(MapValue.Water, 34, y);
+    }
+    const view = buildViewport(world);
+    const material = new MeshBasicMaterial();
+    const shore = new Shoreline(material);
+    for (const landscape of [null, buildLandscape(world, view)]) {
+      shore.set(landscape, view.cells, true);
+      expect(shore.mesh.count).toBe(0);
+    }
+    shore.dispose();
+    material.dispose();
+  });
+});

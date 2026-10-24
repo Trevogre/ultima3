@@ -14,6 +14,8 @@ describe('presentation presets', () => {
       'dayNight',
       'contactShadows',
       'fixedCamera',
+      'steppedMountains',
+      'recessedWater',
     ] as const)
       expect(presentationPreset({ ...DEFAULT_3D_SETTINGS, [key]: false })).toBe('Custom');
   });

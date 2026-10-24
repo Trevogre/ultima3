@@ -3,6 +3,7 @@ import { landscapeOffset, type Landscape } from '../game/landscape.ts';
 import { MapValue, Shape } from '../game/tiles.ts';
 import type { ViewCell } from '../game/viewport.ts';
 import type { View3DSettings } from './view3DSettings.ts';
+import { MOUNTAIN_STEPS } from './terrainDepth.ts';
 
 /** One tile wide and deep, standing one tile above the original ground plane. */
 export function terrainCubeGeometry(): BoxGeometry {
@@ -11,13 +12,13 @@ export function terrainCubeGeometry(): BoxGeometry {
 
 export class TerrainCubes {
   readonly geometry = terrainCubeGeometry();
-  readonly slots = new InstancedBufferAttribute(new Float32Array(4096 * 2), 2);
+  readonly slots = new InstancedBufferAttribute(new Float32Array(4096 * 3 * 2), 2);
   readonly mesh: InstancedMesh;
   private readonly matrix = new Matrix4();
 
   constructor(material: MeshBasicMaterial) {
     this.geometry.setAttribute('mapTile', this.slots);
-    this.mesh = new InstancedMesh(this.geometry, material, 4096);
+    this.mesh = new InstancedMesh(this.geometry, material, 4096 * 3);
     this.mesh.frustumCulled = false;
     this.mesh.count = 0;
     this.mesh.renderOrder = 0.25;
@@ -35,9 +36,13 @@ export class TerrainCubes {
       const y = landscape
         ? -landscapeOffset(Math.floor(i / side), landscape.partyY, side, landscape.wraps)
         : (side - 1) / 2 - Math.floor(i / side);
-      this.mesh.setMatrixAt(count, this.matrix.makeTranslation(x, y, 0));
-      this.slots.setXY(count, shape % 16, 15 - Math.floor(shape / 16));
-      count++;
+      const steps = shape === Shape.Mountains && options.steppedMountains ? MOUNTAIN_STEPS : [{ width: 1, height: 1, base: 0 }];
+      for (const step of steps) {
+        this.matrix.makeScale(step.width, step.width, step.height).setPosition(x, y, step.base);
+        this.mesh.setMatrixAt(count, this.matrix);
+        this.slots.setXY(count, shape % 16, 15 - Math.floor(shape / 16));
+        count++;
+      }
     });
     this.mesh.count = count;
     this.mesh.instanceMatrix.needsUpdate = true;

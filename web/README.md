@@ -87,11 +87,19 @@ timer, starting a new game at noon. The UI stays bright and dungeon light
 is unchanged. Turning it off restores the original colours. This affects
 the WebGL map only, with no changes to visibility or gameplay rules.
 
-Wall and mountain cubes start enabled. Each cube has a one-tile footprint and
-height, with the original tile texture repeated on all six faces. Its top matches
-the flat tile when viewed straight down. The two terrain types can be toggled
-independently; cubes use the same visibility mask as flat terrain and change no
-movement or line-of-sight rules.
+Wall and mountain cubes start enabled. **Mt steps** adds three shrinking
+mountain tiers (1, 0.72 and 0.44 tiles wide), reaching 1.2 tiles high. Off
+restores the previous one-tile cube; Mountain cubes Off keeps mountains flat.
+Every face repeats the selected set's original mountain texture. Wall cubes
+stay one tile wide and high. Both terrain types use the original visibility
+mask and change no movement or line-of-sight rules.
+
+**Lower water** recesses water by 0.2 tiles, including its ships, sea creatures,
+whirlpool and effects. Shoreline sides reuse the adjacent land tile's texture;
+there is no new side art or seabed. Only visible water neighbours create shore
+sides, including across wrapping maps. Off restores the original flat surface.
+Both options are enabled by the Depth preset, remembered independently in 3D
+Settings, and work in the local viewport and distant terrain, including combat.
 
 The whole 64 × 64 landscape is batched into one instanced terrain mesh, with
 animated art in a tile atlas. The original 11 × 11 viewport supplies local
@@ -105,7 +113,7 @@ the party.
 Combat retains its 11 × 11 arena. First-person dungeons, charts and scene
 pictures keep their existing presentation, and menus stay in screen space.
 
-The terrain remains flat for now, ready for elevation.
+All terrain elevation is cosmetic; the original map data is unchanged.
 Canvas 2D still composes the original pixel screen for interface textures,
 snapshots and the display fallback on devices without WebGL 2. Nearest-neighbour
 sampling, sRGB colour and no tone mapping retain the art's appearance. CSS,

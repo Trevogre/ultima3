@@ -22,6 +22,8 @@ import { DEFAULT_3D_SETTINGS, type View3DSettings } from './view3DSettings.ts';
 import { buildingGround, isBuilding } from './billboardArt.ts';
 import { BuildingBillboards } from './buildingBillboards.ts';
 import { TerrainCubes } from './terrainCubes.ts';
+import { Shoreline } from './shoreline.ts';
+import { terrainElevation } from './terrainDepth.ts';
 import { castsContactShadow, ContactShadows } from './contactShadows.ts';
 import { cardGroundLift } from './cardGroundLift.ts';
 
@@ -56,6 +58,8 @@ export class TileMapScene {
   private readonly landscapeMesh: InstancedMesh;
   private readonly landscapeTexture: CanvasTexture;
   private readonly cubes: TerrainCubes;
+  private readonly shoreline: Shoreline;
+  private readonly groundEffects: Mesh[] = [];
   private readonly landscapeSlots = new InstancedBufferAttribute(new Float32Array(4096 * 2), 2);
   private readonly matrix = new Matrix4();
   private readonly visibleSide: number;
@@ -124,6 +128,7 @@ export class TileMapScene {
           else {
             this.scene.add(tile);
             if (layer === 1) this.actorCards.push({ mesh: tile, x: tile.position.x, y: tile.position.y, size: 1 });
+            else this.groundEffects.push(tile);
           }
         });
       }
@@ -184,6 +189,8 @@ export class TileMapScene {
     this.scene.add(this.landscapeMesh);
     this.cubes = new TerrainCubes(scenery);
     this.scene.add(this.cubes.mesh);
+    this.shoreline = new Shoreline(scenery);
+    this.scene.add(this.shoreline.mesh);
     this.camera = new OrthographicCamera(-side / 2, side / 2, side / 2, -side / 2, 0.1, 500);
     this.updateCamera();
   }
@@ -193,11 +200,14 @@ export class TileMapScene {
     this.buildings.set(landscape, cells, gfx, this.options.buildings);
     if (this.options.contactShadows && this.options.buildings) this.buildings.forEachFootprint((x, y) => this.shadows.add(x, y, 1));
     this.cubes.set(landscape, cells, this.options);
+    this.shoreline.set(landscape, cells, this.options.recessedWater);
     this.landscapeMesh.visible = !!landscape;
     // Preserve exact local floors. The landscape supplies either distant
     // outdoor scenery or black tiles from the town/castle visibility mask.
     this.localTerrain.children.forEach((tile, i) => {
       tile.visible = !landscape || cells[i].base !== Shape.Void;
+      tile.position.z = terrainElevation(cells[i].base, this.options.recessedWater);
+      this.groundEffects[i].position.z = tile.position.z + 0.003;
     });
     // Both local-only and expanded modes use the same tile atlas for cube faces.
     const shapes = landscape?.shapes ?? cells.map((cell) => cell.base);
@@ -229,7 +239,7 @@ export class TileMapScene {
     for (let i = 0; i < shapes.length; i++) {
       const x = landscapeOffset(i % side, partyX, side, wraps);
       const y = -landscapeOffset(Math.floor(i / side), partyY, side, wraps);
-      this.landscapeMesh.setMatrixAt(i, this.matrix.makeTranslation(x, y, 0));
+      this.landscapeMesh.setMatrixAt(i, this.matrix.makeTranslation(x, y, terrainElevation(shapes[i], this.options.recessedWater)));
       this.landscapeSlots.setXY(i, shapes[i] % 16, 15 - Math.floor(shapes[i] / 16));
     }
     this.landscapeMesh.count = shapes.length;
@@ -387,7 +397,11 @@ export class TileMapScene {
 
   private faceActors(): void {
     for (const card of [...this.actorCards, ...this.partyCards]) {
-      card.mesh.position.set(card.x, card.y, cardGroundLift(card.size, this.options.characters ? this.tilt : 0));
+      const col = Math.floor(card.x + this.visibleSide / 2);
+      const row = Math.floor(this.visibleSide / 2 - card.y);
+      const base = this.shadowCells[row * this.visibleSide + col]?.base ?? Shape.Void;
+      const ground = terrainElevation(base, this.options.recessedWater);
+      card.mesh.position.set(card.x, card.y, ground + cardGroundLift(card.size, this.options.characters ? this.tilt : 0));
       if (this.options.characters) {
         card.mesh.quaternion.copy(this.camera.quaternion);
         card.mesh.position.addScaledVector(this.camera.up, (card.size * Math.sin(this.tilt)) / 2);
@@ -403,6 +417,7 @@ export class TileMapScene {
     this.shadows.dispose();
     this.landscapeMesh.dispose();
     this.cubes.dispose();
+    this.shoreline.dispose();
     this.scene.clear();
   }
 }

@@ -978,6 +978,18 @@ export class Screen implements GameIO {
         { key: 'T', label: `Distant land: ${onOff(this.view3D.distantTerrain)}`, disabled },
         { key: 'W', label: `Wall cubes: ${onOff(this.view3D.walls)}`, disabled },
         { key: 'N', label: `Mountain cubes: ${onOff(this.view3D.mountains)}`, disabled },
+        {
+          key: 'E',
+          label: `Mt steps: ${onOff(this.view3D.steppedMountains)}`,
+          disabled,
+          hint: 'Stepped mountains using this set’s existing mountain texture. Requires Mountain cubes.',
+        },
+        {
+          key: 'Z',
+          label: `Lower water: ${onOff(this.view3D.recessedWater)}`,
+          disabled,
+          hint: 'Recess water and add shore sides using neighbouring land textures.',
+        },
         { key: 'M', label: `Mouse camera: ${onOff(this.view3D.mouseCamera)}`, disabled },
         {
           key: 'S',
@@ -1024,8 +1036,10 @@ export class Screen implements GameIO {
             F: 'fixedCamera',
             Y: 'dayNight',
             S: 'contactShadows',
+            E: 'steppedMountains',
+            Z: 'recessedWater',
           } as const
-        )[key as 'D' | 'C' | 'L' | 'T' | 'W' | 'N' | 'M' | 'F' | 'Y' | 'S'];
+        )[key as 'D' | 'C' | 'L' | 'T' | 'W' | 'N' | 'M' | 'F' | 'Y' | 'S' | 'E' | 'Z'];
         if (setting) this.set3DSettings({ ...this.view3D, [setting]: !this.view3D[setting] });
         else if (key === 'R') this.presentation.map.reset();
         else if (key === 'I' || key === 'O') {
