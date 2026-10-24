@@ -1053,6 +1053,11 @@ export class Screen implements GameIO {
             hint: 'F7 cycles independent model sets. Animations run continuously; F6 still selects sprites.',
           },
           {
+            key: '4',
+            label: `Sight: ${this.view3D.townSightlines ? 'Continuous' : 'Classic'}`,
+            hint: 'Town sight clips partial tiles at wall edges. Doors update sight when opened.',
+          },
+          {
             key: 'C',
             label: `Characters: ${this.view3D.characters ? 'Cards' : 'Flat'}`,
             disabled,
@@ -1199,6 +1204,7 @@ export class Screen implements GameIO {
           } as const
         )[key as 'D' | 'C' | 'L' | 'T' | 'W' | 'N' | 'M' | 'F' | 'Y' | 'S' | 'E' | 'Z' | 'G' | 'H' | 'V' | 'U' | 'A' | 'J' | 'K'];
         if (setting) this.set3DSettings({ ...this.view3D, [setting]: !this.view3D[setting] });
+        else if (key === '4') this.set3DSettings({ ...this.view3D, townSightlines: !this.view3D.townSightlines });
         else if (key === '2') {
           this.set3DSettings({
             ...this.view3D,

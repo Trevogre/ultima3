@@ -31,6 +31,34 @@ describe('continuous sight boundary', () => {
     expect(region.visible[4 * 10 + 4]).toBe(0);
     expect(sightArea(sightTile(region.polygon, 4, 4))).toBeLessThan(1e-8);
   });
+  it('updates the shared polygon and distant actor admission when a town door opens and closes', () => {
+    const world = newWorld();
+    world.enterMap(402);
+    world.party.location = Location.Town;
+    world.current.tiles.fill(MapValue.Wall);
+    world.monsters.bytes.fill(0);
+    world.x = 10;
+    world.y = 20;
+    world.townSightlines = true;
+    for (let x = 8; x <= 35; x++) world.putXYVal(MapValue.Floor, x, 20);
+    world.monsters.setType(0, MapValue.Guard);
+    world.monsters.setPosition(0, 30, 20);
+    world.monsters.setTileUnder(0, MapValue.Floor);
+    world.putXYVal(MapValue.Guard, 30, 20);
+    const doorIndex = 20 * 64 + 20;
+    world.putXYVal(MapValue.LetterI, 20, 20);
+    const closed = buildViewport(world);
+    expect(closed.sightRegion!.surfaces).toContain(doorIndex);
+    expect(townSightActors(world, closed)?.map((a) => a.id)).not.toContain('monster:0');
+    world.putXYVal(MapValue.Floor, 20, 20);
+    const opened = buildViewport(world);
+    expect(opened.sightRegion!.surfaces).not.toContain(doorIndex);
+    expect(sightArea(opened.sightRegion!.polygon)).toBeGreaterThan(sightArea(closed.sightRegion!.polygon));
+    expect(townSightActors(world, opened)?.map((a) => a.id)).toContain('monster:0');
+    world.putXYVal(MapValue.LetterI, 20, 20);
+    expect(buildViewport(world).sightRegion).toEqual(closed.sightRegion);
+    expect(townSightActors(world, buildViewport(world))?.map((a) => a.id)).not.toContain('monster:0');
+  });
   it('admits the visible portion of an NPC whose centre is occluded, and rejects fully hidden actors', () => {
     const world = newWorld();
     world.enterMap(402);
