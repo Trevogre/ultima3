@@ -39,8 +39,7 @@ Class figures use their own reviewed row seams. In particular the ranger
 neighbouring sprites cannot appear below his feet in either animation pose.
 
 This is a first art pass, not a claim that every generated silhouette is
-final. UI, font and first-person dungeon art currently use the existing
-Standard fallback. There is no separate Van Gogh grass-card extraction or
+final. Full-screen scene art currently uses the existing Standard fallback. There is no separate Van Gogh grass-card extraction or
 new full-screen scene art in this increment. These files are expanded art;
 they do not enter the preservation-only masks for historical tile sets.
 
@@ -50,3 +49,34 @@ npm run graphics-index. manifest.json records shipped file hashes.
 ChestCards preserves both chest paintings with reviewed alpha silhouettes for
 angled 3D cards only. The flat atlas retains the complete painted background;
 cutout RGB pixels are unchanged. No background-colour key is used.
+
+Painted dungeon and interface treatment
+
+Interior materials were generated with the built-in image_gen tool using the
+Van Gogh tile atlas as a palette/style reference. interiors-prompt.txt records
+the exact prompt; interior-materials-draft.png retains the unmodified output.
+prepare-van-gogh-interiors.py normalizes the four equal material quadrants.
+
+Final assets, bundled under public/graphics for offline play:
+  Van Gogh-DungeonMaterials.png — blue/ochre wall, slate floor and painted vault
+  Van Gogh-MenuBackground.png — dark cobalt paint with gold swirls
+  Van Gogh-UI.png — cobalt enamel and sunflower/gold frame junctions
+  Van Gogh-Font.png — ivory-gold Georgia Bold serif glyphs in fixed 32px cells
+
+The font is rasterized from the locally installed typeface; no font binary is
+redistributed. The packer accepts --font for an explicit local typeface path.
+Menu selections use a blue band with a gold leading edge instead of inverting
+the painting. Disabled entries, menu layout, keyboard/mouse handling and all
+functional arrow, ladder and map icon slots retain their existing behavior.
+
+Dungeon materials follow the renderer's existing wall rectangles and traced
+Standard masks. Angled walls and the floor/vault use perspective sampling;
+door geometry, torch dimming, chest and ladder positions are unchanged. The
+chest uses the existing Van Gogh chest painting. A missing material file falls
+back to the set's own blue/ochre procedural palette, not the VGA palette.
+No historical artwork or game rules are changed.
+
+Repack interiors: python3 tools/prepare-van-gogh-interiors.py, then
+npm run graphics-index. The manifest hashes all twelve shipped Van Gogh PNGs.
+Review in tools/preview-van-gogh-interiors.html: corridor, wall, door, chest,
+ladder and low-torch scenes, menus and a complete readability sample.

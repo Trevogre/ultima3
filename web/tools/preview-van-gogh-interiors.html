@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" />
+  <title>Van Gogh dungeon and interface preview</title>
+  <style>
+    body {
+      background: #0a0d16;
+      color: #f5e4ba;
+      font: 16px system-ui;
+      margin: 16px;
+    }
+    header {
+      display: flex;
+      gap: 18px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    main {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+    canvas {
+      width: 600px;
+      height: 512px;
+      max-width: 100%;
+      object-fit: contain;
+      background: black;
+    }
+    #font {
+      width: 100%;
+      height: 144px;
+      object-fit: contain;
+      object-position: left;
+    }
+    p {
+      color: #b4c0d8;
+    }
+    label {
+      white-space: nowrap;
+    }
+  </style>
+  <header>
+    <label
+      >Tile set
+      <select id="set">
+        <option>Van Gogh</option>
+        <option>Standard</option>
+        <option>Macintosh B&W</option>
+      </select></label
+    >
+    <label
+      >Dungeon
+      <select id="scene">
+        <option>Corridor</option>
+        <option>Door</option>
+        <option>Chest</option>
+        <option>Ladder</option>
+        <option>Facing wall</option>
+      </select></label
+    >
+    <label><input id="dark" type="checkbox" />Low torch</label>
+    <button id="next">Next menu item</button>
+  </header>
+  <main>
+    <canvas id="dungeon" width="600" height="512" aria-label="First-person dungeon preview"></canvas
+    ><canvas id="menu" width="640" height="512" aria-label="Painted menu preview"></canvas>
+  </main>
+  <canvas id="font" width="1280" height="144" aria-label="Font readability sample"></canvas>
+  <p>Isolated art fixture — no game saves or preferences. Uses the real dungeon and menu renderers.</p>
+  <script type="module">
+    import { GraphicsSet } from '/src/ui/graphics.ts';
+    import { DungeonRenderer } from '/src/ui/dungeonView.ts';
+    import { layoutMenu, drawMenu } from '/src/ui/menus.ts';
+    let gfx,
+      renderer,
+      cursor = 0;
+    const dungeon = document.querySelector('#dungeon').getContext('2d');
+    const menu = document.querySelector('#menu').getContext('2d');
+    const font = document.querySelector('#font').getContext('2d');
+    async function load() {
+      gfx = await GraphicsSet.load(document.querySelector('#set').value, '/graphics/');
+      renderer = DungeonRenderer.forSet(gfx);
+      draw();
+    }
+    function draw() {
+      const scene = document.querySelector('#scene').value;
+      let ops = [24, 17, 18, 7, 8, 1, 2].map((location) => ({ kind: 'wall', location }));
+      if (scene === 'Door')
+        ops = [
+          { kind: 'wall', location: 0 },
+          { kind: 'door', location: 0 },
+        ];
+      if (scene === 'Chest') ops.push({ kind: 'chest', location: 0 });
+      if (scene === 'Ladder') ops.push({ kind: 'ladder', location: 0, down: false });
+      if (scene === 'Facing wall') ops = [{ kind: 'wall', location: 0 }];
+      dungeon.drawImage(renderer.render(ops, document.querySelector('#dark').checked ? 1 : 5, null), 0, 0);
+      menu.fillStyle = '#000';
+      menu.fillRect(0, 0, 640, 512);
+      for (let x = 1; x < 39; x++) {
+        gfx.drawUiPiece(menu, 9, 0, x * 16, 0, 16);
+        gfx.drawUiPiece(menu, 9, 0, x * 16, 496, 16);
+      }
+      for (let y = 1; y < 31; y++) {
+        gfx.drawUiPiece(menu, 10, 0, 0, y * 16, 16);
+        gfx.drawUiPiece(menu, 10, 0, 624, y * 16, 16);
+      }
+      const names = ['Journey onward', 'Visuals', 'Audio settings', 'Mouse settings', 'Help and controls', 'Return to game'];
+      const window = layoutMenu('Settings', names);
+      window.x = 3;
+      window.y = 5;
+      window.width = 34;
+      window.cursor = cursor;
+      window.hints = names.map(() => 'Painted worlds, familiar adventures.');
+      drawMenu(menu, gfx, 16, window);
+      font.fillStyle = '#000';
+      font.fillRect(0, 0, 1280, 144);
+      const lines = [
+        'Van Gogh  /  The Starry Dungeon',
+        'ABCDEFGHIJKLMNOPQRSTUVWXYZ  0123456789',
+        'abcdefghijklmnopqrstuvwxyz  Il1 O0 !? / \\ <> [] () +-= :;.,',
+        'HP 150/150  MP 25  GOLD 1,025  North  Level 8',
+      ];
+      lines.forEach((line, row) => [...line].forEach((ch, col) => gfx.drawGlyph(font, ch, col * 20, 4 + row * 34, 20)));
+    }
+    document.querySelector('#set').onchange = load;
+    document.querySelector('#scene').onchange = draw;
+    document.querySelector('#dark').onchange = draw;
+    document.querySelector('#next').onclick = () => {
+      cursor = (cursor + 1) % 6;
+      draw();
+    };
+    await load();
+  </script>
+</html>

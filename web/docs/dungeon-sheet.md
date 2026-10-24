@@ -101,3 +101,14 @@ view. Positions follow the original's numbering of the 32 visible cells.
    file: `Apple II Color`, `Nintendo`, `PC EGA` and so on.
 6. Light: the renderer darkens the view by 57% when the torch is nearly
    out, so keep the art bright enough to survive that.
+
+## Painted Van Gogh materials
+
+Van Gogh supplies a 1024×1024 `Van Gogh-DungeonMaterials.png` board with four
+512×512 quadrants: facing wall, flagstone floor, vaulted ceiling and interface
+paint. `DungeonStyle.painted` selects it during `GraphicsSet.load`. The same
+sheet painter maps the wall material into facing-wall bands and masked side
+silhouettes, and projects the floor and vault toward the existing vanishing
+point. The renderer still consumes the same 3000×512 sheet and Standard masks.
+Door polygons, torch darkness, chest/ladder placement and gameplay are shared.
+See `docs/generated/van-gogh/README.txt` for provenance and repacking.

@@ -306,7 +306,7 @@ export class DungeonRenderer {
   private secret(text: string): void {
     const ctx = this.ctx;
     ctx.save();
-    ctx.font = 'bold 48px sans-serif';
+    ctx.font = this.style?.painted ? 'italic bold 48px Georgia, serif' : 'bold 48px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.globalAlpha = 0.6;

@@ -224,6 +224,8 @@ export class GraphicsSet {
     readonly buildingGrounds: HTMLImageElement | null = null,
     /** Optional two-frame chest silhouettes used only by angled cards. */
     readonly chestCards: HTMLImageElement | null = null,
+    /** A set-specific painted menu surface; other sets keep their original black windows. */
+    readonly menuBackground: HTMLImageElement | null = null,
   ) {
     this.tileSize = tiles.width / TILE_COLUMNS;
     this.opaqueTiles = document.createElement('canvas');
@@ -270,8 +272,13 @@ export class GraphicsSet {
     const dungeonMasks = await tryLoad('DungeonMasks', ['png', 'gif']);
     const ownShapes = await tryLoad('DungeonShapes', ['png', 'jpg'], false);
     const style = ownShapes ? null : (DUNGEON_STYLES[name] ?? null);
+    const chestCards = await tryLoad('ChestCards', ['png'], false);
+    const dungeonMaterials = style?.painted ? await tryLoad('DungeonMaterials', ['png'], false) : null;
     const dungeonShapes =
-      ownShapes ?? (style && dungeonMasks ? paintDungeonSheet(style, dungeonMasks) : await tryLoad('DungeonShapes', ['png', 'jpg']));
+      ownShapes ??
+      (style && dungeonMasks
+        ? paintDungeonSheet(style, dungeonMasks, dungeonMaterials ? { materials: dungeonMaterials, tiles, chestCards } : undefined)
+        : await tryLoad('DungeonShapes', ['png', 'jpg']));
     const scenes = new Map<string, HTMLImageElement>();
     for (const scene of SCENE_NAMES) {
       const own = await tryLoad(scene, ['png', 'jpg', 'gif'], false);
@@ -303,7 +310,8 @@ export class GraphicsSet {
       vegetationCards && VEGETATION_LAYOUTS[name] ? { image: vegetationCards, layout: VEGETATION_LAYOUTS[name] } : null,
       await tryLoad('BuildingCards', ['png'], false),
       await tryLoad('BuildingGrounds', ['png'], false),
-      await tryLoad('ChestCards', ['png'], false),
+      chestCards,
+      await tryLoad('MenuBackground', ['png'], false),
     );
   }
 

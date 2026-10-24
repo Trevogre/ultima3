@@ -214,8 +214,13 @@ const Piece = { TopLeft: 1, TopRight: 3, BottomLeft: 7, BottomRight: 9, Horizont
 export function drawMenu(ctx: CanvasRenderingContext2D, gfx: GraphicsSet, cell: number, menu: MenuWindow): void {
   const { x, y, width } = menu;
   const height = menu.visibleRows + 2;
-  ctx.fillStyle = '#000';
+  ctx.fillStyle = gfx.menuBackground ? '#080f25' : '#000';
   ctx.fillRect(x * cell, y * cell, width * cell, height * cell);
+  if (gfx.menuBackground) {
+    ctx.drawImage(gfx.menuBackground, x * cell, y * cell, width * cell, height * cell);
+    ctx.fillStyle = 'rgba(3,8,24,0.58)';
+    ctx.fillRect((x + 1) * cell, (y + 1) * cell, (width - 2) * cell, (height - 2) * cell);
+  }
   const piece = (n: number, px: number, py: number) => gfx.drawUiPiece(ctx, n - 1, 0, px * cell, py * cell, cell);
   for (let i = 1; i < width - 1; i++) {
     piece(Piece.Horizontal, x + i, y);
@@ -236,7 +241,7 @@ export function drawMenu(ctx: CanvasRenderingContext2D, gfx: GraphicsSet, cell: 
   // Title on the top border.
   const title = menu.title.slice(0, width - 4);
   const tx = x + Math.floor((width - title.length) / 2);
-  ctx.fillStyle = '#000';
+  ctx.fillStyle = gfx.menuBackground ? '#0c1733' : '#000';
   ctx.fillRect(tx * cell, y * cell, title.length * cell, cell);
   text(title, tx, y);
 
@@ -254,8 +259,14 @@ export function drawMenu(ctx: CanvasRenderingContext2D, gfx: GraphicsSet, cell: 
         label = menu.items[index];
         if (index === menu.items.length - 1 && index > spread) px = x + 2 + (menu.columns - 1) * colWidth + 1 - label.length;
       }
+      if (index === menu.cursor && gfx.menuBackground) {
+        ctx.fillStyle = '#304878';
+        ctx.fillRect((px - 1) * cell, py * cell, (label.length + 1) * cell, cell);
+        ctx.fillStyle = '#e8bf62';
+        ctx.fillRect((px - 1) * cell, py * cell, Math.max(2, cell / 8), cell);
+      }
       text(label, px, py);
-      if (index === menu.cursor) {
+      if (index === menu.cursor && !gfx.menuBackground) {
         // The cursor is an inverted cell to the left of the item.
         ctx.save();
         ctx.globalCompositeOperation = 'difference';
@@ -286,7 +297,7 @@ export function drawMenu(ctx: CanvasRenderingContext2D, gfx: GraphicsSet, cell: 
   // The highlighted item's hint on the rows under the window, word-wrapped.
   const hint = menu.hints?.[menu.cursor];
   if (menu.hints) {
-    ctx.fillStyle = '#000';
+    ctx.fillStyle = gfx.menuBackground ? '#080f25' : '#000';
     ctx.fillRect(cell, (y + height) * cell, 38 * cell, HINT_ROWS * cell);
     if (hint) {
       const tint = menu.hintColours?.[menu.cursor];

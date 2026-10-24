@@ -235,7 +235,8 @@ building_review.convert('RGB').save(DOC/'building-review.png')
 review=Image.new('RGBA',atlas.size,'#777777'); review.alpha_composite(atlas)
 review.convert('RGB').save(DOC / 'atlas-review.jpg',quality=90)
 files = sorted(OUT.glob('Van Gogh-*.png'))
-manifest = {'generator':'OpenAI built-in image_gen', 'normalizer':'tools/prepare-van-gogh.py',
+manifest = {**(json.loads((DOC/'manifest.json').read_text()) if (DOC/'manifest.json').exists() else {}),
+            'generator':'OpenAI built-in image_gen', 'normalizer':'tools/prepare-van-gogh.py',
             'tileSize':N, 'columns':12,'rows':16,'artMode':'Expanded art, opt-in',
             'files':{p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in files}}
 (DOC / 'manifest.json').write_text(json.dumps(manifest,indent=2)+'\n')

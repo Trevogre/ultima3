@@ -22,6 +22,8 @@ import { DUNGEON_SHEET_HEIGHT, DUNGEON_SHEET_WIDTH, sheetRegions, type SheetRegi
 export interface DungeonStyle {
   /** Wireframe (lines on a plain ground) or brick (filled walls with mortar lines). */
   kind: 'wire' | 'brick';
+  /** Uses the set's generated four-quadrant material board when available. */
+  painted?: boolean;
   /** The ground: the corridor with nothing in it, and the inside of wire walls unless `fill` says otherwise. */
   bg: string;
   /** Wire: the line colour. Brick: the mortar. */
@@ -65,8 +67,19 @@ const VGA: DungeonStyle = {
  */
 export const DUNGEON_STYLES: Record<string, DungeonStyle> = {
   Standard: VGA,
-  // Expanded-art first pass retains the established dungeon presentation.
-  'Van Gogh': VGA,
+  'Van Gogh': {
+    kind: 'brick',
+    painted: true,
+    bg: '#080e22',
+    line: '#142345',
+    face: '#7184a2',
+    side: '#334a72',
+    floor: '#776847',
+    ceiling: '#101f42',
+    wood: '#d4a149',
+    doorFill: '#030710',
+    doorLine: '#d3aa52',
+  },
   'PC VGA': VGA,
   // Mono draws in its monitor's green phosphor, as its tiles do (display.ts).
   'Apple II Mono': {
@@ -197,8 +210,14 @@ function shade(hex: string, factor: number): string {
   return `rgb(${c[0]},${c[1]},${c[2]})`;
 }
 
-/** Paint the whole sheet for a style. `mask` is the (Standard) mask sheet the renderer will apply. */
-export function paintDungeonSheet(style: DungeonStyle, mask: HTMLImageElement): HTMLCanvasElement {
+/** Optional original paintings used by the textured sheet painter. */
+export interface DungeonPaint {
+  materials: HTMLImageElement;
+  tiles: HTMLImageElement;
+  chestCards?: HTMLImageElement | null;
+}
+/** Paint the exact sheet geometry, retaining the Standard side-wall mask. */
+export function paintDungeonSheet(style: DungeonStyle, mask: HTMLImageElement, paint?: DungeonPaint): HTMLCanvasElement {
   const sheet = document.createElement('canvas');
   sheet.width = DUNGEON_SHEET_WIDTH;
   sheet.height = DUNGEON_SHEET_HEIGHT;
@@ -213,7 +232,7 @@ export function paintDungeonSheet(style: DungeonStyle, mask: HTMLImageElement): 
   mctx.drawImage(mask, 0, 0);
   const maskData = mctx.getImageData(0, 0, mask.width, mask.height);
 
-  const painter = new SheetPainter(ctx, style);
+  const painter = new SheetPainter(ctx, style, paint);
   for (const r of sheetRegions()) {
     if (r.name === 'corridor background') painter.corridor(r);
     else if (r.name === 'chest') painter.chest(r);
@@ -230,6 +249,7 @@ class SheetPainter {
   constructor(
     private readonly ctx: CanvasRenderingContext2D,
     private readonly style: DungeonStyle,
+    private readonly paint?: DungeonPaint,
   ) {}
 
   fillRegion(r: SheetRegion, colour: string): void {
@@ -255,6 +275,10 @@ class SheetPainter {
     const { ctx, style } = this;
     if (style.kind === 'wire') return; // nothing but the ground: walls draw themselves
     const ox = r.sx;
+    if (this.paint) {
+      this.paintedCorridor(r);
+      return;
+    }
     // Ceiling and floor are the triangles that meet at the vanishing point; the sides stay dark.
     ctx.fillStyle = style.ceiling ?? style.bg;
     ctx.beginPath();
@@ -303,6 +327,30 @@ class SheetPainter {
     ctx.fillRect(ox, 0, 600, 512);
   }
 
+  /** Project the floor and vault materials into the existing corridor's vanishing point. */
+  private paintedCorridor(r: SheetRegion): void {
+    const source = document.createElement('canvas');
+    source.width = source.height = 1024;
+    const sourceCtx = source.getContext('2d', { willReadFrequently: true })!;
+    sourceCtx.drawImage(this.paint!.materials, 0, 0, 1024, 1024);
+    const pixels = sourceCtx.getImageData(0, 0, 1024, 1024).data;
+    const view = this.ctx.createImageData(600, 512);
+    for (let y = 0; y < 512; y++) {
+      const depth = 256 / Math.max(1, Math.abs(y - VP_Y));
+      const floor = y > VP_Y;
+      const sy = (Math.floor(depth * 220) % 512) + (floor ? 0 : 512);
+      const fade = Math.max(0.08, Math.min(0.82, 1.05 / Math.sqrt(depth)));
+      for (let x = 0; x < 600; x++) {
+        const sx = (((Math.floor((x - VP_X) * depth) % 512) + 512) % 512) + (floor ? 512 : 0);
+        const from = (sy * 1024 + sx) * 4,
+          to = (y * 600 + x) * 4;
+        for (let c = 0; c < 3; c++) view.data[to + c] = pixels[from + c] * fade;
+        view.data[to + 3] = 255;
+      }
+    }
+    this.ctx.putImageData(view, r.sx, r.sy);
+  }
+
   // -- Panels C and E: facing walls -----------------------------------------
 
   facingWall(r: SheetRegion): void {
@@ -312,6 +360,17 @@ class SheetPainter {
       ctx.fillStyle = style.fill ?? style.bg;
       ctx.fillRect(r.sx, r.sy, r.w, r.h);
       this.stroke(() => ctx.rect(r.sx + 1, r.sy + 1, r.w - 2, r.h - 2));
+      return;
+    }
+    if (this.paint) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(r.sx, r.sy, r.w, r.h);
+      ctx.clip();
+      const width = r.h,
+        offset = (r.dx ?? 0) % width;
+      for (let x = -offset; x < r.w; x += width) ctx.drawImage(this.paint.materials, 0, 0, 512, 512, r.sx + x, r.sy, width, r.h);
+      ctx.restore();
       return;
     }
     // Bricks in screen space, halving with distance, so a band's pieces tile.
@@ -378,6 +437,22 @@ class SheetPainter {
       return;
     }
 
+    if (this.paint) {
+      const nearX = dx + near - VP_X,
+        farX = dx + far - VP_X;
+      const depth = Math.abs(farX) / Math.max(1, Math.abs(nearX) - Math.abs(farX));
+      for (let x = s.first; x <= s.last; x++) {
+        if (s.top[x] < 0) continue;
+        const screenX = dx + x - VP_X;
+        const t = Math.abs(screenX) < 0.001 ? 1 : depth * (nearX / screenX - 1);
+        const u = Math.floor((((t * 511) % 512) + 512) % 512);
+        ctx.drawImage(this.paint.materials, u, 0, 1, 512, r.sx + x, topAt(x), 1, bottomAt(x) - topAt(x));
+        ctx.fillStyle = 'rgba(4,8,24,0.24)';
+        ctx.fillRect(r.sx + x, topAt(x), 1, bottomAt(x) - topAt(x));
+      }
+      ctx.restore();
+      return;
+    }
     // Brick: the face, dithered if the style shades that way, then courses and joints in perspective.
     for (let x = s.first; x <= s.last; x++) {
       if (s.top[x] < 0) continue;
@@ -432,6 +507,24 @@ class SheetPainter {
 
   chest(r: SheetRegion): void {
     const { ctx, style } = this;
+    if (this.paint) {
+      // Reuse the selected set's actual chest painting, cropped to its reviewed body.
+      this.ctx.clearRect(r.sx, r.sy, r.w, r.h);
+      const source = this.paint.chestCards ?? this.paint.tiles;
+      const size = this.paint.chestCards ? source.height : source.width / 12;
+      this.ctx.drawImage(
+        source,
+        (size * 14) / 128,
+        size * ((this.paint.chestCards ? 0 : 9) + 26 / 128),
+        (size * 89) / 128,
+        (size * 94) / 128,
+        r.sx + r.w * 0.24,
+        r.sy,
+        r.w * 0.52,
+        r.h,
+      );
+      return;
+    }
     const lid = r.h * 0.35;
     if (style.kind === 'wire') {
       ctx.fillStyle = style.fill ?? style.bg;

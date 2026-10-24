@@ -235,3 +235,43 @@ describe('the on-screen keyboard', () => {
     expect(list.x + list.width).toBeLessThanOrEqual(23);
   });
 });
+
+describe('painted menu treatment', () => {
+  it('preserves labels and layout while using an outlined selection instead of inverting the painted panel', () => {
+    const labels: string[] = [],
+      operations: string[] = [],
+      backgrounds: unknown[] = [];
+    const context = {
+      fillStyle: '',
+      fillRect() {},
+      save() {},
+      restore() {},
+      drawImage(source: unknown) {
+        backgrounds.push(source);
+      },
+      set globalCompositeOperation(value: string) {
+        operations.push(value);
+      },
+    };
+    const background = {};
+    const gfx = {
+      menuBackground: background,
+      drawUiPiece() {},
+      drawGlyph(_ctx: unknown, ch: string) {
+        labels.push(ch);
+      },
+    } as unknown as GraphicsSet;
+    const menu = layoutMenu('Audio', ['Classic', 'Orchestral']);
+    drawMenu(context as unknown as CanvasRenderingContext2D, gfx, 16, menu);
+    expect(labels.join('')).toBe('AudioClassicOrchestral');
+    expect(backgrounds).toEqual([background]);
+    expect(operations).not.toContain('difference');
+    labels.length = 0;
+    backgrounds.length = 0;
+    Object.assign(gfx, { menuBackground: null });
+    drawMenu(context as unknown as CanvasRenderingContext2D, gfx, 16, menu);
+    expect(labels.join('')).toBe('AudioClassicOrchestral');
+    expect(backgrounds).toEqual([]);
+    expect(operations).toContain('difference');
+  });
+});

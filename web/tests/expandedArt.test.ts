@@ -155,6 +155,10 @@ describe('opt-in Van Gogh art package', () => {
     const dimensions: Record<string, number[]> = {
       Tiles: [1536, 2048],
       ChestCards: [256, 128],
+      DungeonMaterials: [1024, 1024],
+      MenuBackground: [512, 512],
+      Font: [3072, 32],
+      UI: [1024, 192],
       BuildingCards: [1024, 128],
       BuildingGrounds: [1024, 128],
       VegetationCards: [1024, 128],
@@ -168,10 +172,30 @@ describe('opt-in Van Gogh art package', () => {
       const suffix = name.replace('Van Gogh-', '').replace('.png', '');
       expect([bytes.readUInt32BE(16), bytes.readUInt32BE(20)]).toEqual(dimensions[suffix]);
     }
-    expect(Object.keys(manifest.files)).toHaveLength(8);
+    expect(Object.keys(manifest.files)).toHaveLength(12);
     expect(VEGETATION_LAYOUTS['Van Gogh']).toEqual(VEGETATION_LAYOUTS.Standard);
   });
 
+  it('ships readable complete serif lettering and painted interior materials rather than VGA fallbacks', () => {
+    const font = rgba('Font'),
+      materials = rgba('DungeonMaterials');
+    for (let glyph = 1; glyph < 95; glyph++) {
+      let ink = 0;
+      for (let y = 0; y < 32; y++)
+        for (let x = 0; x < 32; x++) {
+          const pixel = font(glyph * 32 + x, y);
+          if (pixel[3] > 100) {
+            ink++;
+            expect(pixel[0]).toBeGreaterThan(230);
+          }
+        }
+      expect(ink, String.fromCharCode(glyph + 32)).toBeGreaterThan(10);
+    }
+    for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) expect(font(x, y)[3]).toBe(0);
+    const colours = new Set<string>();
+    for (let y = 0; y < 512; y += 8) for (let x = 0; x < 512; x += 8) colours.add(materials(x, y).toString('hex'));
+    expect(colours.size).toBeGreaterThan(1000);
+  });
   it('preserves every historical sheet used as generation reference', () => {
     const sources = JSON.parse(readFileSync(new URL('../docs/generated/van-gogh/sources.json', import.meta.url), 'utf8')) as {
       file: string;

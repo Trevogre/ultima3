@@ -14,6 +14,12 @@ describe('dungeon art styles', () => {
     expect(DUNGEON_STYLES.Standard).toBe(DUNGEON_STYLES['PC VGA']);
   });
 
+  it('uses its own painted palette for Van Gogh without changing Standard', () => {
+    expect(DUNGEON_STYLES['Van Gogh'].painted).toBe(true);
+    expect(DUNGEON_STYLES['Van Gogh']).not.toBe(DUNGEON_STYLES.Standard);
+    expect(DUNGEON_STYLES.Standard.painted).toBeUndefined();
+    expect(DUNGEON_STYLES['Van Gogh'].doorLine).toBeDefined();
+  });
   it('gives wireframe styles a visible doorway, since a black door would vanish on a black wall', () => {
     for (const [name, style] of Object.entries(DUNGEON_STYLES)) {
       if (style.kind === 'wire' && style.bg === '#000') expect(style.doorLine, name).toBeDefined();
