@@ -4,6 +4,7 @@ import { createHash } from 'node:crypto';
 import { MeshBasicMaterial, OrthographicCamera, Matrix4, Vector3 } from 'three';
 import { BuildingBillboards, STANDARD_TREE_ANCHORS, STANDARD_BRUSH_ANCHORS } from '../src/ui/buildingBillboards.ts';
 import type { GraphicsSet } from '../src/ui/graphics.ts';
+import { VEGETATION_LAYOUTS } from '../src/ui/vegetationLayouts.ts';
 import { Shape } from '../src/game/tiles.ts';
 import { DEFAULT_3D_SETTINGS, presentationPreset, read3DSettings, useTreeCards } from '../src/ui/view3DSettings.ts';
 
@@ -30,6 +31,16 @@ describe('optional reviewed tree cards', () => {
     }[];
     const brush = JSON.parse(readFileSync(new URL('../docs/forest-cards/brush-manifest.json', import.meta.url), 'utf8')) as typeof manifest;
     expect(brush).toHaveLength(8);
+    const layouts = JSON.parse(readFileSync(new URL('../docs/forest-cards/vegetation-layouts.json', import.meta.url), 'utf8')) as {
+      set: string;
+      file: string;
+      sha256: string;
+    }[];
+    expect(layouts).toHaveLength(9);
+    for (const item of layouts) {
+      const bytes = readFileSync(new URL(`../public/graphics/${item.file}`, import.meta.url));
+      expect(createHash('sha256').update(bytes).digest('hex')).toBe(item.sha256);
+    }
     expect(manifest).toHaveLength(9);
     expect(manifest.map((m) => m.set)).not.toContain('PC VGA');
     expect(manifest.map((m) => m.set)).not.toContain('Macintosh B&W');
@@ -116,6 +127,34 @@ describe('optional reviewed tree cards', () => {
     expect(trees.mesh.count).toBe(0);
     trees.set(null, [{ base: Shape.Brush }], { brushCards: { width: 16 } } as GraphicsSet, true);
     expect(trees.mesh.count).toBe(1);
+    for (const name of ['Apple II Color', 'Apple II Mono', 'PC EGA', 'PC CGA', 'Commodore 64']) {
+      const layout = VEGETATION_LAYOUTS[name];
+      expect(layout.trees).toHaveLength(3);
+      expect(layout.brush).toHaveLength(4);
+      for (const [shape, anchors] of [
+        [Shape.Forest, layout.trees],
+        [Shape.Brush, layout.brush],
+      ] as const) {
+        trees.set(null, [{ base: shape }], { forestCard: {}, brushCards: {}, vegetation: { image: {}, layout } } as GraphicsSet, true);
+        expect(trees.mesh.count).toBe(anchors.length);
+        for (const tilt of [0, Math.PI / 4, (70 * Math.PI) / 180]) {
+          camera.position.set(0, -10 * Math.sin(tilt), 10 * Math.cos(tilt));
+          camera.up.set(0, Math.cos(tilt), Math.sin(tilt));
+          camera.lookAt(0, 0, 0);
+          trees.faceCamera(camera, tilt);
+          anchors.forEach(([px, py], i) => {
+            trees.mesh.getMatrixAt(i, matrix);
+            const base = new Vector3(px / 64 - 0.5, 0.5 - py / 64, 0).applyMatrix4(matrix);
+            expect(base.x).toBeCloseTo(px / 64 - 0.5);
+            expect(base.y).toBeCloseTo(0.5 - py / 64);
+            expect(base.z).toBeCloseTo(0.002);
+          });
+        }
+        const shadows: number[][] = [];
+        trees.forEachShadow((x, y, _slot, anchor) => shadows.push([x, y, ...anchor]));
+        anchors.forEach(([px, py], i) => expect(shadows[i]).toEqual([px / 64 - 0.5, 0.5 - py / 64, px / 64, 1 - py / 64]));
+      }
+    }
     trees.set(null, [{ base: Shape.Forest }], { forestCard: null } as GraphicsSet, true);
     expect(trees.mesh.count).toBe(0);
     trees.dispose();

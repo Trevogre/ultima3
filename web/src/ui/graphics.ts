@@ -21,6 +21,7 @@
  * `FullUpdate()` advanced every idle tick in the original.
  */
 
+import { VEGETATION_LAYOUTS, type VegetationLayout } from './vegetationLayouts.ts';
 import { characterCard, clearCharacterBackground } from './characterMask.ts';
 import { DUNGEON_STYLES, paintDungeonSheet, type DungeonStyle } from './dungeonArt.ts';
 import { MOON_STYLES, MOON_CELL, paintMoons } from './moonArt.ts';
@@ -214,6 +215,7 @@ export class GraphicsSet {
     readonly forestCard: HTMLImageElement | null = null,
     readonly treeCards: HTMLImageElement | null = null,
     readonly brushCards: HTMLImageElement | null = null,
+    readonly vegetation: { image: HTMLImageElement; layout: VegetationLayout } | null = null,
   ) {
     this.tileSize = tiles.width / TILE_COLUMNS;
     this.opaqueTiles = document.createElement('canvas');
@@ -272,6 +274,7 @@ export class GraphicsSet {
     const forestCard = await tryLoad('ForestCard', ['png'], false);
     const treeCards = await tryLoad('TreeCards', ['png'], false);
     const brushCards = await tryLoad('BrushCards', ['png'], false);
+    const vegetationCards = await tryLoad('VegetationCards', ['png'], false);
     return new GraphicsSet(
       tiles,
       applyMask(tiles, mask),
@@ -287,6 +290,7 @@ export class GraphicsSet {
       forestCard,
       treeCards,
       brushCards,
+      vegetationCards && VEGETATION_LAYOUTS[name] ? { image: vegetationCards, layout: VEGETATION_LAYOUTS[name] } : null,
     );
   }
 

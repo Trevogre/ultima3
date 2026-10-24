@@ -44,7 +44,7 @@ export class BuildingBillboards {
   private readonly geometry = new PlaneGeometry(1, 1);
   private readonly material: MeshBasicMaterial;
   private readonly slots = new InstancedBufferAttribute(new Float32Array(MAX_CARDS), 1);
-  private readonly positions: { x: number; y: number; anchor?: readonly [number, number] }[] = [];
+  private readonly positions: { x: number; y: number; anchor?: readonly [number, number]; footprint?: number }[] = [];
   private readonly matrix = new Matrix4();
   private readonly position = new Vector3();
   private readonly right = new Vector3();
@@ -104,17 +104,32 @@ export class BuildingBillboards {
     this.mesh.count = 0;
     if (!enabled) return;
     this.ctx.clearRect(0, 0, 512, 64);
+    const vegetation = this.kind === 'trees' ? gfx.vegetation : null;
     const separateTrees = this.kind === 'trees' && !!gfx.treeCards;
-    if (separateTrees) this.ctx.drawImage(gfx.treeCards, 0, 0, 192, 64);
+    if (vegetation) this.ctx.drawImage(vegetation.image, 0, 0, 512, 64);
+    else if (separateTrees) this.ctx.drawImage(gfx.treeCards, 0, 0, 192, 64);
     else if (this.kind === 'trees' && gfx.forestCard) this.ctx.drawImage(gfx.forestCard, 0, 0, 64, 64);
     else if (this.kind === 'buildings') SHAPES.forEach((shape, i) => this.ctx.drawImage(buildingArt(gfx, shape), i * 64, 0));
-    if (this.kind === 'trees' && gfx.brushCards) this.ctx.drawImage(gfx.brushCards, 256, 0, gfx.brushCards.width > 64 ? 256 : 64, 64);
+    if (!vegetation && this.kind === 'trees' && gfx.brushCards)
+      this.ctx.drawImage(gfx.brushCards, 256, 0, gfx.brushCards.width > 64 ? 256 : 64, 64);
     this.texture.needsUpdate = true;
     const add = (shape: number, x: number, y: number) => {
       if (!this.shapes.includes(shape)) return;
       if (this.kind === 'trees' && ((shape === Shape.Forest && !gfx.forestCard) || (shape === Shape.Brush && !gfx.brushCards))) return;
       const separateBrush = this.kind === 'trees' && shape === Shape.Brush && gfx.brushCards!.width > 64;
-      if ((separateTrees && shape === Shape.Forest) || separateBrush) {
+      if (vegetation) {
+        const brush = shape === Shape.Brush;
+        const anchors = brush ? vegetation.layout.brush : vegetation.layout.trees;
+        anchors.forEach((anchor, slot) => {
+          this.slots.setX(this.positions.length, (brush ? 4 : 0) + slot);
+          this.positions.push({
+            x: x + anchor[0] / 64 - 0.5,
+            y: y + 0.5 - anchor[1] / 64,
+            anchor,
+            footprint: anchors.length === 1 ? 1 : 0.45,
+          });
+        });
+      } else if ((separateTrees && shape === Shape.Forest) || separateBrush) {
         const anchors = separateBrush ? STANDARD_BRUSH_ANCHORS : STANDARD_TREE_ANCHORS;
         anchors.forEach((anchor, slot) => {
           this.slots.setX(this.positions.length, (separateBrush ? 4 : 0) + slot);
@@ -188,6 +203,6 @@ export class BuildingBillboards {
   }
 
   forEachFootprint(visit: (x: number, y: number, size: number) => void): void {
-    if (this.mesh.visible) this.positions.forEach(({ x, y, anchor }) => visit(x, y, anchor ? 0.45 : 1));
+    if (this.mesh.visible) this.positions.forEach(({ x, y, anchor, footprint }) => visit(x, y, footprint ?? (anchor ? 0.45 : 1)));
   }
 }

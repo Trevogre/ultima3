@@ -1,0 +1,132 @@
+[
+  {
+    "set": "Standard",
+    "file": "Standard-VegetationCards.png",
+    "sha256": "a94db145962779fb56674c2db757a43f52f9dfc614b94ad186d03ba978043d8b",
+    "nativeSize": 64,
+    "trees": [
+      [20, 35],
+      [48, 55],
+      [18, 63]
+    ],
+    "brush": [
+      [16, 19],
+      [46, 33],
+      [16, 50],
+      [46, 63]
+    ]
+  },
+  {
+    "set": "Lairware",
+    "file": "Lairware-VegetationCards.png",
+    "sha256": "315e879ad15f397af2af706d08f614d1f42a36c698c360e3767ca775b1292601",
+    "nativeSize": 64,
+    "trees": [
+      [18, 33],
+      [48, 53],
+      [18, 63]
+    ],
+    "brush": []
+  },
+  {
+    "set": "Nintendo",
+    "file": "Nintendo-VegetationCards.png",
+    "sha256": "cf975a2fb9f404cb8c7aa393cdcd92f5ddfda20a2c582eff9ceeb9bc67f3bd8e",
+    "nativeSize": 32,
+    "trees": [[32.0, 60.0]],
+    "brush": [[29.4286, 60.0]]
+  },
+  {
+    "set": "PC Ultima V",
+    "file": "PC Ultima V-VegetationCards.png",
+    "sha256": "78907ae075ec4df7500ba0251a2002234576f6b55daf9a05139503c90f59f465",
+    "nativeSize": 32,
+    "trees": [[30.8, 64.0]],
+    "brush": [[44.0, 64.0]]
+  },
+  {
+    "set": "Apple II Color",
+    "file": "Apple II Color-VegetationCards.png",
+    "sha256": "451bee56331f1eb8ac506023d9f3dd19d6a46d9584fff3fe20a252febb3455f8",
+    "nativeSize": 32,
+    "trees": [
+      [19.0, 20.0],
+      [45.0, 40.0],
+      [19.0, 60.0]
+    ],
+    "brush": [
+      [14.0, 16.0],
+      [41.0, 28.0],
+      [14.0, 48.0],
+      [41.0, 64.0]
+    ]
+  },
+  {
+    "set": "Apple II Mono",
+    "file": "Apple II Mono-VegetationCards.png",
+    "sha256": "353024121f9ee90b062ed84c0707664547bd5f17e37460d422487fb0d267ca7d",
+    "nativeSize": 32,
+    "trees": [
+      [16.0, 20.0],
+      [44.1429, 40.0],
+      [16.0, 60.0]
+    ],
+    "brush": [
+      [11.0, 16.0],
+      [39.0, 28.0],
+      [11.0, 48.0],
+      [39.0, 64.0]
+    ]
+  },
+  {
+    "set": "PC EGA",
+    "file": "PC EGA-VegetationCards.png",
+    "sha256": "ae38c41b07cad48cd3ba9f4f50b99a6f7ac47f4a723921657664bdfac47f3cf5",
+    "nativeSize": 16,
+    "trees": [
+      [16.0, 20.0],
+      [40.0, 40.0],
+      [16.0, 60.0]
+    ],
+    "brush": [
+      [12.0, 16.0],
+      [44.0, 28.0],
+      [12.0, 48.0],
+      [44.0, 64.0]
+    ]
+  },
+  {
+    "set": "PC CGA",
+    "file": "PC CGA-VegetationCards.png",
+    "sha256": "cc2617d244109633e075f6aff9451a6bf0c64fe3e146a3edd8a2ce16841784af",
+    "nativeSize": 16,
+    "trees": [
+      [16.0, 20.0],
+      [40.0, 40.0],
+      [16.0, 60.0]
+    ],
+    "brush": [
+      [12.0, 16.0],
+      [44.0, 28.0],
+      [12.0, 48.0],
+      [44.0, 64.0]
+    ]
+  },
+  {
+    "set": "Commodore 64",
+    "file": "Commodore 64-VegetationCards.png",
+    "sha256": "baf77bef8a65559b32ee2243b82a6c02953475e4cf17c71bbb10720fb34d3ab2",
+    "nativeSize": 16,
+    "trees": [
+      [18.0, 20.0],
+      [50.0, 40.0],
+      [18.0, 60.0]
+    ],
+    "brush": [
+      [18.0, 16.0],
+      [50.0, 28.0],
+      [18.0, 48.0],
+      [50.0, 64.0]
+    ]
+  }
+]

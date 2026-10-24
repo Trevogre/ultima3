@@ -61,3 +61,28 @@ edge-connected exterior colour, preserving enclosed details. Source RGB
 preservation is asserted, and source/output hashes are in `brush-manifest.json`.
 No original sheet is changed. Overhead views retain the original brush tiles;
 players stay in front of cards and foreground cubes still occlude them.
+
+## Per-set ground anchors
+
+![Forest and brush masks with reviewed native contact points marked red](vegetation-anchors.png)
+
+`tools/prepare-vegetation-layouts.py` builds an eight-slot per-set vegetation
+atlas and generates `src/ui/vegetationLayouts.ts`. Anchors are expressed in a
+64-unit tile coordinate system but measured from each set’s own native pixels.
+Standard retains its reviewed tree/brush anchors. Lairware now has three
+separate tree cards. Apple II Color, Apple II Mono, PC EGA, PC CGA and
+Commodore 64 have three forest cards and four brush cards. The disconnected
+stripes in Apple II Mono remain grouped as their original plant shapes.
+
+Native alpha is partitioned without deleting or inventing retained pixels;
+recomposition assertions verify identical alpha and retained RGB. Ground bases
+for the simpler silhouettes are the centre of their lowest occupied row at
+its bottom edge. Both card placement and sun/contact shadows use these anchors.
+Every card keeps a full tile coordinate frame, so overhead reconstruction and
+native pixel scale remain exact. Full overhead rendering still uses original tiles.
+
+Nintendo and PC Ultima V contain connected vegetation, so they retain cluster
+cards, now anchored at their own source contact point rather than the tile centre.
+Ambiguous/unreviewed masks still fall back flat. Lairware brush remains flat.
+`vegetation-layouts.json` records atlas hashes and layouts. No source sheets or
+previous reviewed cutouts are overwritten by this step.
