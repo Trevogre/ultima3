@@ -15,6 +15,7 @@ import { Shape } from '../game/tiles.ts';
 import type { ViewCell } from '../game/viewport.ts';
 import type { View3DSettings } from './view3DSettings.ts';
 
+import { LavaBursts } from './lavaBursts.ts';
 import { addZoomFiltering } from './zoomFiltering.ts';
 
 export function isPaintedLava(gfx: Pick<GraphicsSet, 'tiles'>): boolean {
@@ -31,6 +32,10 @@ export class LavaSurface {
   readonly mesh: InstancedMesh;
   private readonly seeds = new InstancedBufferAttribute(new Float32Array(4096 * 2), 2);
   readonly time = { value: 0 };
+  readonly bursts: LavaBursts;
+  get activeCount(): number {
+    return this.mesh.count + this.bursts.mesh.count;
+  }
 
   private matrix = new Matrix4();
   private filter: ReturnType<typeof addZoomFiltering>;
@@ -92,6 +97,7 @@ export class LavaSurface {
             '#include <dithering_fragment>\nif(mapInverted) gl_FragColor.rgb=vec3(1.0)-gl_FragColor.rgb;',
           );
     };
+    this.bursts = new LavaBursts(this.texture, this.time, inverted);
     this.filter = addZoomFiltering(this.material, this.texture, 1, 1);
     this.mesh = new InstancedMesh(this.geometry, this.material, 4096);
     this.mesh.count = 0;
@@ -110,6 +116,7 @@ export class LavaSurface {
     this.texture.needsUpdate = true;
     this.filter(options.zoomFiltering);
     this.mesh.count = 0;
+    this.bursts.reset();
     if (!options.enabled || options.renderStyle !== 'Cards' || !options.lavaBubbles || !isPaintedLava(gfx)) return;
     const shapes = landscape?.shapes ?? cells.map((c) => c.base),
       side = landscape?.side ?? Math.sqrt(cells.length);
@@ -119,6 +126,15 @@ export class LavaSurface {
       const y = landscape
         ? -landscapeOffset(Math.floor(i / side), landscape.partyY, side, landscape.wraps)
         : (side - 1) / 2 - Math.floor(i / side);
+      if (options.lavaStyle === 'Rising') {
+        this.bursts.add(
+          x,
+          y,
+          (i % side) + (landscape ? 0 : (origin?.originX ?? 0)),
+          Math.floor(i / side) + (landscape ? 0 : (origin?.originY ?? 0)),
+        );
+        return;
+      }
       this.seeds.setXY(
         this.mesh.count,
         (i % side) + (landscape ? 0 : (origin?.originX ?? 0)),
@@ -126,10 +142,12 @@ export class LavaSurface {
       );
       this.mesh.setMatrixAt(this.mesh.count++, this.matrix.makeTranslation(x, y, 0.002));
     });
+    this.bursts.finish();
     this.seeds.needsUpdate = true;
     this.mesh.instanceMatrix.needsUpdate = true;
   }
   dispose() {
+    this.bursts.dispose();
     this.geometry.dispose();
     this.texture.dispose();
     this.material.dispose();

@@ -8,6 +8,9 @@ afterEach(() => vi.unstubAllGlobals());
 describe('painted lava surface', () => {
   it('migrates the option and preserves explicit Off overrides', () => {
     expect(read3DSettings({}).lavaBubbles).toBe(true);
+    expect(read3DSettings({}).lavaStyle).toBe('Rising');
+    expect(read3DSettings({ lavaStyle: 'Surface' }).lavaStyle).toBe('Surface');
+    expect(read3DSettings({ lavaStyle: 'bad' }).lavaStyle).toBe('Rising');
     expect(read3DSettings({ lavaBubbles: false }).lavaBubbles).toBe(false);
     expect(presentationPreset({ ...DEFAULT_3D_SETTINGS, lavaBubbles: false })).toBe('Custom');
   });
@@ -17,16 +20,23 @@ describe('painted lava surface', () => {
     const gfx = { tiles: { src: 'http://localhost/graphics/Van%20Gogh-Tiles.png' }, drawShape } as unknown as GraphicsSet;
     const lava = new LavaSurface({ value: false });
     const cells = [Shape.Lava, Shape.Void, Shape.Water, Shape.Grass].map((base) => ({ base }));
-    lava.set(null, cells, gfx, DEFAULT_3D_SETTINGS);
+    const surface = { ...DEFAULT_3D_SETTINGS, lavaStyle: 'Surface' as const };
+    lava.set(null, cells, gfx, surface);
     expect(lava.mesh.count).toBe(1);
     expect(drawShape).toHaveBeenCalledWith(expect.anything(), Shape.Lava, 0, 0, 64);
     const matrix = new Matrix4();
     lava.mesh.getMatrixAt(0, matrix);
     expect(new Vector3().setFromMatrixPosition(matrix).z).toBeCloseTo(0.002);
     expect(lava.material.depthTest).toBe(true);
-    lava.set(null, cells, gfx, DEFAULT_3D_SETTINGS, { originX: 12, originY: 24 });
+    lava.set(null, cells, gfx, surface, { originX: 12, originY: 24 });
     const seed = lava.geometry.getAttribute('lavaCell');
     expect([seed.getX(0), seed.getY(0)]).toEqual([12, 24]);
+    lava.set(null, cells, gfx, DEFAULT_3D_SETTINGS);
+    expect(lava.mesh.count).toBe(0);
+    expect(lava.bursts.mesh.count).toBe(8);
+    expect(lava.bursts.geometry.type).toBe('SphereGeometry');
+    expect(lava.bursts.material.depthTest).toBe(true);
+    expect(lava.bursts.material.depthWrite).toBe(true);
     for (const options of [
       { ...DEFAULT_3D_SETTINGS, lavaBubbles: false },
       { ...DEFAULT_3D_SETTINGS, enabled: false },
@@ -34,9 +44,11 @@ describe('painted lava surface', () => {
     ]) {
       lava.set(null, cells, gfx, options);
       expect(lava.mesh.count).toBe(0);
+      expect(lava.bursts.mesh.count).toBe(0);
     }
     lava.set(null, cells, { ...gfx, tiles: { src: '/graphics/Standard-Tiles.png' } } as GraphicsSet, DEFAULT_3D_SETTINGS);
     expect(lava.mesh.count).toBe(0);
+    expect(lava.bursts.mesh.count).toBe(0);
     lava.dispose();
   });
 });

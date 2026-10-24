@@ -307,7 +307,7 @@ export class TileMapScene {
     this.shoreline = new Shoreline(scenery);
     this.scene.add(this.shoreline.mesh);
     this.lava = new LavaSurface(this.inverted);
-    this.scene.add(this.lava.mesh);
+    this.scene.add(this.lava.mesh, this.lava.bursts.mesh);
     this.water = new WaterSurface(this.inverted);
     this.scene.add(this.water.mesh);
     this.scene.add(this.fog.mesh, this.grass.mesh);
@@ -378,6 +378,7 @@ export class TileMapScene {
         this.grass.mesh,
         this.water.mesh,
         this.lava.mesh,
+        this.lava.bursts.mesh,
         this.fog.mesh,
         this.trees.mesh,
         this.buildings.mesh,
@@ -404,7 +405,7 @@ export class TileMapScene {
     this.shadows.mesh.visible = true;
     for (const mesh of [this.water.mesh, this.fog.mesh, this.cubes.mesh, this.shoreline.mesh]) mesh.visible = true;
     this.grass.set(cells, gfx, this.options.grassDepth, landscape);
-    this.lava.mesh.visible = true;
+    this.lava.mesh.visible = this.lava.bursts.mesh.visible = true;
     this.lava.set(landscape, cells, gfx, this.options, location);
     this.water.set(landscape, cells, gfx, this.options);
     this.fog.set(landscape, cells, this.options.softFog, this.options.recessedWater);
@@ -764,7 +765,7 @@ export class TileMapScene {
   animate(time: number, active: boolean): void {
     if (this.doors.animate(time, active)) this.invalidate();
     if (this.models.animate(time, active && this.modelMode)) this.invalidate();
-    if (active && this.lava.mesh.visible && this.lava.mesh.count > 0) {
+    if (active && this.lava.mesh.visible && this.lava.activeCount > 0) {
       this.lava.time.value = time / 1000;
       this.invalidate();
     }

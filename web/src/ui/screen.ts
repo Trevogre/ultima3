@@ -1114,9 +1114,9 @@ export class Screen implements GameIO {
           },
           {
             key: '2',
-            label: `Lava bubbles: ${onOff(this.view3D.lavaBubbles)}`,
+            label: `Lava: ${this.view3D.lavaBubbles ? this.view3D.lavaStyle : 'Off'}`,
             disabled,
-            hint: 'Van Gogh lava: slow golden swirls and bursting painted bubbles over the existing tile.',
+            hint: 'Van Gogh lava: Rising adds solid bubbles and airborne droplets; Surface keeps the original painted shader.',
           },
           {
             key: 'A',
@@ -1193,14 +1193,20 @@ export class Screen implements GameIO {
             H: 'softFog',
             V: 'terrainShading',
             U: 'waterHighlights',
-            '2': 'lavaBubbles',
             A: 'alphaWater',
             J: 'sunShadows',
             K: 'grassDepth',
           } as const
-        )[key as 'D' | 'C' | 'L' | 'T' | 'W' | 'N' | 'M' | 'F' | 'Y' | 'S' | 'E' | 'Z' | 'G' | 'H' | 'V' | 'U' | 'A' | 'J' | 'K' | '2'];
+        )[key as 'D' | 'C' | 'L' | 'T' | 'W' | 'N' | 'M' | 'F' | 'Y' | 'S' | 'E' | 'Z' | 'G' | 'H' | 'V' | 'U' | 'A' | 'J' | 'K'];
         if (setting) this.set3DSettings({ ...this.view3D, [setting]: !this.view3D[setting] });
-        else if (key === 'P') this.set3DSettings({ ...this.view3D, renderStyle: this.view3D.renderStyle === 'Cards' ? 'Models' : 'Cards' });
+        else if (key === '2') {
+          this.set3DSettings({
+            ...this.view3D,
+            lavaBubbles: !this.view3D.lavaBubbles || this.view3D.lavaStyle === 'Rising',
+            lavaStyle: this.view3D.lavaBubbles && this.view3D.lavaStyle === 'Rising' ? 'Surface' : 'Rising',
+          });
+        } else if (key === 'P')
+          this.set3DSettings({ ...this.view3D, renderStyle: this.view3D.renderStyle === 'Cards' ? 'Models' : 'Cards' });
         else if (key === 'X') await this.chooseModelSet();
         else if (key === 'Q') {
           const modes = ['Crisp', 'Stable', 'Auto'] as const;
@@ -1247,7 +1253,13 @@ export class Screen implements GameIO {
         else if (key === 'G') await this.chooseModelSet();
         else if (key === 'V') this.set3DSettings({ ...this.view3D, townSightlines: !this.view3D.townSightlines });
         else if (key === 'M') await this.mouseSettingsMenu();
-        else if (key === 'P') {
+        else if (key === '2') {
+          this.set3DSettings({
+            ...this.view3D,
+            lavaBubbles: !this.view3D.lavaBubbles || this.view3D.lavaStyle === 'Rising',
+            lavaStyle: this.view3D.lavaBubbles && this.view3D.lavaStyle === 'Rising' ? 'Surface' : 'Rising',
+          });
+        } else if (key === 'P') {
           const picked = await this.runMenu('Presentation', [
             { key: 'C', label: 'Classic', hint: 'The original flat viewport.' },
             {

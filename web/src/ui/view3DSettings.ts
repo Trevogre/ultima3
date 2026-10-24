@@ -1,3 +1,4 @@
+export type LavaStyle = 'Rising' | 'Surface';
 export type ZoomFiltering = 'Crisp' | 'Stable' | 'Auto';
 import { readModelSet, type ModelSet } from './modelSets.ts';
 
@@ -28,6 +29,7 @@ export interface View3DSettings {
   terrainShading: boolean;
   waterHighlights: boolean;
   lavaBubbles: boolean;
+  lavaStyle: LavaStyle;
   alphaWater: boolean;
   sunShadows: boolean;
   cameraRelative: boolean;
@@ -63,6 +65,7 @@ export const DEFAULT_3D_SETTINGS: Readonly<View3DSettings> = {
   terrainShading: true,
   waterHighlights: true,
   lavaBubbles: true,
+  lavaStyle: 'Rising',
   alphaWater: false,
   sunShadows: true,
   grassDepth: false,
@@ -77,6 +80,7 @@ const DEPTH_OPTIONS = {
   terrainShading: true,
   waterHighlights: true,
   lavaBubbles: true,
+  lavaStyle: 'Rising',
   alphaWater: false,
   sunShadows: true,
   grassDepth: false,
@@ -118,10 +122,19 @@ export function read3DSettings(value: unknown): View3DSettings {
   const settings = { ...DEFAULT_3D_SETTINGS };
   if (!value || typeof value !== 'object') return settings;
   for (const key of Object.keys(settings) as (keyof View3DSettings)[]) {
-    if (key === 'fixedAngle' || key === 'fixedRotation' || key === 'zoomFiltering' || key === 'renderStyle' || key === 'modelSet') continue;
+    if (
+      key === 'fixedAngle' ||
+      key === 'fixedRotation' ||
+      key === 'zoomFiltering' ||
+      key === 'renderStyle' ||
+      key === 'modelSet' ||
+      key === 'lavaStyle'
+    )
+      continue;
     const saved: unknown = Reflect.get(value, key);
     if (typeof saved === 'boolean') settings[key] = saved;
   }
+  if (Reflect.get(value, 'lavaStyle') === 'Surface') settings.lavaStyle = 'Surface';
   const filtering: unknown = Reflect.get(value, 'zoomFiltering');
   settings.modelSet = readModelSet(Reflect.get(value, 'modelSet'));
   if (Reflect.get(value, 'renderStyle') === 'Models') settings.renderStyle = 'Models';

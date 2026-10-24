@@ -1,7 +1,11 @@
 <!doctype html>
 <html>
   <body style="margin: 0; background: #17151d; color: white; font: 16px sans-serif">
-    <button id="toggle">Bubbles on/off</button><button id="pause">Pause animation</button><button id="rotate">Rotate</button>
+    <select id="style">
+      <option>Rising</option>
+      <option>Surface</option>
+      <option>Off</option></select
+    ><button id="toggle">Bubbles on/off</button><button id="pause">Pause animation</button><button id="rotate">Rotate</button>
     <canvas></canvas>
     <script type="module">
       import * as T from 'three';
@@ -29,7 +33,7 @@
         scene.add(mesh);
       }
       const lava = new LavaSurface({ value: false });
-      scene.add(lava.mesh);
+      scene.add(lava.mesh, lava.bursts.mesh);
       lava.set(null, cells, gfx, options);
       const cube = new T.Mesh(new T.BoxGeometry(1, 1, 1), new T.MeshBasicMaterial({ color: '#71615b' }));
       cube.position.set(1, 1, 0.5);
@@ -52,6 +56,12 @@
         requestAnimationFrame(frame);
       }
       requestAnimationFrame(frame);
+      document.querySelector('#style').onchange = () => {
+        const style = document.querySelector('#style').value;
+        options.lavaBubbles = style !== 'Off';
+        options.lavaStyle = style === 'Surface' ? 'Surface' : 'Rising';
+        lava.set(null, cells, gfx, options);
+      };
       document.querySelector('#toggle').onclick = () => {
         options.lavaBubbles = !options.lavaBubbles;
         lava.set(null, cells, gfx, options);

@@ -1,23 +1,25 @@
-Van Gogh lava bubbles
+Van Gogh lava effects
 
-Settings / Pause > Visuals > 3D Settings > Lava bubbles (2).
-Enabled by default in Depth. The individual choice is saved through the existing
-3D preferences; Off becomes Custom. Classic, model scenes and other tile sets
+Settings / Pause > Visuals > 3D Settings > Lava (2).
+Cycles Rising, Surface, Off. Rising is the new default; saved Off stays Off.
+The individual mode is remembered. Classic, model scenes and other tile sets
 retain their existing presentation.
 
-LavaSurface samples the current Van Gogh lava animation frame, then overlays
-three staggered procedural bubbles per known tile: warm shaded domes, broken
-golden rims and curved impasto-like strokes. No raster assets are modified.
-A stable world-tile hash varies location and phase. Growth and fading take about
-four to five seconds; this is cosmetic and never changes lava damage or movement.
+Rising retains the existing animated ground tile. Two staggered sources per known
+lava tile grow solid painted domes above the surface and eject three droplets per
+burst. Droplets follow rising/falling arcs, shrinking before returning to the
+surface. Sphere meshes have real depth and use the selected lava painting with
+warm highlights and curved brush-stroke modulation. They are neither cards nor
+flat ground highlights. Geometry is instanced; animation runs on the GPU.
 
-The batch uses one instanced ground plane per visibility-filtered lava tile,
-placed 0.002 above the original terrain. Depth testing preserves foreground
-occlusion. Highlights run through the existing map animation invalidation loop
-and stop updating while the game map is paused or hidden. Existing zoom filtering,
-daylight tint and inversion apply. GPU resources are disposed with the map scene.
+Surface retains the earlier procedural impasto circles/swirl shader over the
+painted floor, as an independent selectable presentation. No raster art changes.
+Both modes use stable world-coordinate seeds and the existing animation clock;
+paused or hidden maps do not update the displayed animation. Known scenery alone
+supplies lava positions. Depth testing allows nearer cubes and actors to occlude
+the effect. It never changes damage, movement, discovery or other gameplay.
 
-To review without saves/preferences: /tools/preview-lava.html. Toggle bubbles,
-pause the animation, and rotate around the occluding cube.
-Tests cover saved Off migration, Custom detection, style/tile-set restrictions,
-known lava placement, and ground depth testing.
+Review without saves/preferences: /tools/preview-lava.html. Select Rising,
+Surface or Off, pause animation, and rotate around the occluding cube.
+Tests cover preference migration, saved Off/Surface, library selection, known
+lava placement, volumetric mesh instancing and depth testing.
