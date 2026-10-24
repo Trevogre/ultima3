@@ -267,6 +267,7 @@ export function exitToSurface(world: World, io: GameIO, hooks?: TurnHooks): void
  */
 export async function endTurn(world: World, io: GameIO, hooks: TurnHooks): Promise<void> {
   world.party.incrementMoves();
+  if (world.party.location !== Location.Dungeon) world.daylightTurn = (world.daylightTurn + 1) % 96;
   moonGateUpdate(world, io);
 
   if (world.party.location === Location.Dungeon) {

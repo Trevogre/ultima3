@@ -209,6 +209,9 @@ export class World {
   moonTimer: [number, number] = [12, 4];
   moonPhase: [number, number] = [4, 4];
 
+  /** Cosmetic daylight clock: 96 outdoor turns per day; independent of moongates. */
+  daylightTurn = 48;
+
   /**
    * Moongates the party has come out of (gate numbers 0..7), this port:
    * View map marks each with the moon that opens it. Saved with the game.
@@ -645,6 +648,7 @@ export class World {
    * just chosen "Form party" with the first four characters.
    */
   newGame(): void {
+    this.daylightTurn = 48;
     this.party.bytes.set(this.resources.defaultParty);
     this.roster.bytes.set(this.resources.defaultRoster);
     for (let m = 0; m < this.party.size; m++) this.member(m).inParty = true;

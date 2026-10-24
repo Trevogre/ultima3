@@ -1,4 +1,4 @@
-/** A cosmetic day per slow-moon orbit (96 surface turns), starting at noon. */
+/** A cosmetic day per 96 outdoor turns, starting at noon. */
 export function daylightColour(phase: number, timer: number): [number, number, number] {
   const turn = phase * 12 + (12 - timer);
   const sun = Math.cos(((turn - 48) / 96) * Math.PI * 2);

@@ -511,3 +511,22 @@ describe('the whirlpool', () => {
     for (const line of io.output.split('\n')) expect(line.length).toBeLessThanOrEqual(16);
   });
 });
+
+describe('cosmetic outdoor clock', () => {
+  it('advances in towns without moving the moons, continues on the surface, and freezes underground', async () => {
+    const { world, io } = flatWorld();
+    world.party.location = Location.Town;
+    world.daylightTurn = 95;
+    const moons = [...world.moonTimer];
+    await endTurn(world, io, noHooks);
+    expect(world.daylightTurn).toBe(0);
+    expect(world.moonTimer).toEqual(moons);
+    world.party.location = Location.Sosaria;
+    await endTurn(world, io, noHooks);
+    expect(world.daylightTurn).toBe(1);
+    expect(world.moonTimer).toEqual(moons.map((t) => t - 1));
+    world.party.location = Location.Dungeon;
+    await endTurn(world, io, noHooks);
+    expect(world.daylightTurn).toBe(1);
+  });
+});

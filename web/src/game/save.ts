@@ -36,6 +36,8 @@ export interface SaveData {
   y: number;
   moonPhase: [number, number];
   moonTimer: [number, number];
+  /** Cosmetic daylight; older saves start at their current moon-derived lighting. */
+  daylightTurn?: number;
   windDirection: number;
   /** The quest journal (version 5 on; older saves start it empty). */
   journal?: JournalState;
@@ -92,6 +94,7 @@ export function serialize(world: World): SaveData {
     y: onSurface ? world.y : world.returnY,
     moonPhase: [...world.moonPhase],
     moonTimer: [...world.moonTimer],
+    daylightTurn: world.daylightTurn,
     windDirection: world.windDirection,
     journal: {
       ...world.journal,
@@ -131,6 +134,10 @@ export function restore(world: World, data: SaveData): boolean {
     world.y = world.returnY = world.party.surfaceY = data.y;
     world.moonPhase = [data.moonPhase[0], data.moonPhase[1]];
     world.moonTimer = [data.moonTimer[0], data.moonTimer[1]];
+    world.daylightTurn =
+      Number.isInteger(data.daylightTurn) && data.daylightTurn! >= 0 && data.daylightTurn! < 96
+        ? data.daylightTurn!
+        : (((world.moonPhase[0] * 12 + 12 - world.moonTimer[0]) % 96) + 96) % 96;
     world.windDirection = data.windDirection;
     if (data.version < 2) world.poolPurses(); // members' purses become the party's
     if (data.version < 3) world.poolGear(); // members' bags become the party's

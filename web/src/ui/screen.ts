@@ -2401,8 +2401,10 @@ export class Screen implements GameIO {
     map.beginFrame();
     map.setGroundEffectsDepthTest(this.tileSetName === 'Van Gogh');
     const outdoors = (world.combat?.previousLocation ?? world.party.location) !== Location.Dungeon;
-    map.setDaylight(this.view3D.dayNight && outdoors ? daylightColour(world.moonPhase[0], world.moonTimer[0]) : [1, 1, 1]);
-    map.setSun(world.moonPhase[0], world.moonTimer[0], outdoors);
+    const dayPhase = Math.floor(world.daylightTurn / 12);
+    const dayTimer = 12 - (world.daylightTurn % 12);
+    map.setDaylight(this.view3D.dayNight && outdoors ? daylightColour(dayPhase, dayTimer) : [1, 1, 1]);
+    map.setSun(dayPhase, dayTimer, outdoors);
     map.setCombat(!!world.combat);
     map.setLandscape(world.combat || !this.view3D.distantTerrain ? null : buildLandscape(world, this.view), gfx, this.view.cells);
     map.setActorLayout(this.view.cells, this.partyStyle === 'grid');

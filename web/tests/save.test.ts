@@ -179,3 +179,24 @@ describe('export and import', () => {
     expect(() => parseExport(JSON.stringify({ game: 'ultima3', format: EXPORT_FORMAT, save: { version: 1 } }))).toThrow('incomplete');
   });
 });
+
+describe('cosmetic daylight persistence', () => {
+  it('remembers daylight independently of moons and migrates old saves without a lighting jump', () => {
+    const world = newWorld();
+    world.daylightTurn = 77;
+    const data = savedCopy(world);
+    const restored = new World(world.resources);
+    expect(restore(restored, data)).toBe(true);
+    expect(restored.daylightTurn).toBe(77);
+    delete data.daylightTurn;
+    data.moonPhase = [3, 4];
+    data.moonTimer = [7, 4];
+    expect(restore(restored, data)).toBe(true);
+    expect(restored.daylightTurn).toBe(41);
+    data.daylightTurn = -1;
+    expect(restore(restored, data)).toBe(true);
+    expect(restored.daylightTurn).toBe(41);
+    restored.newGame();
+    expect(restored.daylightTurn).toBe(48);
+  });
+});

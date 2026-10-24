@@ -544,6 +544,7 @@ export async function formParty(world: World, io: GameIO): Promise<void> {
   world.x = world.returnX = 42;
   world.y = world.returnY = 20;
   world.resetSosaria();
+  world.daylightTurn = 48;
   world.moonPhase = [4, 4];
   world.moonTimer = [12, 4];
   await notice(io, mm(world, MM.Formed));
