@@ -22,6 +22,7 @@ interface Presentation {
   mapVisible: boolean;
   mapInteractive: boolean;
   mapAnimated?: boolean;
+  toolbarVisible?: boolean;
   covers: ScreenRect[];
 }
 
@@ -163,7 +164,10 @@ export class ThreeRenderer {
       this.presentationKey = key;
       this.sceneDirty = true;
     }
-    this.controls?.setActive(presentation.mapInteractive && !this.lost);
+    this.controls?.setActive(
+      presentation.mapInteractive && !this.lost,
+      (presentation.toolbarVisible ?? presentation.mapInteractive) && !this.lost,
+    );
     if ((!this.dirty && !this.sceneDirty) || this.lost || this.disposed) return;
     if (this.renderer) {
       if (this.dirty) this.texture.needsUpdate = true;

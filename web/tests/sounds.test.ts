@@ -35,6 +35,8 @@ function fakeAudio() {
       const s = {
         buffer: null as { name: string } | null,
         gain: 1,
+        stop: vi.fn(),
+        disconnect() {},
         playbackRate: { value: 1 },
         connect: (g: { value: number }) => (s.gain = g.value),
         start: () => started.push({ name: s.buffer!.name, gain: s.gain, rate: s.playbackRate.value }),
@@ -61,6 +63,28 @@ const tick = () => new Promise((r) => setTimeout(r, 0));
 
 describe('sound player', () => {
   afterEach(() => vi.unstubAllGlobals());
+
+  it('master mute stops current effects and cancels pending loads without changing FX preferences', async () => {
+    const { ctx, started } = fakeAudio();
+    const create = vi.spyOn(ctx, 'createBufferSource');
+    const player = new SoundPlayer();
+    player.unlock();
+    player.play('Step');
+    await tick();
+    const source = create.mock.results[0].value as ReturnType<typeof ctx.createBufferSource>;
+    player.muted = true;
+    expect(source.stop).toHaveBeenCalledOnce();
+    expect(player.enabled).toBe(true);
+    player.muted = false;
+    player.play('Attack');
+    player.muted = true;
+    await tick();
+    expect(started).toHaveLength(1);
+    player.muted = false;
+    player.play('Bump');
+    await tick();
+    expect(started).toHaveLength(2);
+  });
 
   it('has both sets', () => {
     expect(SOUND_SETS).toEqual(['Standard', 'Lairware']);

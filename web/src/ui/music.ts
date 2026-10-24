@@ -170,6 +170,7 @@ export class MusicPlayer {
   private nextNote = 0;
   private playing = new Set<AudioScheduledSourceNode>();
   private on = true;
+  private muteValue = false;
   /** While the game is paused (window not focused) the clock stops, so the tune holds its place. */
   private paused = false;
   /** Heard though the game is paused: the Music level's dial is turning (Screen), so the player hears each step. */
@@ -205,6 +206,15 @@ export class MusicPlayer {
   }
   set enabled(on: boolean) {
     this.on = on;
+    this.sync();
+  }
+
+  /** Master mute leaves the individual music preference and volume intact. */
+  get muted(): boolean {
+    return this.muteValue;
+  }
+  set muted(muted: boolean) {
+    this.muteValue = muted;
     this.sync();
   }
 
@@ -286,7 +296,7 @@ export class MusicPlayer {
 
   /** Start or stop so that what sounds is the wanted track, if music is on and audio unlocked, else nothing. */
   private sync(): void {
-    const wanted = this.on && this.levelValue > 0 && this.context ? this.current : 0;
+    const wanted = this.on && !this.muteValue && this.levelValue > 0 && this.context ? this.current : 0;
     if (wanted === this.activeTrack) return;
     this.stopScheduling();
     this.activeTrack = wanted;

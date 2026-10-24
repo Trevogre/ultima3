@@ -135,6 +135,25 @@ function setup(failSamples = false) {
 }
 
 describe('sampled playback lifecycle', () => {
+  it('master mute stops and resumes music without changing its individual preference or volume', async () => {
+    const { player } = setup();
+    player.style = 'Orchestral';
+    player.play(1);
+    player.unlock();
+    await vi.advanceTimersByTimeAsync(1);
+    const ctx = FakeContext.last,
+      count = ctx.voices.length,
+      level = player.level;
+    player.muted = true;
+    expect(ctx.voices.every((v) => v.stopped)).toBe(true);
+    expect(player.enabled).toBe(true);
+    expect(player.level).toBe(level);
+    player.muted = false;
+    await vi.advanceTimersByTimeAsync(1);
+    expect(ctx.voices.length).toBeGreaterThan(count);
+    player.enabled = false;
+  });
+
   it('loads no sample bank in Classic mode', async () => {
     const { player, fetcher } = setup();
     player.play(1);

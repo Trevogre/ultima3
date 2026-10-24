@@ -252,6 +252,7 @@ export class Screen implements GameIO {
   /** While set, the frame loop paints this instead of the game (the map through its CRT effect). */
   private overlay: ((time: number) => void) | null = null;
   /** Called when anything in the Settings menu changes, so the page can remember it. */
+  audioMuted = false;
   onSettingsChange: (() => void) | null = null;
   /** Name of the tile set in use (see help.ts TILE_SETS). */
   tileSetName = 'Standard';
@@ -308,6 +309,18 @@ export class Screen implements GameIO {
       (direction) => this.keyboard.push(direction === 'down' ? Key.Down : Key.Up, 'mouse'),
       () => this.keyboard.push(Key.B, 'mouse'),
     );
+    this.presentation.map.onPresentationToggle = () => {
+      this.set3DSettings({ ...this.view3D, enabled: !this.view3D.enabled });
+      this.onSettingsChange?.();
+    };
+    this.presentation.map.onAudioToggle = () => {
+      this.setAudioMuted(!this.audioMuted);
+      if (!this.audioMuted) {
+        this.sounds.unlock();
+        this.musicPlayer.unlock();
+      }
+      this.onSettingsChange?.();
+    };
     this.presentation.map.onCameraModeToggle = () => {
       this.set3DSettings({ ...this.view3D, fixedCamera: !this.view3D.fixedCamera });
       this.onSettingsChange?.();
@@ -971,6 +984,13 @@ export class Screen implements GameIO {
       await act(options[picked].key, place);
       this.onSettingsChange?.();
     }
+  }
+
+  setAudioMuted(muted: boolean): void {
+    this.audioMuted = muted;
+    this.sounds.muted = muted;
+    this.musicPlayer.muted = muted;
+    this.presentation.map.audioOn = !muted;
   }
 
   /** Apply display preferences without changing the world or the saved game. */
@@ -2559,7 +2579,10 @@ export class Screen implements GameIO {
       const p = this.underPaused;
       covers.push({ x: p.x, y: p.y, w: p.image.width, h: p.image.height });
     }
+    this.presentation.map.audioOn = !this.audioMuted;
     this.presentation.present({
+      toolbarVisible:
+        this.frameShown && !!this.view && !this.viewCovered && !this.overlay && !this.menu && !this.keyboard.paused && !this.pauseShown,
       mapVisible,
       mapAnimated: mapVisible && !this.menu && !this.keyboard.paused && !this.pauseShown,
       mapInteractive: mapVisible && this.view3D.mouseCamera && !this.menu && !this.keyboard.paused && !this.pauseShown,

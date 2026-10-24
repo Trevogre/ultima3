@@ -11,6 +11,8 @@ export class MapCameraControls {
   private readonly reset = document.createElement('button');
   private readonly fit = document.createElement('button');
   private readonly mode = document.createElement('button');
+  private readonly classic = document.createElement('button');
+  private readonly audio = document.createElement('button');
   private readonly toolbar = document.createElement('div');
   private readonly observer: ResizeObserver;
   private readonly originalTitle: string;
@@ -35,14 +37,25 @@ export class MapCameraControls {
       this.map.onCameraModeToggle?.();
       this.canvas.focus();
     });
-    for (const button of [this.fit, this.reset, this.mode]) {
+    this.classic.type = this.audio.type = 'button';
+    this.classic.id = 'map-classic-toggle';
+    this.audio.id = 'map-audio-toggle';
+    this.classic.addEventListener('click', () => {
+      this.map.onPresentationToggle?.();
+      this.canvas.focus();
+    });
+    this.audio.addEventListener('click', () => {
+      this.map.onAudioToggle?.();
+      this.canvas.focus();
+    });
+    for (const button of [this.fit, this.reset, this.mode, this.classic, this.audio]) {
       button.style.cssText =
         'padding:5px 8px;background:#111e;color:#fff;border:1px solid #888;border-radius:3px;font:12px sans-serif;cursor:pointer;';
       button.addEventListener('keydown', (event) => event.stopPropagation());
     }
     this.reset.addEventListener('click', this.onReset);
     this.fit.addEventListener('click', this.onFit);
-    this.toolbar.append(this.mode, this.fit, this.reset);
+    this.toolbar.append(this.mode, this.fit, this.reset, this.classic, this.audio);
     canvas.after(this.toolbar);
     canvas.addEventListener('pointerdown', this.onDown);
     canvas.addEventListener('pointermove', this.onMove);
@@ -57,7 +70,7 @@ export class MapCameraControls {
     this.observer.observe(canvas);
   }
 
-  setActive(active: boolean): void {
+  setActive(active: boolean, toolbarVisible = active): void {
     this.mode.textContent = this.map.fixedCamera ? 'Free camera' : 'Fixed camera';
     if (this.map.fixedCamera) this.cancelDrag();
     this.canvas.title = active
@@ -69,10 +82,18 @@ export class MapCameraControls {
       this.active = active;
       if (!active) this.cancelDrag();
     }
+    this.classic.textContent = this.map.classicView ? '3D' : 'Classic';
+    this.classic.title = this.map.classicView ? 'Return to 3D view' : 'Switch to the original Classic view';
+    this.classic.setAttribute('aria-label', this.classic.title);
+    this.audio.textContent = this.map.audioOn ? '🔊' : '🔇';
+    this.audio.title = this.map.audioOn ? 'Mute game audio' : 'Unmute game audio';
+    this.audio.setAttribute('aria-label', this.audio.title);
+    this.audio.setAttribute('aria-pressed', String(!this.map.audioOn));
+    this.mode.style.display = this.map.classicView ? 'none' : 'block';
     const wholeMap = this.map.inspectionMode && this.map.hasLandscape;
-    const display = active ? 'flex' : 'none';
-    this.reset.style.display = this.map.isDefault ? 'none' : 'block';
-    this.fit.style.display = wholeMap ? 'block' : 'none';
+    const display = toolbarVisible ? 'flex' : 'none';
+    this.reset.style.display = this.map.classicView || this.map.isDefault ? 'none' : 'block';
+    this.fit.style.display = !this.map.classicView && wholeMap ? 'block' : 'none';
     if (this.toolbar.style.display !== display) {
       this.toolbar.style.display = display;
       this.layout();

@@ -65,6 +65,7 @@ interface Prefs {
   /** The Music level, 0 to LEVELS; LEVELS is how loud the music always was. */
   musicLevel: number;
   musicStyle: MusicStyle;
+  audioMuted: boolean;
   dungeonMap: MapMode;
   /** The virtual controller shown; on first visit, shown on a touch screen. */
   touchPad: boolean;
@@ -86,6 +87,7 @@ const DEFAULT_PREFS: Prefs = {
   music: true,
   musicLevel: LEVELS,
   musicStyle: 'Classic',
+  audioMuted: false,
   dungeonMap: 'off',
   touchPad: typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches,
 };
@@ -99,6 +101,7 @@ function loadPrefs(): Prefs {
     // Apple II Color TV was dropped when scanlines became a setting; Apple II Color is its art without the fringing.
     if (prefs.tiles === 'Apple II Color TV') prefs.tiles = 'Apple II Color';
     if (!TILE_SETS.includes(prefs.tiles)) prefs.tiles = DEFAULT_PREFS.tiles;
+    if (typeof prefs.audioMuted !== 'boolean') prefs.audioMuted = false;
     if (typeof prefs.scanlines !== 'boolean') prefs.scanlines = DEFAULT_PREFS.scanlines;
     if (prefs.inputMode !== 'keyboard') prefs.inputMode = DEFAULT_PREFS.inputMode;
     if (!MAP_MODES.includes(prefs.dungeonMap)) prefs.dungeonMap = 'off';
@@ -279,6 +282,7 @@ async function start(): Promise<void> {
   screen.tileSetName = tiles;
   screen.scanlines = prefs.scanlines;
   screen.set3DSettings(prefs.view3D);
+  screen.setAudioMuted(prefs.audioMuted);
   canvas.focus();
 
   // Whatever changes a setting (the menu, a gamepad press, Escape in a fight), remember it.
@@ -287,6 +291,7 @@ async function start(): Promise<void> {
     savePrefs({
       inputMode: screen.inputMode,
       view3D: screen.view3D,
+      audioMuted: screen.audioMuted,
       // A set asked for in the address (development) is this page's alone: the one remembered stays.
       tiles: screen.tileSetName === tilesAsked ? prefs.tiles : screen.tileSetName,
       scanlines: screen.scanlines,

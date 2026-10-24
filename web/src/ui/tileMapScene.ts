@@ -90,6 +90,12 @@ export class TileMapScene {
   zoom = 1;
   private combat = false;
   private explorationZoom = 1;
+  audioOn = true;
+  onPresentationToggle: (() => void) | null = null;
+  onAudioToggle: (() => void) | null = null;
+  get classicView(): boolean {
+    return !this.options.enabled;
+  }
   onCameraModeToggle: (() => void) | null = null;
   onCardModeChange: (() => void) | null = null;
 

@@ -128,6 +128,21 @@ export class SoundPlayer {
   private lastStart = new Map<string, number>();
   /** When each long effect ends (AudioContext time). */
   private ends = new Map<string, number>();
+  private muteValue = false;
+  private generation = 0;
+  private playing = new Set<AudioBufferSourceNode>();
+  get muted(): boolean {
+    return this.muteValue;
+  }
+  set muted(muted: boolean) {
+    this.muteValue = muted;
+    if (muted) {
+      this.generation++;
+      for (const source of this.playing) source.stop();
+      this.playing.clear();
+      this.ends.clear();
+    }
+  }
   enabled = true;
   set: SoundSet = 'Standard';
   /** The FX level (0..LEVELS); at LEVELS each effect plays at its own gain, as before the setting, at 0 none. */
@@ -161,14 +176,15 @@ export class SoundPlayer {
 
   /** Play a named effect from the current set. Missing files fail silently. */
   play(name: string): void {
-    if (!this.enabled || !this.context || this.level <= 0) return;
+    if (this.muted || !this.enabled || !this.context || this.level <= 0) return;
     const set = this.set;
     const key = `${FOLDER[set]}${fileFor(set, name)}`;
     const t = this.now();
     if (t - (this.lastStart.get(key) ?? -Infinity) < MIN_INTERVAL_MS) return;
     this.lastStart.set(key, t);
+    const generation = this.generation;
     void this.load(key).then((buffer) => {
-      if (!buffer || !this.context) return;
+      if (!buffer || !this.context || this.muted || generation !== this.generation) return;
       const ctx = this.context;
       if (buffer.duration >= LONG_S && (this.ends.get(key) ?? 0) > ctx.currentTime) return;
       const source = ctx.createBufferSource();
@@ -179,6 +195,12 @@ export class SoundPlayer {
       gain.gain.value = Math.pow(10, (GAIN_DB[set][name] ?? 0) / 20) * levelGain(this.level);
       source.connect(gain);
       gain.connect(ctx.destination);
+      this.playing.add(source);
+      source.onended = () => {
+        this.playing.delete(source);
+        source.disconnect();
+        gain.disconnect();
+      };
       source.start();
       if (buffer.duration >= LONG_S) this.ends.set(key, ctx.currentTime + buffer.duration);
       if (buffer.duration >= DUCK_S) this.onLong?.(buffer.duration);

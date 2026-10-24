@@ -627,3 +627,17 @@ the ground tile by 20° tilt. Overhead cards restore the original tile orientati
 angled cards face the camera. Source padding cannot lift the building. Contact and sun shadows share the same
 anchor. `/tools/preview-building-anchors.html` is an isolated, save-free check
 for overhead, tilted and rotated views in Macintosh B&W, Standard and EGA.
+
+### Quick view and audio controls
+
+The map toolbar adds **Classic** beside the camera/reset controls. It switches
+to the original viewport, then reads **3D** to restore the previous 3D settings.
+The toolbar stays available in Classic, including with mouse orbit disabled.
+Neither button queues a game command or spends a turn.
+
+The **speaker icon** toggles remembered master mute for music and effects.
+It stops current sounds and pending effect loads immediately, while preserving
+individual Music/FX preferences, styles and volume levels. Unmute restores the
+configured music and permits new effects. Tooltips and accessible labels say
+Mute/Unmute; the crossed speaker indicates mute. Controls hide behind menus and
+overlays and while the game is paused.
