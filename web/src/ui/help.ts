@@ -26,6 +26,7 @@ export const TILE_SETS = [
   'PC EGA',
   'PC CGA',
   'Commodore 64',
+  'Van Gogh',
 ];
 
 export interface HelpPage {

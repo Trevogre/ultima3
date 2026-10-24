@@ -1,0 +1,62 @@
+[
+  {
+    "set": "Standard",
+    "file": "Standard-Tiles.png",
+    "sha256": "aaf504c8f381af702ff2f9f95a77432e893007eec870b09d7d123a33933735ae"
+  },
+  {
+    "set": "Lairware",
+    "file": "Lairware-Tiles.png",
+    "sha256": "b8e85bd4006176fd532f012d983b8dfc54a10ed1be075d21e689a7dc47d3aece"
+  },
+  {
+    "set": "PC VGA",
+    "file": "PC VGA-Tiles.png",
+    "sha256": "13dbbebf3cb510981dcf211f4e4d1d7f80c94719cab5aeea0eda24b0669b1750"
+  },
+  {
+    "set": "Nintendo",
+    "file": "Nintendo-Tiles.png",
+    "sha256": "b63045d04a0ad38d48ad5c12453bfbd8fc405ea33da790ad62548beeacf58ac2"
+  },
+  {
+    "set": "PC Ultima V",
+    "file": "PC Ultima V-Tiles.png",
+    "sha256": "c42330da53052e32bdfc936e5c70a6cb8015fb4747a4dd6e65812c672b1cccb9"
+  },
+  {
+    "set": "PC MCGA",
+    "file": "PC MCGA-Tiles.png",
+    "sha256": "969ddf5a8fb394871d89f6f9e44e72d1afde28c4e11da21fccb905735d2eb355"
+  },
+  {
+    "set": "Apple II Color",
+    "file": "Apple II Color-Tiles.png",
+    "sha256": "5c66e08f7e6c231e161bed679780047178d1b6c7af258c972f442b9b4cd75e72"
+  },
+  {
+    "set": "Apple II Mono",
+    "file": "Apple II Mono-Tiles.png",
+    "sha256": "2ec049a166cefe7363644e070a64c95073073ab44ecd619f656705c5a74b8045"
+  },
+  {
+    "set": "Macintosh B&W",
+    "file": "Macintosh BW-Tiles.gif",
+    "sha256": "fa19f42be1763b9b9bf2b04ed1c7ad9ef02c9763d7c64920b1cfbd53a1c6f923"
+  },
+  {
+    "set": "PC EGA",
+    "file": "PC EGA-Tiles.png",
+    "sha256": "285d86dcf203059443c449ac889379067556894deb369daac9af2403502635ef"
+  },
+  {
+    "set": "PC CGA",
+    "file": "PC CGA-Tiles.gif",
+    "sha256": "538396cadd2936f3ef25d73e9f2e1f65944d1cb0e8b5e9069649c5bb8954c0d3"
+  },
+  {
+    "set": "Commodore 64",
+    "file": "Commodore 64-Tiles.gif",
+    "sha256": "5a9a19e1951bd9b783bcbe555d8e0d6828151d32605b7ff22b2c9094ab2b056d"
+  }
+]

@@ -65,6 +65,8 @@ const VGA: DungeonStyle = {
  */
 export const DUNGEON_STYLES: Record<string, DungeonStyle> = {
   Standard: VGA,
+  // Expanded-art first pass retains the established dungeon presentation.
+  'Van Gogh': VGA,
   'PC VGA': VGA,
   // Mono draws in its monitor's green phosphor, as its tiles do (display.ts).
   'Apple II Mono': {

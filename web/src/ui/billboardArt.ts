@@ -55,6 +55,16 @@ export function buildingArt(gfx: GraphicsSet, shape: number): HTMLCanvasElement 
   canvas.width = canvas.height = 64;
   const ctx = canvas.getContext('2d', { willReadFrequently: true })!;
   ctx.imageSmoothingEnabled = false;
+  if (gfx.buildingCards) {
+    const slot = ([Shape.Town, Shape.Castle, Shape.Dungeon, Shape.Shrine] as number[]).indexOf(shape);
+    if (slot >= 0) {
+      const size = gfx.buildingCards.height;
+      const frame = Math.floor(rect.x / rect.w) % 2;
+      ctx.drawImage(gfx.buildingCards, (slot + frame * 4) * size, 0, size, size, 0, 0, 64, 64);
+      images.set(key, canvas);
+      return canvas;
+    }
+  }
   gfx.drawShape(ctx, buildingGround(shape), 0, 0, 64);
   const ground = ctx.getImageData(0, 0, 64, 64);
   ctx.clearRect(0, 0, 64, 64);

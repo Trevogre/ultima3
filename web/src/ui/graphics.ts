@@ -113,7 +113,7 @@ export async function loadImages(baseUrl = 'images/'): Promise<ImageMap> {
  * figures instead. A list, not a pixel test: browsers have disagreed about
  * the pixels.
  */
-const CLASS_FIGURE_SETS = new Set(['Standard']);
+const CLASS_FIGURE_SETS = new Set(['Standard', 'Van Gogh']);
 
 /** The files in the graphics folder, from index.json; null when there is no index (then every candidate is tried). */
 async function loadIndex(baseUrl: string): Promise<Set<string> | null> {
@@ -218,6 +218,8 @@ export class GraphicsSet {
     readonly brushCards: HTMLImageElement | null = null,
     readonly grass: { image: HTMLImageElement; patches: readonly GrassPatch[] } | null = null,
     readonly vegetation: { image: HTMLImageElement; layout: VegetationLayout } | null = null,
+    /** Optional expanded-art building cutouts: four subjects, then four alternate frames. */
+    readonly buildingCards: HTMLImageElement | null = null,
   ) {
     this.tileSize = tiles.width / TILE_COLUMNS;
     this.opaqueTiles = document.createElement('canvas');
@@ -295,6 +297,7 @@ export class GraphicsSet {
       brushCards,
       grassCards && GRASS_LAYOUTS[name] ? { image: grassCards, patches: GRASS_LAYOUTS[name] } : null,
       vegetationCards && VEGETATION_LAYOUTS[name] ? { image: vegetationCards, layout: VEGETATION_LAYOUTS[name] } : null,
+      await tryLoad('BuildingCards', ['png'], false),
     );
   }
 

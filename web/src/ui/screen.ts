@@ -267,7 +267,7 @@ export class Screen implements GameIO {
    */
   private get partyStyle(): 'grid' | 'line' | 'symbol' {
     if (this.tileSetName === 'Nintendo') return 'line';
-    if (this.tileSetName === 'Standard') return this.world.inTownOrCastle ? 'line' : 'grid';
+    if (this.tileSetName === 'Standard' || this.tileSetName === 'Van Gogh') return this.world.inTownOrCastle ? 'line' : 'grid';
     return 'symbol';
   }
   /** Standard alone shows the red burst on a hit instead of the HIT tile. */

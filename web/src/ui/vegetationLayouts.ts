@@ -4,6 +4,19 @@ export interface VegetationLayout {
   brush: readonly (readonly [number, number])[];
 }
 export const VEGETATION_LAYOUTS: Readonly<Record<string, VegetationLayout>> = {
+  'Van Gogh': {
+    trees: [
+      [20, 35],
+      [48, 55],
+      [18, 63],
+    ],
+    brush: [
+      [16, 19],
+      [46, 33],
+      [16, 50],
+      [46, 63],
+    ],
+  },
   Standard: {
     trees: [
       [20, 35],
