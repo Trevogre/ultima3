@@ -249,7 +249,7 @@ export class TileMapScene {
 
   /** Batch the entire landscape in one draw call, using a small animated tile atlas. */
   setLandscape(landscape: Landscape | null, gfx: GraphicsSet, cells: ViewCell[]): void {
-    this.grass.set(cells, gfx, this.options.grassDepth);
+    this.grass.set(cells, gfx, this.options.grassDepth, landscape);
     this.water.set(landscape, cells, gfx, this.options);
     this.fog.set(landscape, cells, this.options.softFog, this.options.recessedWater);
     this.trees.set(landscape, cells, gfx, this.treeCardsActive);
@@ -347,7 +347,6 @@ export class TileMapScene {
     this.partyCards.forEach(({ mesh }) => {
       mesh.visible = split;
     });
-    this.grass.faceCamera(this.camera, this.tilt, (this.rect.w / this.visibleSide) * this.zoom);
     this.faceActors();
   }
 

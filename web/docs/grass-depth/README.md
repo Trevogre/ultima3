@@ -14,8 +14,11 @@ no recolouring, reconstruction, or runtime segmentation. Source and output
 hashes are in `manifest.json`. Original sheets are unchanged.
 
 Cards retain native width/height and are anchored at the bottom of their own
-mark. Only visible local grass tiles are submitted, in one instanced draw with
-an 8192-card bound. They fade between roughly 5–26° tilt and 24–48 screen pixels
+mark. Explored grass across the landscape is submitted only where it intersects the
+camera view, in one instanced draw with a 32768-card budget. If the budget is
+reached, marks are thinned across all visible tiles instead of cutting off a
+rectangular region. Camera motion updates this selection without needing a
+game turn. Unknown tiles never supply grass. They fade between roughly 5–26° tilt and 24–48 screen pixels
 per tile. Overhead and distant views have no grass cards. They stay behind
 actors, test against cube/building depth, write no depth, and cast no individual
 contact or sun shadows. Day/night colours affect them with the supporting ground.
