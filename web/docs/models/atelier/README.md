@@ -1,10 +1,13 @@
 # Atelier ranger and composed-world study
 
 This is a **work-in-progress review milestone**, not the completed replacement
-for the game's current Van Gogh model set. The character study is not yet used by the game. The new environment library is
-available in Models through the opt-in **Layout: Composed** setting; Tiled remains
-the default. The Low-poly choice uses faceted, lighter vegetation; Van Gogh uses the fuller
-smooth meshes. Existing figures/buildings still use their prior model-set assets.
+for the game's current model sets. Select the third **3D set: Composed** to try
+the new environment and rigged ranger. F7 cycles Low-poly → Van Gogh → Composed.
+There is no separate Layout setting; saved Layout: Composed choices migrate to
+the Composed set. The existing Low-poly and Van Gogh sets retain their presentation
+and scale. Composed uses the authored environment and a skinned ranger; the other
+careers, creatures and buildings still use prior assets. These meshes have not
+met the requested art quality and remain placeholders for reviewed replacements.
 
 ## Review
 
@@ -13,8 +16,10 @@ Run the normal Vite server and open
 
 The viewer loads the actual exported GLB through Three.js, with continuous
 Idle / Walk / Attack / Cast / Hit clips. Drag to orbit, wheel to zoom, WASD to
-walk, or select a clip. Character view and Whole map switch framing. Tiled /
-Composed compares independent tile heights with shared shoreline corner samples.
+walk, or select a clip. Inspect figure, World view and Whole map switch framing.
+The initial World view uses small geographic figures/vegetation, larger mountain
+heights and opaque ocean water. Those scale and ocean adjustments are confined
+to this authoring fixture; the in-game scale and water shader are unchanged.
 The scene uses the original 64×64 Sosaria layout. It is an isolated authoring
 viewer: no game saves, discovery state or preferences are written.
 
@@ -37,8 +42,18 @@ stable scenery placements with camera culling and distant tree/brush meshes.
   `node --import ./tools/node-ts.mjs tools/models/inspect-glb.ts` from `web/`.
 - `web/src/ui/skinnedModel.ts`: animation adapter using cloned glTF skeletons,
   crossfades, individual materials, ground alignment and explicit resource cleanup.
+- `web/src/ui/atelierCharacters.ts`: lazy, offline loader for the exported ranger.
+  In the Composed set, ModelScene swaps only visible ranger figures when ready, retaining
+  movement and action clocks. Switching sets restores the earlier model; a load
+  failure keeps that model and can be retried by switching sets away and back.
 - `web/tests/skinnedModel.test.ts`: loads the actual GLB, verifies all five clips,
-  dimensions, independent skeletons and joint deformation through action states.
+  dimensions, independent skeletons, joint deformation, composed daylight/poison
+  tinting, async live-scene replacement and disposal during pending loads.
+
+`tools/preview-presentations.html` exercises the real game renderer
+with a Ranger / Fighter selector. Walk east, Attack, Cast and Hit frame drive the
+same motion state machine as play. Day/night, set changes and layout changes
+exercise the imported character with existing scenery. This fixture saves nothing.
 
 Blender multi-angle and animation-strip review identified and corrected a backward
 cast reach and the walk knee-flex direction. Browser review confirms actual GPU
@@ -58,9 +73,10 @@ masks water to its own cells. Procedural paint, wind and waves repeat their phas
 across the wrapping map seam. Wrapping maps have
 matching corner samples and connected regions across the seam.
 
-Use Pause / Settings → 3D Settings → Style: 3D models → Layout: Composed.
-Turn Distant land off to retain the original local footprint. Layout is remembered,
-including across presentation changes. Tiled restores the prior model scenery.
+Use Pause / Settings → 3D Settings → 3D set → Composed, or F7.
+Turn Distant land off to retain the original local footprint. The selected set is
+remembered across presentation changes. Selecting Van Gogh or Low-poly restores
+their existing model scenery.
 
 The library has 23 authored plant/rock meshes and 10 distant meshes, exported as
 `environment.glb`; `environment-study.blend` is the editable source. The runtime
@@ -94,7 +110,7 @@ sight mask. The review viewer intentionally reads the full original map for
   substantial new building assets; the existing buildings are still in use.
 - Refine the composed ground, water and shore materials and mountain-ridge
   composition through further scene review.
-- Integrate the asset loader with the actual game motion/action pipeline.
+- Extend the authored character pipeline to the other careers, NPCs and creatures.
 - Verify a polished playable coastal scene in the actual game before expanding
   replacement coverage to the rest of its characters and terrain.
 
