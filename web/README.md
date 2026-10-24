@@ -32,6 +32,14 @@ Its output is committed so the game runs straight after `npm install`.
 
 ### Rendering
 
+**Visuals → Presentation** offers Classic (the original flat viewport) and
+Depth (the existing sprites with cards, terrain cubes, fixed camera,
+day/night lighting and contact shadows). The current choice appears in the
+entry's hint; individual overrides in 3D Settings report Custom. Camera angles,
+the selected tile set and input preferences are preserved when applying a
+preset. Existing saved overrides are preserved when preferences are upgraded.
+No unfinished Layered or Expanded-art mode is exposed.
+
 Three.js owns the visible canvas using WebGL 2. The interface is an unlit,
 screen-sized plane; the map has its own scene and orthographic camera, clipped
 to the map window. The default fixed orthographic view tilts 45° from straight down with a 5° map

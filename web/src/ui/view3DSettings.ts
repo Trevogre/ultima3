@@ -10,6 +10,7 @@ export interface View3DSettings {
   fixedAngle: number;
   fixedRotation: number;
   dayNight: boolean;
+  contactShadows: boolean;
 }
 
 export const DEFAULT_3D_SETTINGS: Readonly<View3DSettings> = {
@@ -24,7 +25,32 @@ export const DEFAULT_3D_SETTINGS: Readonly<View3DSettings> = {
   fixedAngle: 45,
   fixedRotation: 5,
   dayNight: true,
+  contactShadows: true,
 };
+
+const DEPTH_OPTIONS = {
+  enabled: true,
+  characters: true,
+  buildings: true,
+  walls: true,
+  mountains: true,
+  distantTerrain: true,
+  fixedCamera: true,
+  dayNight: true,
+  contactShadows: true,
+} as const;
+
+export type PresentationPreset = 'Classic' | 'Depth';
+
+/** Presets are derived labels, never a second source of saved display state. */
+export function presentationPreset(settings: View3DSettings): PresentationPreset | 'Custom' {
+  if (!settings.enabled) return 'Classic';
+  return (Object.keys(DEPTH_OPTIONS) as (keyof typeof DEPTH_OPTIONS)[]).every((key) => settings[key]) ? 'Depth' : 'Custom';
+}
+
+export function applyPresentationPreset(settings: View3DSettings, preset: PresentationPreset): View3DSettings {
+  return preset === 'Classic' ? { ...settings, enabled: false } : { ...settings, ...DEPTH_OPTIONS };
+}
 
 /** Old or malformed preferences get defaults; explicit Off choices are preserved. */
 export function read3DSettings(value: unknown): View3DSettings {

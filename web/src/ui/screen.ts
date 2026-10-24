@@ -36,7 +36,7 @@ import { ThreeRenderer } from './threeRenderer.ts';
 import type { ScreenRect } from './tileMapScene.ts';
 import { buildLandscape } from '../game/landscape.ts';
 import { Shape } from '../game/tiles.ts';
-import { DEFAULT_3D_SETTINGS, type View3DSettings } from './view3DSettings.ts';
+import { applyPresentationPreset, presentationPreset, DEFAULT_3D_SETTINGS, type View3DSettings } from './view3DSettings.ts';
 import { buildingGround, isBuilding } from './billboardArt.ts';
 import { World, holdCombatMark, STARVATION_MODES, TIMER_MODES } from '../game/world.ts';
 import { PlayerRecord, levelUpDue, statusLetter } from '../game/player.ts';
@@ -1042,11 +1042,24 @@ export class Screen implements GameIO {
       'Visuals',
       () => [
         { key: 'T', label: `Tiles: ${this.tileSetName}` },
+        { key: 'P', label: 'Presentation', hint: `Current: ${presentationPreset(this.view3D)}. Adjust individual options in 3D Settings.` },
         { key: 'L', label: `Scanlines: ${onOff(this.scanlines)}` },
       ],
       async (key) => {
         if (key === 'T') await this.chooseTiles();
-        else if (key === 'L') this.scanlines = !this.scanlines;
+        else if (key === 'P') {
+          const picked = await this.runMenu('Presentation', [
+            { key: 'C', label: 'Classic', hint: 'The original flat viewport.' },
+            {
+              key: 'D',
+              label: 'Depth',
+              disabled: !this.presentation.supports3D,
+              hint: 'Existing tile art with depth, cards, lighting and contact shadows.',
+            },
+            { key: 'B', label: 'Back' },
+          ]);
+          if (picked === 0 || picked === 1) this.set3DSettings(applyPresentationPreset(this.view3D, picked === 0 ? 'Classic' : 'Depth'));
+        } else if (key === 'L') this.scanlines = !this.scanlines;
       },
     );
   }
