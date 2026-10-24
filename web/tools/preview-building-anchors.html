@@ -1,0 +1,67 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+  </head>
+  <body style="margin: 0; background: #252525; color: white; font: 16px sans-serif">
+    <select id="set">
+      <option>Macintosh B&amp;W</option>
+      <option>Standard</option>
+      <option>PC EGA</option></select
+    ><button id="top">Overhead</button><button id="angle">45° tilt</button><button id="rotate">Rotate 90°</button
+    ><canvas style="display: block"></canvas>
+    <script type="module">
+      import * as T from 'three';
+      import { GraphicsSet } from '/src/ui/graphics.ts';
+      import { BuildingBillboards } from '/src/ui/buildingBillboards.ts';
+      import { buildingGround } from '/src/ui/billboardArt.ts';
+      const renderer = new T.WebGLRenderer({ canvas: document.querySelector('canvas'), antialias: false });
+      renderer.setSize(900, 650);
+      renderer.setClearColor('#252525');
+      const camera = new T.OrthographicCamera(-1.8, 1.8, 1.3, -1.3, 0.1, 100),
+        scene = new T.Scene();
+      let yaw = 0,
+        tilt = Math.PI / 4;
+      const buildings = new BuildingBillboards({ value: false });
+      scene.add(buildings.mesh);
+      const canvas = document.createElement('canvas');
+      canvas.width = canvas.height = 128;
+      const texture = new T.CanvasTexture(canvas);
+      texture.colorSpace = T.SRGBColorSpace;
+      texture.magFilter = texture.minFilter = T.NearestFilter;
+      texture.generateMipmaps = false;
+      scene.add(new T.Mesh(new T.PlaneGeometry(2, 2), new T.MeshBasicMaterial({ map: texture })));
+      const cells = [12, 14, 10, 124].map((base) => ({ base }));
+      function render() {
+        camera.position.set(10 * Math.sin(yaw) * Math.sin(tilt), -10 * Math.cos(yaw) * Math.sin(tilt), 10 * Math.cos(tilt));
+        camera.up.set(-Math.sin(yaw) * Math.cos(tilt), Math.cos(yaw) * Math.cos(tilt), Math.sin(tilt));
+        camera.lookAt(0, 0, 0);
+        buildings.faceCamera(camera, tilt);
+        renderer.render(scene, camera);
+      }
+      async function load() {
+        const gfx = await GraphicsSet.load(document.querySelector('#set').value, '/graphics/');
+        const ctx = canvas.getContext('2d');
+        ctx.imageSmoothingEnabled = false;
+        cells.forEach((c, i) => gfx.drawShape(ctx, buildingGround(c.base), (i % 2) * 64, Math.floor(i / 2) * 64, 64));
+        texture.needsUpdate = true;
+        buildings.set(null, cells, gfx, true);
+        render();
+      }
+      document.querySelector('#set').onchange = load;
+      document.querySelector('#top').onclick = () => {
+        tilt = 0;
+        render();
+      };
+      document.querySelector('#angle').onclick = () => {
+        tilt = Math.PI / 4;
+        render();
+      };
+      document.querySelector('#rotate').onclick = () => {
+        yaw += Math.PI / 2;
+        render();
+      };
+      await load();
+    </script>
+  </body>
+</html>

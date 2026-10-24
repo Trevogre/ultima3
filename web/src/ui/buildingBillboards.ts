@@ -15,7 +15,7 @@ import { type Landscape, landscapeOffset } from '../game/landscape.ts';
 import type { ViewCell } from '../game/viewport.ts';
 import { Shape } from '../game/tiles.ts';
 import type { GraphicsSet } from './graphics.ts';
-import { buildingArt } from './billboardArt.ts';
+import { buildingArt, buildingAnchor } from './billboardArt.ts';
 import { addZoomFiltering } from './zoomFiltering.ts';
 import type { ZoomFiltering } from './view3DSettings.ts';
 import { cardGroundLift } from './cardGroundLift.ts';
@@ -137,7 +137,10 @@ export class BuildingBillboards {
         });
       } else {
         this.slots.setX(this.positions.length, this.kind === 'trees' && shape === Shape.Brush ? 4 : this.shapes.indexOf(shape));
-        this.positions.push({ x, y });
+        if (this.kind === 'buildings') {
+          const anchor = buildingAnchor(gfx, shape);
+          this.positions.push({ x: x + anchor[0] / 64 - 0.5, y: y + 0.5 - anchor[1] / 64, anchor, footprint: 1 });
+        } else this.positions.push({ x, y });
       }
     };
     if (landscape) {

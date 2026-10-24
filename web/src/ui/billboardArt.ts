@@ -65,3 +65,29 @@ export function buildingArt(gfx: GraphicsSet, shape: number): HTMLCanvasElement 
   images.set(key, canvas);
   return canvas;
 }
+
+/** Native tile coordinates of the lowest retained foundation pixels. */
+export function buildingBase(pixels: Uint8ClampedArray, width: number, height: number): readonly [number, number] {
+  for (let y = height - 1; y >= 0; y--) {
+    let sum = 0,
+      count = 0;
+    for (let x = 0; x < width; x++) {
+      if (pixels[(y * width + x) * 4 + 3] === 0) continue;
+      sum += x + 0.5;
+      count++;
+    }
+    if (count) return [((sum / count) * 64) / width, ((y + 1) * 64) / height];
+  }
+  return [32, 64];
+}
+
+const bases = new WeakMap<HTMLCanvasElement, readonly [number, number]>();
+export function buildingAnchor(gfx: GraphicsSet, shape: number): readonly [number, number] {
+  const image = buildingArt(gfx, shape);
+  let base = bases.get(image);
+  if (!base) {
+    base = buildingBase(image.getContext('2d')!.getImageData(0, 0, image.width, image.height).data, image.width, image.height);
+    bases.set(image, base);
+  }
+  return base;
+}

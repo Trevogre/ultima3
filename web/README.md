@@ -617,3 +617,9 @@ this input preference.
 cards, initially for Standard and PC EGA. It defaults off and has no effect on
 other sets. Cards fade overhead and when zoomed out, preserve the flat ground,
 and cast no individual shadows. See [grass review](docs/grass-depth/README.md).
+
+Building cards use the bottommost retained foundation pixels of each set’s
+cutout as their ground anchor, including inset Macintosh B&W cities. Transparent
+tile padding cannot lift the building. Contact and sun shadows share the same
+anchor. `/tools/preview-building-anchors.html` is an isolated, save-free check
+for overhead, tilted and rotated views in Macintosh B&W, Standard and EGA.
