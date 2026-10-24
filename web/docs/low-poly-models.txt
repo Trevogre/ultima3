@@ -1,31 +1,44 @@
-Low-poly model preview
+3D model sets
 
-Settings > Visuals > Presentation > Low-poly (preview), or toggle Style in
-3D Settings. Classic and Depth remain available. The selected historical
-or painterly tile set is preserved when switching model styles.
+F7 enters Models using the remembered set, then cycles Low-poly / Van Gogh.
+The selected name appears briefly. F6 still selects the independent sprite
+set. Both selections are remembered. Classic and Depth remain available.
+Menus: Pause/Settings > Visuals > 3D set, or 3D Settings > 3D set.
 
-This initial pass uses locally authored procedural solid meshes, not a paid
-asset provider. Model factories in modelAssets.ts cover terrain, trees,
-brush, houses, castles, cave entrances, walls, shrines, chests, horses,
-ships, portals, and directional humanoid / creature families. They use
-faceted geometry with vertex colours, instancing, real depth testing and
-directional light/shadow maps. They do not billboard toward the camera.
-The next art stage can replace individual factories with reviewed GLBs.
+Low-poly retains faceted model scenery. Van Gogh is a fuller procedural
+model set: rounded canopies and figures, detailed towers, battlements,
+windows and entrances, and UV-mapped surfaces. It samples material patches
+from the bundled generated Van Gogh atlas (foliage, cloth, stone, wood,
+skin and gold). The original artwork is unchanged. Paint loading is lazy,
+works with the offline asset cache, and falls back to vertex colours.
 
-Characters keep a presentation-only heading inferred from movement. Stable
-party/monster IDs preserve it across redraws; wrapping map seams are handled
-and large teleports do not turn a figure. Camera rotation never changes
-heading. Party grid and follower layouts are supported. Actor selection
-uses the ordinary visibility-filtered viewport; scenery uses the explored
-landscape. No game state or exploration is written by this renderer.
+Both sets animate independently of sprite ticks. Humanoids use articulated
+joint groups: shoulders/elbows, hips/knees, torso and head. Continuous poses
+include breathing/look-around idle, interpolated walking with a gait, weapon
+attacks, casting gestures and hit recoil. Optional GameIO action cues feed
+attacks/casts; normal visible hit data feeds recoil. Poisoned figures keep
+their green tint. Flags flutter, vegetation sways, water moves, waterborne
+props bob, and whirlpools rotate. Doors and other static props stay fixed.
 
-This is a model-family prototype, not 96 individually sculpted, animated
-assets. Several enemies intentionally share a family mesh; weapons/armour
-are not yet exact equipment models. Functional letter tiles remain textures
-on solid ground blocks. Menus and first-person dungeons keep their existing
-renderers. Tile-specific card/filter/cube controls apply to the tile style;
-camera, distant terrain, lowered water, sun shadows and day/night also work
-with models. Real model shadows use the same world-space sun clock.
+The animation clock stops during menus/pauses and does not fast-forward on
+resume. Movement uses stable entity IDs and handles map wrapping; teleports
+snap rather than walking across the map. Camera rotation cannot turn the
+models. Visibility-filtered inputs are shared with the other renderers,
+and hidden rigs are immediately removed. Gameplay state is not changed.
 
-Safe visual fixture: /tools/preview-presentations.html. It owns synthetic
-terrain and actors and never reads or writes saves or display preferences.
+Extension points: modelSets.ts registers stable saved IDs and menu metadata;
+modelAssetSets.ts supplies scenery and actor factories. AnimatedModel's root,
+pose, tint and disposal contract can also wrap a future skinned GLB with an
+AnimationMixer. This increment uses jointed meshes, not skinned GLB assets.
+No provider service, paid generation call or new download is required.
+
+These are procedural sets, not a finished individually sculpted model for
+every semantic tile. Some creatures still share family/fallback shapes.
+Exact equipment models, death animations, richer creature rigs and bespoke
+sculpted assets remain future work. First-person dungeons and menus retain
+their established renderers. The Low-poly sign tops retain the selected
+sprite glyphs; the Van Gogh model set has independent gold sign lettering.
+
+Safe preview: /tools/preview-presentations.html, with set selection, F7,
+walking, attack/cast/hit controls and pause. It owns synthetic terrain and
+actors and never reads or writes game saves or display preferences.

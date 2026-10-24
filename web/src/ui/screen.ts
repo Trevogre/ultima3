@@ -46,6 +46,7 @@ import { memberShape } from '../game/combat.ts';
 import { TILE_SETS, helpPages, PAGE_ROWS, PAGE_WIDTH } from './help.ts';
 import { modelActors } from './modelActors.ts';
 import { drawPaintedHit, usesGroundHit } from './hitEffects.ts';
+import { MODEL_SETS, MODEL_SET_INFO, nextModelSet } from './modelSets.ts';
 import { journalCard, journalSnapshot, journalTop, wordCard, type JournalLine } from '../game/journal.ts';
 import { TIPS, tipPages, type Tip } from '../game/tips.ts';
 import { CHEATS } from '../game/cheats.ts';
@@ -1016,9 +1017,15 @@ export class Screen implements GameIO {
           },
           {
             key: 'P',
-            label: `Style: ${this.view3D.renderStyle === 'Models' ? 'Low-poly' : 'Tile cards'}`,
+            label: `Style: ${this.view3D.renderStyle === 'Models' ? '3D models' : 'Tile cards'}`,
             disabled,
-            hint: 'Low-poly uses solid mesh prototypes. Tile-specific controls below apply to Tile cards.',
+            hint: '3D sets use solid models with continuous animation. Tile-specific controls below apply to Tile cards.',
+          },
+          {
+            key: 'X',
+            label: `3D set: ${this.view3D.modelSet}`,
+            disabled,
+            hint: 'F7 cycles independent model sets. Animations run continuously; F6 still selects sprites.',
           },
           {
             key: 'C',
@@ -1162,6 +1169,7 @@ export class Screen implements GameIO {
         )[key as 'D' | 'C' | 'L' | 'T' | 'W' | 'N' | 'M' | 'F' | 'Y' | 'S' | 'E' | 'Z' | 'G' | 'H' | 'V' | 'U' | 'A' | 'J' | 'K'];
         if (setting) this.set3DSettings({ ...this.view3D, [setting]: !this.view3D[setting] });
         else if (key === 'P') this.set3DSettings({ ...this.view3D, renderStyle: this.view3D.renderStyle === 'Cards' ? 'Models' : 'Cards' });
+        else if (key === 'X') await this.chooseModelSet();
         else if (key === 'Q') {
           const modes = ['Crisp', 'Stable', 'Auto'] as const;
           this.set3DSettings({ ...this.view3D, zoomFiltering: modes[(modes.indexOf(this.view3D.zoomFiltering) + 1) % modes.length] });
@@ -1187,12 +1195,19 @@ export class Screen implements GameIO {
       'Visuals',
       () => [
         { key: 'T', label: `Tiles: ${this.tileSetName}`, hint: 'F6 cycles tile sets without opening a menu.' },
+        {
+          key: 'G',
+          label: `3D set: ${this.view3D.modelSet}`,
+          disabled: !this.presentation.supports3D,
+          hint: 'F7 cycles model sets independently of the tile set.',
+        },
         { key: 'M', label: 'Mouse settings' },
         { key: 'P', label: 'Presentation', hint: `Current: ${presentationPreset(this.view3D)}. Adjust individual options in 3D Settings.` },
         { key: 'L', label: `Scanlines: ${onOff(this.scanlines)}` },
       ],
       async (key) => {
         if (key === 'T') await this.chooseTiles();
+        else if (key === 'G') await this.chooseModelSet();
         else if (key === 'M') await this.mouseSettingsMenu();
         else if (key === 'P') {
           const picked = await this.runMenu('Presentation', [
@@ -1205,9 +1220,9 @@ export class Screen implements GameIO {
             },
             {
               key: 'M',
-              label: 'Low-poly (preview)',
+              label: '3D models',
               disabled: !this.presentation.supports3D,
-              hint: 'Actual mesh terrain and directional figures. Early model-family prototypes.',
+              hint: `Animated models. Selected set: ${this.view3D.modelSet}. F7 cycles sets.`,
             },
             { key: 'B', label: 'Back' },
           ]);
@@ -1410,6 +1425,23 @@ export class Screen implements GameIO {
   }
 
   private cyclingTiles = false;
+  private async chooseModelSet(): Promise<void> {
+    const picked = await this.runMenu('3D model set', [
+      ...MODEL_SETS.map((name) => ({ key: '', label: name, hint: MODEL_SET_INFO[name].description })),
+      { key: 'B', label: 'Back' },
+    ]);
+    if (picked >= 0 && picked < MODEL_SETS.length)
+      this.set3DSettings({ ...this.view3D, enabled: true, renderStyle: 'Models', modelSet: MODEL_SETS[picked] });
+  }
+
+  /** Presentation-only shortcut: no game command or turn is queued. */
+  nextModelSet(): void {
+    if (!this.presentation.supports3D) return;
+    const modelSet =
+      this.view3D.enabled && this.view3D.renderStyle === 'Models' ? nextModelSet(this.view3D.modelSet) : this.view3D.modelSet;
+    this.set3DSettings({ ...this.view3D, enabled: true, renderStyle: 'Models', modelSet });
+    this.onSettingsChange?.();
+  }
 
   /** F6 cycles tile sets without entering the game command queue. */
   async nextTileSet(): Promise<void> {

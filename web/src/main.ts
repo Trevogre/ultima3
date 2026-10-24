@@ -353,9 +353,9 @@ async function start(): Promise<void> {
   tileNotice.hidden = true;
   document.getElementById('stage')!.append(tileNotice);
   let tileNoticeTimer: ReturnType<typeof setTimeout> | undefined;
-  const showTileNotice = () => {
+  const showTileNotice = (message = `Tiles: ${screen.tileSetName}`) => {
     clearTimeout(tileNoticeTimer);
-    tileNotice.textContent = `Tiles: ${screen.tileSetName}`;
+    tileNotice.textContent = message;
     tileNotice.hidden = false;
     tileNoticeTimer = setTimeout(() => {
       tileNotice.hidden = true;
@@ -367,12 +367,17 @@ async function start(): Promise<void> {
     'keydown',
     (event) => {
       const cycleKey = event.key === 'F6' && !event.altKey && !event.shiftKey;
+      const modelKey = event.key === 'F7' && !event.altKey && !event.shiftKey;
       const legacyKey = event.altKey && event.shiftKey && event.code === 'Digit6';
-      if ((!cycleKey && !legacyKey) || event.ctrlKey || event.metaKey) return;
+      if ((!cycleKey && !legacyKey && !modelKey) || event.ctrlKey || event.metaKey) return;
       if (document.querySelector('dialog[open], input:focus, textarea:focus, [contenteditable="true"]:focus')) return;
       event.preventDefault();
       event.stopImmediatePropagation();
-      if (!event.repeat) void screen.nextTileSet().then(showTileNotice);
+      if (event.repeat) return;
+      if (modelKey) {
+        screen.nextModelSet();
+        showTileNotice(`3D set: ${screen.view3D.modelSet}`);
+      } else void screen.nextTileSet().then(() => showTileNotice());
     },
     true,
   );

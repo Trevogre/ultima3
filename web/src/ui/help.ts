@@ -63,6 +63,7 @@ const KEYBOARD_PAGES: HelpPage[] = [
       'Escape: pause menu',
       'F4: fixed/free view',
       'F6: next tile set',
+      'F7: next 3D set',
       'J: journal',
       '#: view the map',
       '!: heal the party',

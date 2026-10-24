@@ -24,6 +24,14 @@
       <button id="orbit">Rotate 90°</button><button id="overhead">Overhead</button><button id="angle">45° tilt</button>
       <button id="zoom">Zoom</button><button id="night">Day/night</button><button id="move">Walk east</button>
       <button id="hit">Hit frame</button>
+      <label
+        >3D set
+        <select id="models">
+          <option>Van Gogh</option>
+          <option>Low-poly</option>
+        </select></label
+      >
+      <button id="attack">Attack</button><button id="cast">Cast</button><button id="pause">Pause animation</button>
       <span>Isolated fixture — no game saves or preferences.</span>
     </div>
     <canvas aria-label="Presentation preview"></canvas>
@@ -57,6 +65,7 @@
       landscape.shapes[5 * 19 + 10] = Shape.Castle;
       landscape.shapes[11 * 19 + 10] = Shape.Shrine;
       landscape.shapes[5 * 19 + 5] = Shape.Dungeon;
+      for (let y = 9; y <= 12; y++) for (let x = 8; x <= 10; x++) landscape.shapes[y * 19 + x] = Shape.Grass;
       let hit = 0;
       let gfx,
         night = false,
@@ -68,7 +77,13 @@
       }
       function draw() {
         const style = document.querySelector('#style').value;
-        map.setOptions({ ...DEFAULT_3D_SETTINGS, renderStyle: style, fixedCamera: false, treeCards: true });
+        map.setOptions({
+          ...DEFAULT_3D_SETTINGS,
+          renderStyle: style,
+          modelSet: document.querySelector('#models').value,
+          fixedCamera: false,
+          treeCards: true,
+        });
         map.beginFrame();
         map.setGroundEffectsDepthTest(document.querySelector('#tiles').value === 'Van Gogh');
         map.setDaylight(night ? [0.53, 0.61, 0.8] : [1, 1, 1]);
@@ -89,7 +104,17 @@
             );
         });
         const actors = [
-          { id: 'fighter', shape: 136, x: step * 0.25 - 0.25, y: -0.25, worldX: 9 + step, worldY: 9, size: 0.65, ground: Shape.Grass },
+          {
+            id: 'fighter',
+            shape: 136,
+            x: step * 0.25 - 0.25,
+            y: -1.25,
+            worldX: 9 + step,
+            worldY: 10,
+            size: 0.85,
+            ground: Shape.Grass,
+            hit: hit > 0,
+          },
           { id: 'wizard', shape: 140, x: 0.4, y: 0.25, worldX: 9, worldY: 9, size: 0.65, ground: Shape.Grass },
           { id: 'orc', shape: 48, x: -2, y: 1, worldX: 7, worldY: 8, size: 1, ground: Shape.Grass },
         ];
@@ -115,6 +140,7 @@
         renderer.render(map.scene, map.camera);
       }
       document.querySelector('#tiles').onchange = load;
+      document.querySelector('#models').onchange = draw;
       document.querySelector('#style').onchange = draw;
       document.querySelector('#orbit').onclick = () => {
         map.orbit(Math.PI / 2 / 0.006, 0);
@@ -141,10 +167,30 @@
         draw();
       };
       document.querySelector('#hit').onclick = () => {
-        hit = (hit % 3) + 1;
+        hit = (hit + 1) % 4;
         draw();
       };
+      document.querySelector('#attack').onclick = () => map.triggerModelAction('fighter', 'attack');
+      document.querySelector('#cast').onclick = () => map.triggerModelAction('wizard', 'cast');
+      let paused = false;
+      document.querySelector('#pause').onclick = () => {
+        paused = !paused;
+        document.querySelector('#pause').textContent = paused ? 'Resume animation' : 'Pause animation';
+      };
+      window.addEventListener('keydown', (event) => {
+        if (event.key !== 'F7' || event.repeat) return;
+        event.preventDefault();
+        const select = document.querySelector('#models');
+        select.value = select.value === 'Van Gogh' ? 'Low-poly' : 'Van Gogh';
+        draw();
+      });
       await load();
+      function loop(time) {
+        map.animate(time, !paused);
+        render();
+        requestAnimationFrame(loop);
+      }
+      requestAnimationFrame(loop);
     </script>
   </body>
 </html>
