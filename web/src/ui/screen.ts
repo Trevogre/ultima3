@@ -2406,7 +2406,12 @@ export class Screen implements GameIO {
     map.setDaylight(this.view3D.dayNight && outdoors ? daylightColour(dayPhase, dayTimer) : [1, 1, 1]);
     map.setSun(dayPhase, dayTimer, outdoors);
     map.setCombat(!!world.combat);
-    map.setLandscape(world.combat || !this.view3D.distantTerrain ? null : buildLandscape(world, this.view), gfx, this.view.cells);
+    map.setLandscape(
+      world.combat || !this.view3D.distantTerrain ? null : buildLandscape(world, this.view),
+      gfx,
+      this.view.cells,
+      world.combat ? undefined : { mapId: world.current.id, originX: this.view.originX, originY: this.view.originY, side: world.mapSize },
+    );
     map.setActorLayout(this.view.cells, this.partyStyle === 'grid');
     if (map.modelMode)
       map.setModelActors(
@@ -2422,7 +2427,8 @@ export class Screen implements GameIO {
       const dy = cell + Math.floor(i / VIEW_SIZE) * tile;
       gfx.drawShape(ctx, c.base, dx, dy, tile);
       if (c.base !== Shape.Void) {
-        if (this.view3D.buildings && isBuilding(c.base)) drawBuildingGround(map.terrainContext, gfx, c.base, dx, dy, tile);
+        if (map.dungeonEntryGround(i)) gfx.drawShape(map.terrainContext, Shape.Grass, dx, dy, tile);
+        else if (this.view3D.buildings && isBuilding(c.base)) drawBuildingGround(map.terrainContext, gfx, c.base, dx, dy, tile);
         else gfx.drawShape(map.terrainContext, map.forestGround(c.base, gfx), dx, dy, tile);
       }
       this.drawViewportActors(ctx, c, dx, dy, tile);

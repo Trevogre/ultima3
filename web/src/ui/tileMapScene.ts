@@ -16,6 +16,8 @@ import {
 import type { GraphicsSet } from './graphics.ts';
 import { type Landscape, landscapeOffset } from '../game/landscape.ts';
 import { Shape } from '../game/tiles.ts';
+import { dungeonFaces, type LocalMapLocation } from './dungeonEntrances.ts';
+import { DungeonEntranceFaces } from './dungeonEntranceFaces.ts';
 import type { ViewCell } from '../game/viewport.ts';
 import { battlefieldZoom, mapCameraTarget, minimumMapZoom } from './mapCameraBounds.ts';
 import { DEFAULT_3D_SETTINGS, useTreeCards, type View3DSettings } from './view3DSettings.ts';
@@ -87,6 +89,11 @@ export class TileMapScene {
   private readonly landscapeTexture: CanvasTexture;
   private readonly cubes: TerrainCubes;
   private readonly shoreline: Shoreline;
+  private readonly entranceFaces = new DungeonEntranceFaces(this.inverted);
+  private readonly entranceGround = new Set<number>();
+  dungeonEntryGround(index: number): boolean {
+    return this.entranceGround.has(index);
+  }
   private readonly groundEffects: Mesh[] = [];
   private readonly waterEffectsMaterial: MeshBasicMaterial;
   private readonly landscapeSlots = new InstancedBufferAttribute(new Float32Array(4096 * 2), 2);
@@ -129,7 +136,7 @@ export class TileMapScene {
     readonly inspectionMode = false,
   ) {
     this.visibleSide = side;
-    this.scene.add(this.models.group);
+    this.scene.add(this.models.group, this.entranceFaces.mesh);
     const size = side * 2 * cell;
     this.rect = { x: cell, y: cell, w: size, h: size };
     const contexts = [false, true, true].map((transparent, layer) => {
@@ -285,7 +292,30 @@ export class TileMapScene {
   }
 
   /** Batch the entire landscape in one draw call, using a small animated tile atlas. */
-  setLandscape(landscape: Landscape | null, gfx: GraphicsSet, cells: ViewCell[]): void {
+  setLandscape(landscape: Landscape | null, gfx: GraphicsSet, cells: ViewCell[], location?: LocalMapLocation): void {
+    const faces =
+      this.options.buildings && this.options.mountains && (this.modelMode || this.tilt > 0.001)
+        ? dungeonFaces(landscape, cells, location)
+        : [];
+    this.entranceFaces.set(faces, gfx);
+    this.entranceGround.clear();
+    const localSide = Math.sqrt(cells.length);
+    const localEntries = new Set(faces.map((face) => `${face.x},${face.y}`));
+    cells = cells.map((cell, i) => {
+      if (
+        cell.base !== Shape.Dungeon ||
+        !localEntries.has(`${(i % localSide) - (localSide - 1) / 2},${(localSide - 1) / 2 - Math.floor(i / localSide)}`)
+      )
+        return cell;
+      this.entranceGround.add(i);
+      return { ...cell, base: Shape.Grass };
+    });
+    if (landscape && faces.length) {
+      const shapes = landscape.shapes.slice();
+      for (const face of faces) shapes[face.index] = Shape.Grass;
+      landscape = { ...landscape, shapes };
+    }
+    const cliffHosts = new Set(faces.map((face) => face.host));
     this.groundEffects.forEach((mesh, i) => {
       mesh.material = cells[i].overlay === Shape.Whirlpool ? this.waterEffectsMaterial : this.materials[2];
     });
@@ -305,7 +335,7 @@ export class TileMapScene {
     });
     this.models.group.visible = this.modelMode;
     if (this.modelMode) {
-      this.models.setLandscape(landscape, cells, gfx, this.options.recessedWater);
+      this.models.setLandscape(landscape, cells, gfx, this.options.recessedWater, cliffHosts);
       for (const mesh of [
         this.grass.mesh,
         this.water.mesh,
@@ -341,7 +371,7 @@ export class TileMapScene {
     if (this.options.contactShadows) this.trees.forEachFootprint((x, y, size) => this.shadows.add(x, y, size));
     this.buildings.set(landscape, cells, gfx, this.options.buildings);
     if (this.options.contactShadows && this.options.buildings) this.buildings.forEachFootprint((x, y) => this.shadows.add(x, y, 1));
-    this.cubes.set(landscape, cells, this.options);
+    this.cubes.set(landscape, cells, this.options, cliffHosts);
     this.shoreline.set(landscape, cells, this.options.recessedWater);
     this.sunShadows.setGround(landscape, cells);
     if (this.sunShadows.active) {
@@ -491,6 +521,7 @@ export class TileMapScene {
 
   /** Tint only the map; menus, status text and the moon indicators stay bright. */
   setDaylight(colour: [number, number, number]): void {
+    this.entranceFaces.material.color.setRGB(...colour);
     this.doors.material.color.setRGB(...colour);
     this.models.setDaylight(colour);
     for (const material of this.materials) material.color.setRGB(...colour);
@@ -686,6 +717,7 @@ export class TileMapScene {
   }
 
   dispose(): void {
+    this.entranceFaces.dispose();
     this.doors.dispose();
     this.models.dispose();
     this.grass.dispose();

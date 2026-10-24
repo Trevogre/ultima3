@@ -39,7 +39,7 @@ export class TerrainCubes {
   }
 
   /** Accept only visibility-filtered shapes, never the raw world map. */
-  set(landscape: Landscape | null, cells: ViewCell[], options: View3DSettings): void {
+  set(landscape: Landscape | null, cells: ViewCell[], options: View3DSettings, cliffHosts: ReadonlySet<number> = new Set()): void {
     const shapes = landscape ? landscape.shapes : cells.map((cell) => cell.base);
     const side = landscape?.side ?? Math.sqrt(cells.length);
     let count = 0;
@@ -50,7 +50,9 @@ export class TerrainCubes {
         ? -landscapeOffset(Math.floor(i / side), landscape.partyY, side, landscape.wraps)
         : (side - 1) / 2 - Math.floor(i / side);
       const steps =
-        shape === Shape.Mountains && options.steppedMountains ? MOUNTAIN_STEPS : [{ width: 1, height: barrierHeight(shape), base: 0 }];
+        shape === Shape.Mountains && options.steppedMountains && !cliffHosts.has(i)
+          ? MOUNTAIN_STEPS
+          : [{ width: 1, height: barrierHeight(shape), base: 0 }];
       for (const step of steps) {
         this.matrix.makeScale(step.width, step.width, step.height).setPosition(x, y, step.base);
         this.mesh.setMatrixAt(count, this.matrix);

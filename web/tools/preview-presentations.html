@@ -66,6 +66,10 @@
       landscape.shapes[11 * 19 + 10] = Shape.Shrine;
       landscape.shapes[5 * 19 + 5] = Shape.Dungeon;
       for (let y = 9; y <= 12; y++) for (let x = 8; x <= 10; x++) landscape.shapes[y * 19 + x] = Shape.Grass;
+      // A north-facing host, with two open approach squares, exercises cliff entrances.
+      for (let y = 6; y <= 9; y++) for (let x = 11; x <= 13; x++) landscape.shapes[y * 19 + x] = Shape.Grass;
+      landscape.shapes[6 * 19 + 12] = Shape.Mountains;
+      landscape.shapes[7 * 19 + 12] = Shape.Dungeon;
       let hit = 0;
       let gfx,
         night = false,
@@ -93,7 +97,8 @@
         cells.forEach((c, i) => {
           const x = 32 + (i % 11) * 64,
             y = 32 + Math.floor(i / 11) * 64;
-          if (isBuilding(c.base)) drawBuildingGround(map.terrainContext, gfx, c.base, x, y, 64);
+          if (map.dungeonEntryGround(i)) gfx.drawShape(map.terrainContext, Shape.Grass, x, y, 64);
+          else if (isBuilding(c.base)) drawBuildingGround(map.terrainContext, gfx, c.base, x, y, 64);
           else
             gfx.drawShape(
               map.terrainContext,
@@ -144,15 +149,15 @@
       document.querySelector('#style').onchange = draw;
       document.querySelector('#orbit').onclick = () => {
         map.orbit(Math.PI / 2 / 0.006, 0);
-        render();
+        draw();
       };
       document.querySelector('#overhead').onclick = () => {
         map.orbit(0, -1000);
-        render();
+        draw();
       };
       document.querySelector('#angle').onclick = () => {
         map.orbit(0, (Math.PI / 4 - map.tilt) / 0.006);
-        render();
+        draw();
       };
       document.querySelector('#zoom').onclick = () => {
         map.zoomBy(map.zoom === 1 ? 800 : -800);

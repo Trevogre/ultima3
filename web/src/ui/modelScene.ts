@@ -25,7 +25,7 @@ import { ModelHeadings, type ModelActor } from './modelActors.ts';
 import { sunShadow } from './sunShadows.ts';
 import { barrierHeight } from './terrainDepth.ts';
 import type { ModelSet } from './modelSets.ts';
-import { ModelPaint } from './modelPaint.ts';
+import { ModelPaint, colourPart } from './modelPaint.ts';
 import type { AnimatedModel } from './modelRigs.ts';
 import { MODEL_ASSET_SETS } from './modelAssetSets.ts';
 import { ModelMotion } from './modelAnimation.ts';
@@ -51,6 +51,8 @@ export class ModelScene {
   private readonly flagMaterial = new MeshLambertMaterial({ color: 0x458fda, side: DoubleSide });
   private readonly flags = new InstancedMesh(this.flagGeometry, this.flagMaterial, 4096);
   private sceneryFlags = 0;
+  private readonly cliffGeometry = colourPart(new BoxGeometry(1, 1, 1).translate(0, 0, 0.5), 0x8c8e80, 2);
+  private readonly cliffs = new InstancedMesh(this.cliffGeometry, this.material, 32);
   private readonly groundGeometry = new BoxGeometry(1, 1, 1);
   private readonly ground = new InstancedMesh(this.groundGeometry, this.groundMaterial, 4096);
   private readonly unknownMaterial = new MeshBasicMaterial({ color: 0 });
@@ -99,6 +101,7 @@ export class ModelScene {
     if (set === this.modelSet) return;
     this.modelSet = set;
     this.paint.enable(MODEL_ASSET_SETS[set].painted);
+    this.cliffs.material = set === 'Van Gogh' ? this.paintedMaterial : this.material;
     for (const batch of this.batches.values()) {
       this.group.remove(batch);
       batch.geometry.dispose();
@@ -154,8 +157,18 @@ export class ModelScene {
     mesh.count++;
   }
 
-  setLandscape(landscape: Landscape | null, cells: ViewCell[], gfx: GraphicsSet, lowered: boolean): void {
+  setLandscape(
+    landscape: Landscape | null,
+    cells: ViewCell[],
+    gfx: GraphicsSet,
+    lowered: boolean,
+    cliffHosts: ReadonlySet<number> = new Set(),
+  ): void {
     this.lowered = lowered;
+    this.cliffs.count = 0;
+    this.cliffs.frustumCulled = false;
+    this.cliffs.castShadow = this.cliffs.receiveShadow = true;
+    if (cliffHosts.size) this.group.add(this.cliffs);
     if (this.gfx !== gfx) {
       this.clearSigns();
       this.gfx = gfx;
@@ -165,7 +178,7 @@ export class ModelScene {
     this.ground.count = this.unknown.count = 0;
     this.flags.count = 0;
     this.wind.length = 0;
-    const add = (shape: number, x: number, y: number) => {
+    const add = (shape: number, x: number, y: number, index: number) => {
       const z = shape === Shape.Water && lowered ? -0.22 : 0;
       this.matrix.makeScale(1, 1, 0.36 + z).setPosition(x, y, (-0.36 + z) / 2);
       if (shape === Shape.Void) {
@@ -191,7 +204,9 @@ export class ModelScene {
       this.ground.setColorAt(this.ground.count++, this.colour.setHex(modelGroundColour(shape)));
       if (shape >= 76 && shape <= 114 && shape !== Shape.Door) this.addSign(shape, x, y, gfx);
       else if (hasTerrainModel(shape)) {
-        this.add(shape, x, y, z);
+        if (shape === Shape.Mountains && cliffHosts.has(index) && this.cliffs.count < 32) {
+          this.cliffs.setMatrixAt(this.cliffs.count++, this.matrix.makeTranslation(x, y, z));
+        } else this.add(shape, x, y, z);
         if (shape === Shape.Forest || shape === Shape.Brush)
           this.wind.push({ mesh: this.batch(shape), index: this.batch(shape).count - 1, x, y, z });
         if (shape === Shape.Town || shape === Shape.Castle)
@@ -201,11 +216,11 @@ export class ModelScene {
     if (landscape) {
       const { side, partyX, partyY, wraps } = landscape;
       landscape.shapes.forEach((shape, i) =>
-        add(shape, landscapeOffset(i % side, partyX, side, wraps), -landscapeOffset(Math.floor(i / side), partyY, side, wraps)),
+        add(shape, landscapeOffset(i % side, partyX, side, wraps), -landscapeOffset(Math.floor(i / side), partyY, side, wraps), i),
       );
     } else {
       const side = Math.sqrt(cells.length);
-      cells.forEach((cell, i) => add(cell.base, (i % side) - (side - 1) / 2, (side - 1) / 2 - Math.floor(i / side)));
+      cells.forEach((cell, i) => add(cell.base, (i % side) - (side - 1) / 2, (side - 1) / 2 - Math.floor(i / side), i));
     }
     this.scenery = new Map([...this.batches].map(([shape, batch]) => [shape, batch.count]));
     this.sceneryFlags = this.flags.count;
@@ -214,6 +229,7 @@ export class ModelScene {
       mesh.instanceMatrix.needsUpdate = true;
       if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     }
+    this.cliffs.instanceMatrix.needsUpdate = true;
     this.changed();
   }
   private addFlag(x: number, y: number, z: number, size = 1, yaw = 0): void {
@@ -358,6 +374,8 @@ export class ModelScene {
 
   dispose(): void {
     this.clearActors();
+    this.cliffGeometry.dispose();
+    this.cliffs.dispose();
     this.paint.dispose();
     this.paintedMaterial.dispose();
     this.flagGeometry.dispose();

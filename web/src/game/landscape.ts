@@ -5,6 +5,7 @@ import { Location } from './party.ts';
 import { marksOn } from './worldMap.ts';
 
 export interface Landscape {
+  mapId?: number;
   side: number;
   shapes: Uint8Array;
   partyX: number;
@@ -102,7 +103,7 @@ export function buildLandscape(world: World, view: Viewport): Landscape {
     }
     return mapValueToShape(value);
   });
-  return { side, shapes, partyX: world.x, partyY: world.y, wraps };
+  return { mapId: world.current.id, side, shapes, partyX: world.x, partyY: world.y, wraps };
 }
 
 /** Position relative to the party, with the far-away seam of a wrapping map behind it. */

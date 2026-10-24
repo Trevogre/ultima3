@@ -1,0 +1,39 @@
+Mountain-face dungeon entrances
+
+In angled tile-card mode (Buildings + Mountains enabled) and model mode,
+a dungeon entrance is painted on one fixed, upright side of an adjacent
+mountain cube. Its original entry square becomes grass in the renderer.
+The map data, movement, E command, discovery and original atlas are unchanged.
+Overhead tile-card mode keeps the original tile. Disabling Buildings or
+Mountains restores the existing entrance presentation.
+
+Edit DUNGEON_FACE_OVERRIDES in src/ui/dungeonEntrances.ts. Keys are map/X/Y;
+the direction points FROM the square where E is pressed TO the host mountain.
+For example, north means the mountain immediately north, with its SOUTH face
+looking back at the entry square. Coordinates are zero-based map coordinates.
+
+Initial choices (Sosaria, map 420):
+Entry     Host direction   Face shown    Open approach square
+56,6      north            south         56,7
+46,7      east             west          45,7
+9,28      east             west          8,28
+58,30     north            south         58,31
+58,44     north            south         58,45
+19,57     west             east          20,57
+
+The dungeon at 49,34 has fire terrain, not mountains, around it. It keeps its
+existing entrance. No mountain is invented or substituted for fire.
+
+Inference considers cardinal mountain neighbors, strongly favors a walkable
+square behind the entry on the same axis, then a further walkable square,
+then a mountain behind the host. Ties use north/east/south/west order. The
+six real-map choices are pinned so exploration or zoom cannot flip a face.
+Only already-visible/discovered entry and host terrain can render the facade.
+Unknown hosts are never exposed, and a missing authored host does not silently
+select another side. Local-only and expanded scenery use the same table.
+
+A host remains a full cube with a vertical face even when stepped mountains
+are enabled. Model sets give that host a solid rock cliff instead of a peak.
+The selected sprite set's complete dungeon tile is used as a surface decal;
+it never billboards, and depth testing hides it from behind the mountain.
+No new artwork, colour-key removal or reconstructed pixels are required.
