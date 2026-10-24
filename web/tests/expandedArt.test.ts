@@ -42,6 +42,27 @@ function rgba(file: string) {
 }
 
 describe('opt-in Van Gogh art package', () => {
+  it('provides chest card silhouettes without changing painted foreground pixels or the flat background', () => {
+    const atlas = rgba('Tiles'),
+      cards = rgba('ChestCards');
+    for (const frame of [0, 1]) {
+      expect(cards(frame * 128 + 120, 5)[3]).toBe(0);
+      expect(atlas(frame * 128 + 120, 9 * 128 + 5)[3]).toBeGreaterThan(0);
+      expect(cards(frame * 128 + 60, 80)).toEqual(atlas(frame * 128 + 60, 9 * 128 + 80));
+      let visible = 0,
+        clear = 0;
+      for (let y = 0; y < 128; y++)
+        for (let x = 0; x < 128; x++) {
+          const card = cards(frame * 128 + x, y),
+            original = atlas(frame * 128 + x, 9 * 128 + y);
+          expect(card.subarray(0, 3)).toEqual(original.subarray(0, 3));
+          if (card[3]) visible++;
+          else clear++;
+        }
+      expect(visible).toBeGreaterThan(7000);
+      expect(clear).toBeGreaterThan(4000);
+    }
+  });
   it('keeps the starter ranger frames clear of the whirlpool below the class figures', () => {
     const atlas = rgba('Tiles');
     for (const frame of [0, 1]) {
@@ -133,6 +154,7 @@ describe('opt-in Van Gogh art package', () => {
     };
     const dimensions: Record<string, number[]> = {
       Tiles: [1536, 2048],
+      ChestCards: [256, 128],
       BuildingCards: [1024, 128],
       BuildingGrounds: [1024, 128],
       VegetationCards: [1024, 128],
@@ -146,7 +168,7 @@ describe('opt-in Van Gogh art package', () => {
       const suffix = name.replace('Van Gogh-', '').replace('.png', '');
       expect([bytes.readUInt32BE(16), bytes.readUInt32BE(20)]).toEqual(dimensions[suffix]);
     }
-    expect(Object.keys(manifest.files)).toHaveLength(7);
+    expect(Object.keys(manifest.files)).toHaveLength(8);
     expect(VEGETATION_LAYOUTS['Van Gogh']).toEqual(VEGETATION_LAYOUTS.Standard);
   });
 

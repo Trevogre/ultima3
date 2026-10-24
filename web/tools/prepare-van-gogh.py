@@ -8,7 +8,7 @@ from pathlib import Path
 import hashlib
 import json
 import math
-from PIL import Image, ImageDraw
+from PIL import Image, ImageDraw, ImageChops
 
 ROOT = Path(__file__).resolve().parents[1]
 DOC = ROOT / 'docs/generated/van-gogh'
@@ -180,6 +180,20 @@ for index,spec in building_specs.items():
     painter.polygon(spec['outline'],fill=255)
     painter.rectangle((x0,y0,x1-1,y1-1),fill=255)
     building_masks[index]=mask
+# Reviewed chest silhouettes for angled cards only. Keep the complete painted
+# tile in the classic atlas; this derived sheet changes alpha, never RGB paint.
+chest_cards=Image.new('RGBA',(2*N,N))
+chest_outlines=[
+    [(14,53),(33,26),(82,26),(102,53),(102,116),(97,119),(16,119),(13,115)],
+    [(0,44),(17,26),(87,26),(91,28),(113,53),(113,112),(109,117),(88,120),(0,118)],
+]
+for frame,outline in enumerate(chest_outlines):
+    tile=get(9,frame)
+    mask=Image.new('L',(N,N)); ImageDraw.Draw(mask).polygon(outline,fill=255)
+    tile.putalpha(ImageChops.multiply(tile.getchannel('A'),mask))
+    chest_cards.paste(tile,(frame*N,0))
+chest_cards.save(OUT / 'Van Gogh-ChestCards.png')
+
 atlas.save(OUT / 'Van Gogh-Tiles.png')
 
 # Buildings get explicit cutouts: the new painted grass is not pixel-identical

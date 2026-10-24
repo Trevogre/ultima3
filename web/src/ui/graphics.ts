@@ -222,6 +222,8 @@ export class GraphicsSet {
     readonly buildingCards: HTMLImageElement | null = null,
     /** Expanded-art surroundings preserved beneath the standing building. */
     readonly buildingGrounds: HTMLImageElement | null = null,
+    /** Optional two-frame chest silhouettes used only by angled cards. */
+    readonly chestCards: HTMLImageElement | null = null,
   ) {
     this.tileSize = tiles.width / TILE_COLUMNS;
     this.opaqueTiles = document.createElement('canvas');
@@ -301,6 +303,7 @@ export class GraphicsSet {
       vegetationCards && VEGETATION_LAYOUTS[name] ? { image: vegetationCards, layout: VEGETATION_LAYOUTS[name] } : null,
       await tryLoad('BuildingCards', ['png'], false),
       await tryLoad('BuildingGrounds', ['png'], false),
+      await tryLoad('ChestCards', ['png'], false),
     );
   }
 
@@ -335,7 +338,11 @@ export class GraphicsSet {
     // Doors are the alternate frame of the letter "I"; `altFrame` forces the
     // second frame (used for the "HIT" balls).
     let rect = shape === Shape.Door ? this.tileRect(Shape.Door >> 1, true) : this.tileRect(shape >> 1, opts.altFrame ? true : undefined);
-    if (opts.masked && opts.card && characterCard(shape)) {
+    if (opts.masked && opts.card && shape === Shape.Chest && this.chestCards) {
+      src = this.chestCards;
+      const size = this.chestCards.height;
+      rect = { x: ((rect.x / this.tileSize) % 2) * size, y: 0, w: size, h: size };
+    } else if (opts.masked && opts.card && characterCard(shape)) {
       const key = `${rect.x}:${rect.y}`;
       let card = this.characterCards.get(key);
       if (!card) {

@@ -46,3 +46,7 @@ they do not enter the preservation-only masks for historical tile sets.
 
 Repack locally: python3 tools/prepare-van-gogh.py (Pillow required), then
 npm run graphics-index. manifest.json records shipped file hashes.
+
+ChestCards preserves both chest paintings with reviewed alpha silhouettes for
+angled 3D cards only. The flat atlas retains the complete painted background;
+cutout RGB pixels are unchanged. No background-colour key is used.
