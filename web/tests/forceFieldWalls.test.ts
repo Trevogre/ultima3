@@ -10,7 +10,7 @@ describe('vertical force fields', () => {
     const drawShape = vi.fn(),
       gfx = { drawShape } as unknown as GraphicsSet;
     const field = new ForceFieldWalls({ value: false });
-    const cells = Array.from({ length: 9 }, () => ({ base: Shape.Floor }));
+    const cells: { base: number }[] = Array.from({ length: 9 }, () => ({ base: Shape.Floor }));
     cells[4].base = Shape.ForceField;
     cells[3].base = cells[5].base = Shape.Wall;
     field.set(null, cells, gfx, true);
