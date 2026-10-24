@@ -42,6 +42,20 @@ function rgba(file: string) {
 }
 
 describe('opt-in Van Gogh art package', () => {
+  it('keeps the jester outfit, head and feet fixed while only his raised hand waves', () => {
+    const atlas = rgba('Tiles');
+    let changed = 0;
+    for (let y = 0; y < 128; y++)
+      for (let x = 0; x < 128; x++) {
+        const a = atlas(2 * 128 + x, 128 + y),
+          b = atlas(3 * 128 + x, 128 + y);
+        if (!a.equals(b)) {
+          expect(x < 36 && y >= 18 && y < 56).toBe(true);
+          changed++;
+        }
+      }
+    expect(changed).toBeGreaterThan(20);
+  });
   it('keeps the neighbouring force-field stripe out of alternate NPC frames', () => {
     const atlas = rgba('Tiles');
     for (let index = 16; index <= 23; index++)

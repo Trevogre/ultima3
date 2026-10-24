@@ -80,6 +80,19 @@ for index in [*range(16,31),*range(63,79),*range(80,96)]:
                     for x,y in component: px[x,y]=(0,0,0,0)
         put(index,frame,tile)
 
+# Keep the jester's red/blue costume, torso, head and feet identical. The
+# generated alternate changed both anatomy and which leg wore each colour.
+# Animate only the existing raised red hand/forearm with a two-pixel wave.
+jester=get(17,0)
+jester.putalpha(jester.getchannel('A').point(lambda alpha: 0 if alpha<8 else alpha))
+put(17,0,jester)
+wave=jester.copy()
+for x in range(36):
+    offset=round(2*(1-x/36))
+    for y in range(18,56):
+        wave.putpixel((x,y),jester.getpixel((x,y+offset)))
+put(17,1,wave)
+
 # Exact historical A–T glyphs and the alternate I/door are functional game
 # symbols. Repaint their gold strokes over generated wood instead of accepting
 # the generator's misspelled letters. The alternate I remains its painted door.

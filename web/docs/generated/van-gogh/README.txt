@@ -32,6 +32,8 @@ The whirlpool row uses two equal 88×77 source crops, preventing unequal
 animation scaling and bleed from the neighbouring vortex and serpent row.
 The alternate NPC column clears the neighbouring force-field gutter before
 resampling, preserving figure placement without opaque animation-edge lines.
+The jester reuses one fixed outfit and pose, with only a small raised-hand
+wave; head, torso and feet stay fixed and the red/blue legs never swap sides.
 
 This is a first art pass, not a claim that every generated silhouette is
 final. UI, font and first-person dungeon art currently use the existing
