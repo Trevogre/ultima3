@@ -1,0 +1,40 @@
+{
+  "file": "public/models/atelier/ranger.glb",
+  "sha256": "4f6cece2793e71526766240da5b6a35291b6f878a46a37401f8fe8300e2ed7ee",
+  "bytes": 581236,
+  "triangles": 13955,
+  "joints": 18,
+  "weightedVertices": 7124,
+  "bounds": {
+    "min": [-0.38499999046325684, 0.023000000044703484, -0.2254585325717926],
+    "max": [0.38499999046325684, 1.8052763938903809, 0.2007872462272644]
+  },
+  "clips": [
+    {
+      "name": "Attack",
+      "duration": 1.1666667126119137,
+      "channels": 54
+    },
+    {
+      "name": "Cast",
+      "duration": 1.9666666649281979,
+      "channels": 54
+    },
+    {
+      "name": "Hit",
+      "duration": 0.7666666768491268,
+      "channels": 54
+    },
+    {
+      "name": "Idle",
+      "duration": 2.966666664928198,
+      "channels": 54
+    },
+    {
+      "name": "Walk",
+      "duration": 0.9666666649281979,
+      "channels": 54
+    }
+  ],
+  "verification": "Static GLB structure, budgets, skin weight normalisation and non-static animation channels. Visual quality and runtime playback require separate review."
+}

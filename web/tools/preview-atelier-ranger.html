@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" /><title>Atelier character and world composition review</title>
+  <style>
+    body {
+      margin: 0;
+      background: #121b29;
+      color: #eee5cd;
+      font: 15px system-ui;
+    }
+    header {
+      padding: 14px 20px;
+      border-bottom: 1px solid #4a5361;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    h1 {
+      font-size: 18px;
+      margin: 0 18px 0 0;
+    }
+    button,
+    select {
+      background: #24364b;
+      color: #ffe8ae;
+      border: 1px solid #5f7180;
+      border-radius: 4px;
+      padding: 7px 10px;
+    }
+    button:hover {
+      background: #37526d;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: calc(100vh - 150px);
+    }
+    p {
+      margin: 9px 20px;
+      max-width: 1200px;
+      line-height: 1.4;
+    }
+    #status {
+      color: #9bd0cb;
+    }
+    .note {
+      color: #b1bac9;
+    }
+  </style>
+  <header>
+    <h1>Atelier / Ranger study</h1>
+    <label
+      >Animation
+      <select id="animation">
+        <option>Idle</option>
+        <option>Walk</option>
+        <option>Attack</option>
+        <option>Cast</option>
+        <option>Hit</option>
+      </select></label
+    ><button id="pause">Pause</button><button id="character">Character view</button><button id="map">Whole map</button
+    ><label
+      >World
+      <select id="layout">
+        <option>Composed</option>
+        <option>Tiled</option>
+      </select></label
+    ><button id="turn">Turn character</button>
+  </header>
+  <p id="status">Loading the skinned GLB and original 64×64 map…</p>
+  <canvas id="review" aria-label="Animated ranger and composition study"></canvas>
+  <p class="note">
+    Work in progress, separate from the game. Drag to orbit; wheel to zoom; WASD to walk. Click an animation to audition it. Ground is
+    composition scaffolding; authored trees, buildings, painterly surfaces and final animation polish are still to come. No saves or
+    preferences are changed.
+  </p>
+  <script type="module">
+    import * as T from 'three';
+    import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+    import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+    import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+    import { SkinnedModel } from '/src/ui/skinnedModel.ts';
+    import { composeWorld } from '/src/game/worldComposition.ts';
+    import { World } from '/src/game/world.ts';
+    import { resourcesFromBundle } from '/src/data/resources.ts';
+    import { Shape, mapValueToShape } from '/src/game/tiles.ts';
+    const canvas = document.querySelector('#review');
+    const renderer = new T.WebGLRenderer({ canvas, antialias: true });
+    renderer.setPixelRatio(Math.min(2, devicePixelRatio));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = T.PCFShadowMap;
+    renderer.outputColorSpace = T.SRGBColorSpace;
+    renderer.toneMapping = T.ACESFilmicToneMapping;
+    const scene = new T.Scene();
+    scene.background = new T.Color('#182739');
+    const camera = new T.PerspectiveCamera(38, 1, 0.05, 250);
+    camera.up.set(0, 0, 1);
+    const controls = new OrbitControls(camera, canvas);
+    controls.enableDamping = true;
+    controls.maxPolarAngle = Math.PI * 0.49;
+    const sun = new T.DirectionalLight(0xffe0a8, 3);
+    sun.position.set(-8, -10, 14);
+    sun.castShadow = true;
+    sun.shadow.mapSize.set(2048, 2048);
+    sun.shadow.camera.left = -8;
+    sun.shadow.camera.right = 8;
+    sun.shadow.camera.top = 8;
+    sun.shadow.camera.bottom = -8;
+    sun.shadow.normalBias = 0.015;
+    const fill = new T.HemisphereLight(0xa9cfe9, 0x273b2b, 2);
+    fill.position.set(0, 0, 1);
+    scene.add(sun, sun.target, fill);
+    const resources = resourcesFromBundle(await (await fetch('/data/resources.json')).json()),
+      world = new World(resources);
+    world.newGame();
+    const side = world.mapSize,
+      shapes = Uint8Array.from(world.current.tiles, mapValueToShape);
+    const composed = composeWorld(world.current.id, shapes, side, {}, true);
+    const land = new T.Group();
+    scene.add(land);
+    const palette = {
+      water: new T.Color('#164f70'),
+      grass: new T.Color('#687b43'),
+      rock: new T.Color('#807968'),
+      sand: new T.Color('#b39b6c'),
+    };
+    function baseColour(shape) {
+      return shape === Shape.Water ? palette.water : shape === Shape.Mountains ? palette.rock : palette.grass;
+    }
+    function ground(layout) {
+      for (const mesh of [...land.children]) {
+        land.remove(mesh);
+        mesh.geometry.dispose();
+        mesh.material.dispose();
+      }
+      const positions = [],
+        colours = [];
+      const cornerColour = (x, y) => {
+        const colour = new T.Color(0, 0, 0);
+        let count = 0;
+        for (const [dx, dy] of [
+          [-1, -1],
+          [0, -1],
+          [-1, 0],
+          [0, 0],
+        ]) {
+          const a = x + dx,
+            b = y + dy;
+          if (a < 0 || b < 0 || a >= side || b >= side) continue;
+          colour.add(baseColour(shapes[b * side + a]));
+          count++;
+        }
+        colour.multiplyScalar(1 / Math.max(1, count));
+        return colour;
+      };
+      for (const cell of composed.cells) {
+        const x = cell.index % side,
+          y = Math.floor(cell.index / side),
+          water = cell.terrain === Shape.Water;
+        const centre = [x, -y, water ? -0.22 : 0];
+        const corners = [
+          [x - 0.5, -y + 0.5],
+          [x + 0.5, -y + 0.5],
+          [x + 0.5, -y - 0.5],
+          [x - 0.5, -y - 0.5],
+        ];
+        const indices = [y * (side + 1) + x, y * (side + 1) + x + 1, (y + 1) * (side + 1) + x + 1, (y + 1) * (side + 1) + x];
+        const ccols = [cornerColour(x, y), cornerColour(x + 1, y), cornerColour(x + 1, y + 1), cornerColour(x, y + 1)];
+        for (let edge = 0; edge < 4; edge++)
+          for (const k of [-1, (edge + 1) % 4, edge]) {
+            let colour;
+            if (k === -1) {
+              positions.push(...centre);
+              colour = baseColour(cell.terrain).clone();
+            } else {
+              positions.push(...corners[k], layout === 'Composed' ? composed.corners[indices[k]] : centre[2]);
+              colour = layout === 'Composed' ? ccols[k].clone() : baseColour(cell.terrain).clone();
+            }
+            const px = positions[positions.length - 3],
+              py = positions[positions.length - 2];
+            const noise = 1 + (Math.sin(px * 0.7 + py * 0.31) + Math.sin(py * 0.91 - px * 0.24)) * 0.035;
+            colour.multiplyScalar(noise);
+            colours.push(colour.r, colour.g, colour.b);
+          }
+      }
+      const geometry = new T.BufferGeometry();
+      geometry.setAttribute('position', new T.Float32BufferAttribute(positions, 3));
+      geometry.setAttribute('color', new T.Float32BufferAttribute(colours, 3));
+      const smoothGeometry = layout === 'Composed' ? mergeVertices(geometry) : geometry;
+      smoothGeometry.computeVertexNormals();
+      const material = new T.MeshStandardMaterial({ vertexColors: true, roughness: 0.92, side: T.DoubleSide });
+      const mesh = new T.Mesh(smoothGeometry, material);
+      mesh.receiveShadow = true;
+      land.add(mesh);
+    }
+    ground('Composed');
+    const asset = await new GLTFLoader().loadAsync('/models/atelier/ranger.glb');
+    const ranger = new SkinnedModel(asset, 0.7, true);
+    scene.add(ranger.root);
+    const spawn = composed.cells.find((c) => c.terrain === Shape.Grass && c.shore) ?? composed.cells.find((c) => c.terrain === Shape.Grass);
+    const start = { x: spawn.index % side, y: -Math.floor(spawn.index / side) };
+    ranger.root.position.set(start.x, start.y, 0);
+    function closeView() {
+      controls.target.set(ranger.root.position.x, ranger.root.position.y, 0.65);
+      camera.position.copy(controls.target).add(new T.Vector3(1.5, -2.8, 1.6));
+      controls.update();
+    }
+    closeView();
+    sun.target.position.copy(ranger.root.position);
+    sun.position.copy(ranger.root.position).add(new T.Vector3(-8, -10, 14));
+    let paused = false,
+      clock = 0,
+      previous = performance.now(),
+      actionStart = 0,
+      state = 'idle',
+      moving = false;
+    const keys = new Set();
+    window.addEventListener('keydown', (e) => {
+      if (e.target instanceof HTMLSelectElement) return;
+      if ('wasd'.includes(e.key.toLowerCase())) {
+        keys.add(e.key.toLowerCase());
+        e.preventDefault();
+      }
+    });
+    window.addEventListener('keyup', (e) => keys.delete(e.key.toLowerCase()));
+    window.addEventListener('blur', () => keys.clear());
+    document.querySelector('#animation').onchange = (e) => {
+      state = e.target.value.toLowerCase();
+      actionStart = clock;
+    };
+    document.querySelector('#pause').onclick = (e) => {
+      paused = !paused;
+      e.target.textContent = paused ? 'Resume' : 'Pause';
+    };
+    document.querySelector('#character').onclick = closeView;
+    document.querySelector('#map').onclick = () => {
+      controls.target.set((side - 1) / 2, -(side - 1) / 2, 0);
+      camera.position.copy(controls.target).add(new T.Vector3(0, -side * 1.3, side * 1.8));
+      controls.update();
+    };
+    document.querySelector('#layout').onchange = (e) => ground(e.target.value);
+    document.querySelector('#turn').onclick = () => (ranger.root.rotation.z += Math.PI / 4);
+    const status = document.querySelector('#status');
+    status.textContent = `Loaded ${asset.animations.map((a) => a.name).join(' / ')} · 18-joint skinned ranger · ${composed.cells.length} original map cells · ${composed.cells.reduce((n, c) => n + c.placements.length, 0)} planned scenery placements (not yet rendered).`;
+    function resize() {
+      renderer.setSize(innerWidth, Math.max(300, innerHeight - 155), false);
+      camera.aspect = canvas.width / canvas.height;
+      camera.updateProjectionMatrix();
+    }
+    window.addEventListener('resize', resize);
+    resize();
+    function frame(now) {
+      requestAnimationFrame(frame);
+      const dt = Math.min(0.05, (now - previous) / 1000);
+      previous = now;
+      if (!paused) {
+        clock += dt;
+        const dx = Number(keys.has('d')) - Number(keys.has('a')),
+          dy = Number(keys.has('w')) - Number(keys.has('s'));
+        moving = !!(dx || dy);
+        if (moving) {
+          const target = ranger.root.position.clone().add(new T.Vector3(dx, dy, 0).normalize().multiplyScalar(dt * 1.2));
+          const x = Math.round(target.x),
+            y = Math.round(-target.y);
+          const terrain = x >= 0 && y >= 0 && x < side && y < side ? shapes[y * side + x] : Shape.Void;
+          if (terrain !== Shape.Water && terrain !== Shape.Mountains && terrain !== Shape.Void) {
+            const delta = target.clone().sub(ranger.root.position);
+            ranger.root.position.copy(target);
+            controls.target.add(delta);
+            camera.position.add(delta);
+            ranger.root.rotation.z = Math.atan2(dx, -dy);
+          }
+        }
+        const active = moving ? 'walk' : state,
+          progress = ((clock - actionStart) % 2) / 2;
+        ranger.pose(clock, active, progress, 0);
+      }
+      controls.update();
+      renderer.render(scene, camera);
+    }
+    requestAnimationFrame(frame);
+  </script>
+</html>

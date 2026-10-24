@@ -1,0 +1,25 @@
+{
+  "name": "atelier-ranger",
+  "stage": "work-in-progress visual review",
+  "intent": "A human-proportioned painterly ranger for a coastal playable scene; replace primitive-based characters after review.",
+  "heightMetres": 1.8,
+  "forwardBlender": "-Y",
+  "upBlender": "+Z",
+  "runtime": "Three.js glTF 2.0, skinned meshes, AnimationMixer",
+  "clips": ["Idle", "Walk", "Attack", "Cast", "Hit"],
+  "triangleBudget": 30000,
+  "jointBudget": 32,
+  "textureBudget": "vertex-painted surfaces; optional authored base colour atlas later",
+  "licensing": "Original locally authored geometry and animation in this project. No third-party models or samples.",
+  "artDirection": "Adult proportions, angular cheek and jaw planes, indigo and teal cloth with directional painted variation, warm leather and restrained ochre highlights. Layered tunic, cloak and boots. Avoid spherical joint toys, oversized heads and recycled low-poly geometry.",
+  "source": "web/tools/models/build_atelier_ranger.py",
+  "reviewRequired": [
+    "front and side proportions",
+    "face silhouette",
+    "feet on ground",
+    "weighting at shoulders and knees",
+    "all five clips in runtime",
+    "coastal scene scale and lighting"
+  ],
+  "license": "MIT"
+}
