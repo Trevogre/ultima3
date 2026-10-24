@@ -1,4 +1,12 @@
 import { isLetter, Shape } from '../game/tiles.ts';
+import type { View3DSettings } from './view3DSettings.ts';
+
+export function raisedTerrain(shape: number, options: View3DSettings): boolean {
+  return (
+    (options.walls && (shape === Shape.Wall || shape === Shape.Wall + 4 || shorelineUsesBackground(shape))) ||
+    (options.mountains && shape === Shape.Mountains)
+  );
+}
 
 export const WATER_DEPTH = 0.2;
 export const MOUNTAIN_STEPS = [

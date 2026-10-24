@@ -226,7 +226,7 @@ export class TileMapScene {
       shader.uniforms.mapInverted = this.inverted;
       shader.vertexShader = `attribute vec2 mapTile;\nattribute float shorelineBackground;\n${shader.vertexShader}`.replace(
         '#include <uv_vertex>',
-        '#include <uv_vertex>\nvMapUv = (mapTile + mix(vMapUv, vec2(0.5 / 64.0, 63.5 / 64.0), shorelineBackground)) / 16.0;',
+        '#include <uv_vertex>\nvMapUv = (mapTile + mix(vMapUv, vec2(4.5 / 64.0, 59.5 / 64.0), shorelineBackground * (abs(normal.z) < 0.5 ? 1.0 : 0.0))) / 16.0;',
       );
       shader.fragmentShader = `uniform bool mapInverted;\n${shader.fragmentShader}`.replace(
         '#include <dithering_fragment>',

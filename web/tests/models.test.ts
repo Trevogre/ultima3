@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { InstancedMesh, Matrix4, Vector3 } from 'three';
 import { modelGeometry } from '../src/ui/modelAssets.ts';
 import { ModelHeadings, modelActors, type ModelActor } from '../src/ui/modelActors.ts';
@@ -12,6 +12,22 @@ import { newWorld, savedCopy } from './helpers.ts';
 const actor: ModelActor = { id: 'party', shape: 136, x: 0, y: 0, worldX: 63, worldY: 10, size: 1, ground: Shape.Grass };
 
 describe('separate low-poly presentation', () => {
+  it('makes town letter barriers full-height solid blocks in model mode too', () => {
+    vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => ({}) }) });
+    const scene = new ModelScene();
+    try {
+      scene.setLandscape(null, [{ base: 76 }], { drawShape() {} } as unknown as GraphicsSet, true);
+      const sign = scene.group.children.filter((c): c is InstancedMesh => c instanceof InstancedMesh).at(-1)!;
+      const matrix = new Matrix4();
+      sign.getMatrixAt(0, matrix);
+      expect(new Vector3(0, 0, 0.5).applyMatrix4(matrix).z).toBe(1);
+      expect(new Vector3(0, 0, -0.5).applyMatrix4(matrix).z).toBe(0);
+      expect(sign.castShadow).toBe(true);
+    } finally {
+      scene.dispose();
+      vi.unstubAllGlobals();
+    }
+  });
   it('migrates to cards, remembers models and preserves Classic / Depth transitions', () => {
     expect(read3DSettings({}).renderStyle).toBe('Cards');
     expect(read3DSettings({ renderStyle: 'invalid' }).renderStyle).toBe('Cards');

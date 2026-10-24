@@ -9,6 +9,18 @@ import { Location } from '../src/game/party.ts';
 import { newWorld } from './helpers.ts';
 
 describe('terrain cubes', () => {
+  it('raises A–T sign barriers with plain sides, excluding the alternate I door', () => {
+    const material = new MeshBasicMaterial(),
+      cubes = new TerrainCubes(material);
+    const cells = Array.from({ length: 25 }, (_, i) => ({ base: i < 20 ? 76 + i * 2 : Shape.Door }));
+    cubes.set(null, cells, DEFAULT_3D_SETTINGS);
+    expect(cubes.mesh.count).toBe(20);
+    for (let i = 0; i < 20; i++) expect(cubes.backgrounds.getX(i)).toBe(1);
+    cubes.set(null, cells, { ...DEFAULT_3D_SETTINGS, walls: false });
+    expect(cubes.mesh.count).toBe(0);
+    cubes.dispose();
+    material.dispose();
+  });
   it('fills one tile above ground, with upright side art and unchanged top art', () => {
     const geometry = terrainCubeGeometry();
     geometry.computeBoundingBox();

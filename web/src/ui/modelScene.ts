@@ -142,12 +142,13 @@ export class ModelScene {
       mesh.count = 0;
       mesh.frustumCulled = false;
       mesh.receiveShadow = true;
+      mesh.castShadow = true;
       sign = { mesh, material, texture };
       this.signs.set(shape, sign);
       this.group.add(mesh);
     }
     // Functional sign art stays on the top of a solid block, never a billboard.
-    this.matrix.makeScale(1, 1, 0.4).setPosition(x, y, -0.16);
+    this.matrix.makeScale(1, 1, 1).setPosition(x, y, 0.5);
     sign.mesh.setMatrixAt(sign.mesh.count++, this.matrix);
   }
 

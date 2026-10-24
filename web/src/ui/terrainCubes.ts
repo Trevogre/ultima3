@@ -1,9 +1,9 @@
 import { BoxGeometry, InstancedBufferAttribute, InstancedMesh, Matrix4, type MeshBasicMaterial } from 'three';
 import { landscapeOffset, type Landscape } from '../game/landscape.ts';
-import { MapValue, Shape } from '../game/tiles.ts';
+import { Shape } from '../game/tiles.ts';
 import type { ViewCell } from '../game/viewport.ts';
 import type { View3DSettings } from './view3DSettings.ts';
-import { MOUNTAIN_STEPS } from './terrainDepth.ts';
+import { MOUNTAIN_STEPS, raisedTerrain, shorelineUsesBackground } from './terrainDepth.ts';
 
 /** One tile wide and deep, standing one tile above the original ground plane. */
 export function terrainCubeGeometry(): BoxGeometry {
@@ -25,11 +25,13 @@ export function terrainCubeGeometry(): BoxGeometry {
 export class TerrainCubes {
   readonly geometry = terrainCubeGeometry();
   readonly slots = new InstancedBufferAttribute(new Float32Array(4096 * 3 * 2), 2);
+  readonly backgrounds = new InstancedBufferAttribute(new Float32Array(4096 * 3), 1);
   readonly mesh: InstancedMesh;
   private readonly matrix = new Matrix4();
 
   constructor(material: MeshBasicMaterial) {
     this.geometry.setAttribute('mapTile', this.slots);
+    this.geometry.setAttribute('shorelineBackground', this.backgrounds);
     this.mesh = new InstancedMesh(this.geometry, material, 4096 * 3);
     this.mesh.frustumCulled = false;
     this.mesh.count = 0;
@@ -42,8 +44,7 @@ export class TerrainCubes {
     const side = landscape?.side ?? Math.sqrt(cells.length);
     let count = 0;
     shapes.forEach((shape, i) => {
-      const wall = shape === Shape.Wall || shape === MapValue.Wall2 >> 1;
-      if (!(wall && options.walls) && !(shape === Shape.Mountains && options.mountains)) return;
+      if (!raisedTerrain(shape, options)) return;
       const x = landscape ? landscapeOffset(i % side, landscape.partyX, side, landscape.wraps) : (i % side) - (side - 1) / 2;
       const y = landscape
         ? -landscapeOffset(Math.floor(i / side), landscape.partyY, side, landscape.wraps)
@@ -53,12 +54,14 @@ export class TerrainCubes {
         this.matrix.makeScale(step.width, step.width, step.height).setPosition(x, y, step.base);
         this.mesh.setMatrixAt(count, this.matrix);
         this.slots.setXY(count, shape % 16, 15 - Math.floor(shape / 16));
+        this.backgrounds.setX(count, shorelineUsesBackground(shape) ? 1 : 0);
         count++;
       }
     });
     this.mesh.count = count;
     this.mesh.instanceMatrix.needsUpdate = true;
     this.slots.needsUpdate = true;
+    this.backgrounds.needsUpdate = true;
   }
 
   dispose(): void {
