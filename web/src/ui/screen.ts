@@ -1580,11 +1580,12 @@ export class Screen implements GameIO {
     this.onSettingsChange?.();
   }
 
-  /** F6 cycles tile sets without entering the game command queue. */
+  /** F6 returns to sprite/card presentation and cycles tiles without spending a turn. */
   async nextTileSet(): Promise<void> {
     if (this.cyclingTiles) return;
     this.cyclingTiles = true;
     try {
+      if (this.view3D.renderStyle === 'Models') this.set3DSettings({ ...this.view3D, renderStyle: 'Cards' });
       const next = TILE_SETS[(TILE_SETS.indexOf(this.tileSetName) + 1) % TILE_SETS.length];
       await this.loadTiles(next);
       this.onSettingsChange?.();

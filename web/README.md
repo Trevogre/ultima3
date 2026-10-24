@@ -40,6 +40,10 @@ the selected tile set and input preferences are preserved when applying a
 preset. Existing saved overrides are preserved when preferences are upgraded.
 No unfinished Layered or Expanded-art mode is exposed.
 
+F6 cycles tile sets and returns from model mode to the sprite/card presentation.
+It preserves the camera, individual visual preferences and selected 3D model set;
+F7 can return to that model set. Cycling tiles while in Classic keeps Classic.
+
 **3D Settings → Shadows** toggles soft, procedural contact shadows (40%
 maximum opacity) under visible land cards and building cards. Half-size
 party members have half-size footprints. Flat sprites, waterborne objects,
