@@ -164,7 +164,6 @@ export class ModelRig {
           Shape.ManOWar,
           Shape.SnakeBottom,
           Shape.SnakeTop,
-          Shape.Whirlpool,
           58,
           184,
           186,

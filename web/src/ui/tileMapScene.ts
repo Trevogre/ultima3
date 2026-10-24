@@ -88,6 +88,7 @@ export class TileMapScene {
   private readonly cubes: TerrainCubes;
   private readonly shoreline: Shoreline;
   private readonly groundEffects: Mesh[] = [];
+  private readonly waterEffectsMaterial: MeshBasicMaterial;
   private readonly landscapeSlots = new InstancedBufferAttribute(new Float32Array(4096 * 2), 2);
   private readonly matrix = new Matrix4();
   private readonly visibleSide: number;
@@ -184,6 +185,12 @@ export class TileMapScene {
         });
       }
     }
+    // Surface objects must test against shoreline cubes even when legacy hit
+    // flashes use an always-visible overlay. Share the canvas, not that policy.
+    this.waterEffectsMaterial = this.materials[2].clone();
+    this.waterEffectsMaterial.depthTest = true;
+    this.waterEffectsMaterial.onBeforeCompile = this.materials[2].onBeforeCompile.bind(this.materials[2]);
+    this.materials.push(this.waterEffectsMaterial);
     const shadowCanvas = document.createElement('canvas');
     shadowCanvas.width = shadowCanvas.height = size;
     this.sunActorContext = shadowCanvas.getContext('2d')!;
@@ -279,6 +286,9 @@ export class TileMapScene {
 
   /** Batch the entire landscape in one draw call, using a small animated tile atlas. */
   setLandscape(landscape: Landscape | null, gfx: GraphicsSet, cells: ViewCell[]): void {
+    this.groundEffects.forEach((mesh, i) => {
+      mesh.material = cells[i].overlay === Shape.Whirlpool ? this.waterEffectsMaterial : this.materials[2];
+    });
     this.doors.set(landscape, cells, gfx, this.doorCardsActive && !this.modelMode);
     this.solidCells.clear();
     const solids = landscape?.shapes ?? cells.map((c) => c.base);
