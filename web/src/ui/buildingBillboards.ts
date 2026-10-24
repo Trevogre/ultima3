@@ -16,6 +16,8 @@ import type { ViewCell } from '../game/viewport.ts';
 import { Shape } from '../game/tiles.ts';
 import type { GraphicsSet } from './graphics.ts';
 import { buildingArt } from './billboardArt.ts';
+import { addZoomFiltering } from './zoomFiltering.ts';
+import type { ZoomFiltering } from './view3DSettings.ts';
 import { cardGroundLift } from './cardGroundLift.ts';
 
 /** Native 64px trunk bases, measured in the Standard forest tile. */
@@ -48,6 +50,7 @@ export class BuildingBillboards {
   private readonly right = new Vector3();
   private readonly scale = new Vector3(1, 1, 1);
   private readonly shapes: number[];
+  private readonly filter: ReturnType<typeof addZoomFiltering>;
 
   constructor(
     inverted: { value: boolean },
@@ -83,6 +86,7 @@ export class BuildingBillboards {
         '#include <dithering_fragment>\nif (mapInverted) gl_FragColor.rgb = vec3(1.0) - gl_FragColor.rgb;',
       );
     };
+    this.filter = addZoomFiltering(this.material, this.texture, 8, 1, true);
     this.mesh = new InstancedMesh(this.geometry, this.material, MAX_CARDS);
     this.mesh.frustumCulled = false;
     // Buildings establish scenery depth before vegetation draws. Nearer tree
@@ -155,6 +159,10 @@ export class BuildingBillboards {
       this.mesh.setMatrixAt(i, this.matrix.compose(this.position, camera.quaternion, this.scale));
     });
     this.mesh.instanceMatrix.needsUpdate = true;
+  }
+
+  setFiltering(mode: ZoomFiltering): void {
+    this.filter(mode);
   }
 
   dispose(): void {

@@ -21,6 +21,7 @@ import { MapCameraControls } from './mapCameraControls.ts';
 interface Presentation {
   mapVisible: boolean;
   mapInteractive: boolean;
+  mapAnimated?: boolean;
   covers: ScreenRect[];
 }
 
@@ -156,6 +157,7 @@ export class ThreeRenderer {
 
   /** Present after all drawing for a browser frame, including menus and effects. */
   present(presentation: Presentation): void {
+    this.map.animate(performance.now(), presentation.mapVisible && (presentation.mapAnimated ?? presentation.mapInteractive));
     const key = JSON.stringify(presentation);
     if (key !== this.presentationKey) {
       this.presentationKey = key;

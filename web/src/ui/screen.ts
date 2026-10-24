@@ -1023,6 +1023,36 @@ export class Screen implements GameIO {
           disabled,
           hint: 'Recess water and add shore sides using neighbouring land textures.',
         },
+        {
+          key: 'Q',
+          label: `Zoom: ${this.view3D.zoomFiltering}`,
+          disabled,
+          hint: 'Crisp pixels, Stable distant textures, or Auto blending as tiles shrink.',
+        },
+        {
+          key: 'H',
+          label: `Soft fog: ${onOff(this.view3D.softFog)}`,
+          disabled,
+          hint: 'Fade explored ground edges inward. Unknown terrain stays hidden.',
+        },
+        {
+          key: 'V',
+          label: `Face shading: ${onOff(this.view3D.terrainShading)}`,
+          disabled,
+          hint: 'Subtle shading distinguishes cube sides using the original textures.',
+        },
+        {
+          key: 'U',
+          label: `Water glints: ${onOff(this.view3D.waterHighlights)}`,
+          disabled,
+          hint: 'Restrained animated highlights over this tile set’s water artwork.',
+        },
+        {
+          key: 'A',
+          label: `Alpha water: ${onOff(this.view3D.alphaWater)}`,
+          disabled,
+          hint: 'See submerged shore blocks. Enable Lower water for depth.',
+        },
         { key: 'M', label: `Mouse camera: ${onOff(this.view3D.mouseCamera)}`, disabled },
         {
           key: 'S',
@@ -1072,10 +1102,17 @@ export class Screen implements GameIO {
             E: 'steppedMountains',
             Z: 'recessedWater',
             G: 'treeCards',
+            H: 'softFog',
+            V: 'terrainShading',
+            U: 'waterHighlights',
+            A: 'alphaWater',
           } as const
-        )[key as 'D' | 'C' | 'L' | 'T' | 'W' | 'N' | 'M' | 'F' | 'Y' | 'S' | 'E' | 'Z' | 'G'];
+        )[key as 'D' | 'C' | 'L' | 'T' | 'W' | 'N' | 'M' | 'F' | 'Y' | 'S' | 'E' | 'Z' | 'G' | 'H' | 'V' | 'U' | 'A'];
         if (setting) this.set3DSettings({ ...this.view3D, [setting]: !this.view3D[setting] });
-        else if (key === 'R') this.presentation.map.reset();
+        else if (key === 'Q') {
+          const modes = ['Crisp', 'Stable', 'Auto'] as const;
+          this.set3DSettings({ ...this.view3D, zoomFiltering: modes[(modes.indexOf(this.view3D.zoomFiltering) + 1) % modes.length] });
+        } else if (key === 'R') this.presentation.map.reset();
         else if (key === 'I' || key === 'O') {
           const rotation = key === 'O';
           const angles = Array.from({ length: rotation ? 72 : 15 }, (_, i) => i * 5);
@@ -2302,7 +2339,7 @@ export class Screen implements GameIO {
     else if (c.overlay !== undefined) {
       if (ctx === this.presentation.map.actorContext && c.overlay === Shape.Whirlpool) {
         // The whirlpool belongs to the water surface, not the standing sprite cards.
-        this.gfx.drawShape(this.presentation.map.terrainContext, c.overlay, dx, dy, tile, { masked: true });
+        this.gfx.drawShape(effectContext, c.overlay, dx, dy, tile, { masked: true });
       } else if (ctx === this.presentation.map.actorContext && isBuilding(c.overlay)) {
         if (!this.view3D.buildings) this.gfx.drawShape(effectContext, c.overlay, dx, dy, tile, { masked: true });
       } else {
@@ -2466,6 +2503,7 @@ export class Screen implements GameIO {
     }
     this.presentation.present({
       mapVisible,
+      mapAnimated: mapVisible && !this.menu && !this.keyboard.paused && !this.pauseShown,
       mapInteractive: mapVisible && this.view3D.mouseCamera && !this.menu && !this.keyboard.paused && !this.pauseShown,
       covers,
     });

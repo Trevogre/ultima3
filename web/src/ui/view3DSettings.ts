@@ -1,3 +1,5 @@
+export type ZoomFiltering = 'Crisp' | 'Stable' | 'Auto';
+
 export interface View3DSettings {
   enabled: boolean;
   characters: boolean;
@@ -18,6 +20,11 @@ export interface View3DSettings {
   wheelZoom: boolean;
   menuClicks: boolean;
   treeCards: boolean;
+  zoomFiltering: ZoomFiltering;
+  softFog: boolean;
+  terrainShading: boolean;
+  waterHighlights: boolean;
+  alphaWater: boolean;
 }
 
 export const DEFAULT_3D_SETTINGS: Readonly<View3DSettings> = {
@@ -40,10 +47,20 @@ export const DEFAULT_3D_SETTINGS: Readonly<View3DSettings> = {
   wheelZoom: true,
   menuClicks: true,
   treeCards: false,
+  zoomFiltering: 'Auto',
+  softFog: true,
+  terrainShading: true,
+  waterHighlights: true,
+  alphaWater: false,
 };
 
 const DEPTH_OPTIONS = {
   treeCards: false,
+  zoomFiltering: 'Auto',
+  softFog: true,
+  terrainShading: true,
+  waterHighlights: true,
+  alphaWater: false,
   enabled: true,
   characters: true,
   buildings: true,
@@ -80,10 +97,12 @@ export function read3DSettings(value: unknown): View3DSettings {
   const settings = { ...DEFAULT_3D_SETTINGS };
   if (!value || typeof value !== 'object') return settings;
   for (const key of Object.keys(settings) as (keyof View3DSettings)[]) {
-    if (key === 'fixedAngle' || key === 'fixedRotation') continue;
+    if (key === 'fixedAngle' || key === 'fixedRotation' || key === 'zoomFiltering') continue;
     const saved: unknown = Reflect.get(value, key);
     if (typeof saved === 'boolean') settings[key] = saved;
   }
+  const filtering: unknown = Reflect.get(value, 'zoomFiltering');
+  if (filtering === 'Crisp' || filtering === 'Stable' || filtering === 'Auto') settings.zoomFiltering = filtering;
   const angle: unknown = Reflect.get(value, 'fixedAngle');
   if (typeof angle === 'number' && Number.isFinite(angle) && angle >= 0 && angle <= 70) settings.fixedAngle = angle;
   const rotation: unknown = Reflect.get(value, 'fixedRotation');

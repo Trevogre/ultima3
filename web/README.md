@@ -539,3 +539,28 @@ The page and its assets are included in the offline cache.
 
 **F6** cycles through all twelve tile sets and remembers the selection without
 spending a turn. On Macs with media keys, use **Fn–F6**.
+
+### Optional texture and water effects
+
+**Settings / Pause → 3D Settings** remembers these presentation controls:
+
+- **Zoom: Crisp / Stable / Auto**. Crisp preserves nearest-neighbour pixels.
+  Stable uses tile-clamped mip levels; Auto blends toward them as texture pixels
+  become smaller than screen pixels. The UI remains crisp. Filtering can blend
+  palette colours, including monochrome greys; choose Crisp for exact palette pixels.
+  Tree/building cutouts use alpha-aware filtering to avoid dark fringes.
+- **Soft fog** fades the outer 22% of explored ground tiles inward where they
+  border unknown tiles. Unknown terrain and actors are never used to draw fog.
+- **Face shading** subtly darkens vertical cube and shoreline faces while keeping
+  top surfaces and source textures intact. It is independent of day/night.
+- **Water glints** adds restrained moving highlights over the selected set’s own
+  water texture. Animation stops while paused or covered by a menu.
+- **Alpha water** uses 62% surface opacity, revealing the submerged full-height
+  sides of neighbouring land blocks. With **Lower water** enabled, the surface
+  remains 0.2 tiles below ground. There is no invented seabed or hidden terrain.
+  Turn it off to restore opaque water.
+
+Depth uses Auto filtering, soft fog, face shading and glints by default; alpha
+water defaults off. Each effect can be disabled individually. Classic and
+first-person dungeon presentation keep their original rendering. These controls
+change no movement, discovery, music or game rules, and modify no sprite files.

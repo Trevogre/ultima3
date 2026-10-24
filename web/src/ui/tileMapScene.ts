@@ -25,6 +25,9 @@ import { TerrainCubes } from './terrainCubes.ts';
 import { Shoreline } from './shoreline.ts';
 import { shorelineTexture, terrainElevation } from './terrainDepth.ts';
 import { castsContactShadow, ContactShadows } from './contactShadows.ts';
+import { addZoomFiltering } from './zoomFiltering.ts';
+import { FogEdges } from './fogEdges.ts';
+import { WaterSurface } from './waterSurface.ts';
 import { cardGroundLift } from './cardGroundLift.ts';
 
 export interface ScreenRect {
@@ -42,6 +45,10 @@ export class TileMapScene {
   readonly terrainContext: CanvasRenderingContext2D;
   readonly actorContext: CanvasRenderingContext2D;
   readonly effectContext: CanvasRenderingContext2D;
+  private readonly filters: ReturnType<typeof addZoomFiltering>[] = [];
+  private readonly shading = { value: 1 };
+  private readonly fog = new FogEdges();
+  private readonly water: WaterSurface;
   private options: View3DSettings = { ...DEFAULT_3D_SETTINGS };
   private readonly actorCards: { mesh: Mesh; x: number; y: number; size: number }[] = [];
   private readonly partyCards: { mesh: Mesh; x: number; y: number; size: number }[] = [];
@@ -114,6 +121,7 @@ export class TileMapScene {
           '#include <dithering_fragment>\nif (mapInverted) gl_FragColor.rgb = vec3(1.0) - gl_FragColor.rgb;',
         );
       };
+      if (layer !== 2) this.filters.push(addZoomFiltering(material, texture, side, side, layer === 1));
       this.materials.push(material);
       return ctx;
     });
@@ -185,6 +193,21 @@ export class TileMapScene {
         '#include <dithering_fragment>\nif (mapInverted) gl_FragColor.rgb = vec3(1.0) - gl_FragColor.rgb;',
       );
     };
+    const originalSceneryShader = scenery.onBeforeCompile.bind(scenery);
+    scenery.onBeforeCompile = function (shader, renderer) {
+      originalSceneryShader(shader, renderer);
+      shader.uniforms.terrainShading = thisShading;
+      shader.vertexShader = `varying vec3 terrainNormal;\n${shader.vertexShader}`.replace(
+        '#include <begin_vertex>',
+        '#include <begin_vertex>\nterrainNormal=normal;',
+      );
+      shader.fragmentShader = `uniform float terrainShading; varying vec3 terrainNormal;\n${shader.fragmentShader}`.replace(
+        '#include <color_fragment>',
+        '#include <color_fragment>\nfloat faceShade=clamp(0.88+0.12*terrainNormal.z-0.05*terrainNormal.x+0.04*terrainNormal.y,0.78,1.0);\ndiffuseColor.rgb *= mix(1.0,faceShade,terrainShading);',
+      );
+    };
+    const thisShading = this.shading;
+    this.filters.push(addZoomFiltering(scenery, this.landscapeTexture, 16, 16));
     this.materials.push(scenery);
     this.geometries.push(ground);
     this.landscapeMesh = new InstancedMesh(ground, scenery, 4096);
@@ -196,12 +219,17 @@ export class TileMapScene {
     this.scene.add(this.cubes.mesh);
     this.shoreline = new Shoreline(scenery);
     this.scene.add(this.shoreline.mesh);
+    this.water = new WaterSurface(this.inverted);
+    this.scene.add(this.water.mesh);
+    this.scene.add(this.fog.mesh);
     this.camera = new OrthographicCamera(-side / 2, side / 2, side / 2, -side / 2, 0.1, 500);
     this.updateCamera();
   }
 
   /** Batch the entire landscape in one draw call, using a small animated tile atlas. */
   setLandscape(landscape: Landscape | null, gfx: GraphicsSet, cells: ViewCell[]): void {
+    this.water.set(landscape, cells, gfx, this.options);
+    this.fog.set(landscape, cells, this.options.softFog, this.options.recessedWater);
     this.trees.set(landscape, cells, gfx, this.treeCardsActive);
     if (this.options.contactShadows) this.trees.forEachFootprint((x, y, size) => this.shadows.add(x, y, size));
     this.buildings.set(landscape, cells, gfx, this.options.buildings);
@@ -212,7 +240,7 @@ export class TileMapScene {
     // Preserve exact local floors. The landscape supplies either distant
     // outdoor scenery or black tiles from the town/castle visibility mask.
     this.localTerrain.children.forEach((tile, i) => {
-      tile.visible = !landscape || cells[i].base !== Shape.Void;
+      tile.visible = cells[i].base !== Shape.Water && (!landscape || cells[i].base !== Shape.Void);
       tile.position.z = terrainElevation(cells[i].base, this.options.recessedWater);
       this.groundEffects[i].position.z = tile.position.z + 0.003;
     });
@@ -251,7 +279,9 @@ export class TileMapScene {
     for (let i = 0; i < shapes.length; i++) {
       const x = landscapeOffset(i % side, partyX, side, wraps);
       const y = -landscapeOffset(Math.floor(i / side), partyY, side, wraps);
-      this.landscapeMesh.setMatrixAt(i, this.matrix.makeTranslation(x, y, terrainElevation(shapes[i], this.options.recessedWater)));
+      if (shapes[i] === Shape.Water) this.matrix.makeScale(0, 0, 0).setPosition(x, y, 0);
+      else this.matrix.makeTranslation(x, y, terrainElevation(shapes[i], this.options.recessedWater));
+      this.landscapeMesh.setMatrixAt(i, this.matrix);
       this.landscapeSlots.setXY(i, shapes[i] % 16, 15 - Math.floor(shapes[i] / 16));
     }
     this.landscapeMesh.count = shapes.length;
@@ -268,6 +298,10 @@ export class TileMapScene {
     const changedAngle = options.fixedAngle !== this.options.fixedAngle;
     const changedRotation = options.fixedRotation !== this.options.fixedRotation;
     this.options = { ...options };
+    this.filters.forEach((filter) => filter(options.zoomFiltering));
+    this.buildings.setFiltering(options.zoomFiltering);
+    this.trees.setFiltering(options.zoomFiltering);
+    this.shading.value = options.terrainShading ? 1 : 0;
     if (changedMode && options.fixedCamera) this.reset();
     else {
       if (changedRotation && options.fixedCamera) this.yaw = (options.fixedRotation * Math.PI) / 180;
@@ -340,6 +374,7 @@ export class TileMapScene {
     for (const material of this.materials) material.color.setRGB(...colour);
     this.buildings.setDaylight(colour);
     this.trees.setDaylight(colour);
+    this.water.material.color.setRGB(...colour);
     this.invalidate();
   }
 
@@ -440,7 +475,16 @@ export class TileMapScene {
     }
   }
 
+  animate(time: number, active: boolean): void {
+    if (active && this.options.waterHighlights && this.water.mesh.count > 0) {
+      this.water.time.value = time / 1000;
+      this.invalidate();
+    }
+  }
+
   dispose(): void {
+    this.water.dispose();
+    this.fog.dispose();
     for (const texture of this.textures) texture.dispose();
     for (const geometry of this.geometries) geometry.dispose();
     for (const material of this.materials) material.dispose();
