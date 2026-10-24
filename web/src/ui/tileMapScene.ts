@@ -23,7 +23,8 @@ import { buildingGround, isBuilding } from './billboardArt.ts';
 import { BuildingBillboards, buildingSlide } from './buildingBillboards.ts';
 import { TerrainCubes } from './terrainCubes.ts';
 import { Shoreline } from './shoreline.ts';
-import { shorelineTexture, terrainElevation } from './terrainDepth.ts';
+import { raisedTerrain, shorelineTexture, terrainElevation } from './terrainDepth.ts';
+import { confineCard } from './cardClearance.ts';
 import { castsContactShadow, ContactShadows } from './contactShadows.ts';
 import { useCharacterCutouts } from './characterMask.ts';
 import { addZoomFiltering } from './zoomFiltering.ts';
@@ -75,6 +76,8 @@ export class TileMapScene {
   private readonly localTerrain = new Group();
   private readonly shadows = new ContactShadows();
   private shadowCells: ViewCell[] = [];
+  private readonly solidCells = new Set<string>();
+  private clearancePose = '';
   private readonly landscapeCanvas = document.createElement('canvas');
   private readonly landscapeContext: CanvasRenderingContext2D;
   private readonly landscapeMesh: InstancedMesh;
@@ -268,6 +271,19 @@ export class TileMapScene {
 
   /** Batch the entire landscape in one draw call, using a small animated tile atlas. */
   setLandscape(landscape: Landscape | null, gfx: GraphicsSet, cells: ViewCell[]): void {
+    this.solidCells.clear();
+    const solids = landscape?.shapes ?? cells.map((c) => c.base);
+    const solidSide = landscape?.side ?? Math.sqrt(cells.length);
+    solids.forEach((shape, i) => {
+      if (!raisedTerrain(shape, this.options)) return;
+      const x = landscape
+        ? landscapeOffset(i % solidSide, landscape.partyX, solidSide, landscape.wraps)
+        : (i % solidSide) - (solidSide - 1) / 2;
+      const y = landscape
+        ? -landscapeOffset(Math.floor(i / solidSide), landscape.partyY, solidSide, landscape.wraps)
+        : (solidSide - 1) / 2 - Math.floor(i / solidSide);
+      this.solidCells.add(`${x},${y}`);
+    });
     this.models.group.visible = this.modelMode;
     if (this.modelMode) {
       this.models.setLandscape(landscape, cells, gfx, this.options.recessedWater);
@@ -473,15 +489,27 @@ export class TileMapScene {
     const row = (y - this.rect.y) / tile;
     const ground = this.shadowCells[Math.floor(row) * this.visibleSide + Math.floor(col)]?.base ?? Shape.Void;
     if (!castsContactShadow(shape, ground)) return;
-    const footX = col + size / tile / 2 - this.visibleSide / 2;
-    const footY = this.visibleSide / 2 - row - size / tile / 2;
-    if (this.options.contactShadows) this.shadows.add(footX, footY, size / tile);
+    let footX = col + size / tile / 2 - this.visibleSide / 2;
+    let footY = this.visibleSide / 2 - row - size / tile / 2;
+    const card = [...this.partyCards, ...this.actorCards].find(
+      (c) =>
+        c.mesh.visible && Math.abs(c.size - size / tile) < 0.00001 && Math.abs(c.x - footX) < 0.00001 && Math.abs(c.y - footY) < 0.00001,
+    );
+    const actualSize = card ? card.size * card.mesh.scale.x : size / tile;
+    if (card) {
+      footX = card.mesh.position.x - (this.camera.up.x * actualSize * Math.sin(this.tilt)) / 2;
+      footY = card.mesh.position.y - (this.camera.up.y * actualSize * Math.sin(this.tilt)) / 2;
+    }
+    if (this.options.contactShadows) {
+      const correction = (actualSize * (Math.sin(this.tilt) - 1)) / 2;
+      this.shadows.add(footX + this.camera.up.x * correction, footY + this.camera.up.y * correction, actualSize);
+    }
     if (this.sunShadows.active) {
       const canvasSize = this.actorContext.canvas.width;
       this.sunShadows.actors.add(
         footX,
         footY,
-        size / tile,
+        actualSize,
         [(x - this.rect.x) / canvasSize, 1 - (y - this.rect.y + size) / canvasSize, size / canvasSize, size / canvasSize],
         [0.5, 0],
       );
@@ -576,6 +604,7 @@ export class TileMapScene {
   }
 
   private faceActors(): void {
+    let pose = '';
     for (const card of [...this.actorCards, ...this.partyCards]) {
       const col = Math.floor(card.x + this.visibleSide / 2);
       const row = Math.floor(this.visibleSide / 2 - card.y);
@@ -583,9 +612,34 @@ export class TileMapScene {
       const ground = terrainElevation(base, this.options.recessedWater);
       card.mesh.position.set(card.x, card.y, ground + cardGroundLift(card.size, this.options.characters ? this.tilt : 0));
       if (this.options.characters) {
+        card.mesh.scale.setScalar(1);
         card.mesh.quaternion.copy(this.camera.quaternion);
         card.mesh.position.addScaledVector(this.camera.up, (card.size * Math.sin(this.tilt)) / 2);
-      } else card.mesh.quaternion.identity();
+        if (this.tilt > 0.001) {
+          const right = { x: Math.cos(this.yaw), y: Math.sin(this.yaw) };
+          const tileX = col - (this.visibleSide - 1) / 2,
+            tileY = (this.visibleSide - 1) / 2 - row;
+          const blocked = (dx: number, dy: number) => this.solidCells.has(`${tileX + dx},${tileY + dy}`);
+          const fit = confineCard(card.mesh.position, right, this.camera.up, card.size, tileX, tileY, {
+            left: blocked(-1, 0),
+            right: blocked(1, 0),
+            bottom: blocked(0, -1),
+            top: blocked(0, 1),
+          });
+          card.mesh.position.x += fit.dx;
+          card.mesh.position.y += fit.dy;
+          card.mesh.position.z = ground + 0.001 + (card.size * fit.scale * Math.sin(this.tilt)) / 2;
+          card.mesh.scale.setScalar(fit.scale);
+          pose += `${fit.dx.toFixed(6)},${fit.dy.toFixed(6)},${fit.scale.toFixed(6)};`;
+        }
+      } else {
+        card.mesh.quaternion.identity();
+        card.mesh.scale.setScalar(1);
+      }
+    }
+    if (pose !== this.clearancePose) {
+      this.clearancePose = pose;
+      this.onCardModeChange?.(); // rebuild shadows when camera clearance changes
     }
   }
 

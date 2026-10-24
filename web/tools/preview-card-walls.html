@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Card and sign block clearance</title>
+  </head>
+  <body style="margin: 0; background: #222; color: white; font: 16px system-ui">
+    <div style="padding: 8px">
+      <label
+        >Tiles
+        <select id="tiles">
+          <option>Standard</option>
+          <option>Macintosh B&amp;W</option>
+          <option>Van Gogh</option>
+        </select></label
+      >
+      <button id="orbit">Rotate 45°</button><button id="top">Overhead</button><button id="angle">45° tilt</button
+      ><button id="low">70° tilt</button>
+      <label
+        >Style
+        <select id="style">
+          <option>Cards</option>
+          <option>Models</option>
+        </select></label
+      >
+    </div>
+    <canvas aria-label="Wall clearance fixture"></canvas>
+    <p>NPC at left: wall behind. Party in centre. NPC at right: foreground wall. Raised letter barriers at rear. No game state.</p>
+    <script type="module">
+      import * as T from 'three';
+      import { TileMapScene } from '/src/ui/tileMapScene.ts';
+      import { GraphicsSet } from '/src/ui/graphics.ts';
+      import { DEFAULT_3D_SETTINGS } from '/src/ui/view3DSettings.ts';
+      import { Shape } from '/src/game/tiles.ts';
+      const renderer = new T.WebGLRenderer({ canvas: document.querySelector('canvas'), antialias: true, preserveDrawingBuffer: true });
+      renderer.setSize(650, 650);
+      renderer.outputColorSpace = T.SRGBColorSpace;
+      const map = new TileMapScene(32, 11, () => {}, true);
+      const cells = Array.from({ length: 121 }, () => ({ base: Shape.Floor }));
+      const index = (x, y) => (5 - y) * 11 + x + 5;
+      for (const x of [-2, 0]) cells[index(x, 1)].base = Shape.Wall;
+      cells[index(2, -1)].base = Shape.Wall;
+      for (let x = -2; x <= 2; x++) cells[index(x, 3)].base = 76 + (x + 2) * 2;
+      cells[index(0, 0)].party = true;
+      let gfx;
+      async function load() {
+        gfx = await GraphicsSet.load(document.querySelector('#tiles').value, '/graphics/');
+        draw();
+      }
+      function draw() {
+        map.setOptions({ ...DEFAULT_3D_SETTINGS, fixedCamera: false, renderStyle: document.querySelector('#style').value });
+        map.beginFrame();
+        map.setDaylight([1, 1, 1]);
+        map.setSun(3, 12, true);
+        map.setLandscape(null, gfx, cells);
+        map.setActorLayout(cells, true);
+        cells.forEach((c, i) => gfx.drawShape(map.terrainContext, c.base, 32 + (i % 11) * 64, 32 + Math.floor(i / 11) * 64, 64));
+        const actors = [
+          { x: -2, y: 0, size: 1, shape: 36 },
+          { x: 2, y: 0, size: 1, shape: 136 },
+          ...Array.from({ length: 4 }, (_, i) => ({
+            x: (i % 2) * 0.5 - 0.25,
+            y: 0.25 - Math.floor(i / 2) * 0.5,
+            size: 0.5,
+            shape: 136 + i * 2,
+          })),
+        ];
+        actors.forEach((a) => {
+          const x = 32 + (a.x + 5.5 - a.size / 2) * 64,
+            y = 32 + (5.5 - a.y - a.size / 2) * 64;
+          gfx.drawShape(map.actorContext, a.shape, x, y, a.size * 64, { masked: true, card: true });
+          gfx.drawShape(map.sunActorContext, a.shape, x, y, a.size * 64, { masked: true, card: true });
+          map.addActorShadow(x, y, a.size * 64, a.shape);
+        });
+        map.setModelActors(
+          actors.map((a, i) => ({ ...a, id: String(i), worldX: a.x, worldY: a.y, ground: Shape.Floor })),
+          'fixture',
+          11,
+          false,
+        );
+        map.changed();
+        renderer.shadowMap.enabled = map.modelShadows;
+        renderer.render(map.scene, map.camera);
+      }
+      document.querySelector('#tiles').onchange = load;
+      document.querySelector('#style').onchange = draw;
+      document.querySelector('#orbit').onclick = () => {
+        map.orbit(Math.PI / 4 / 0.006, 0);
+        draw();
+      };
+      document.querySelector('#top').onclick = () => {
+        map.orbit(0, -1000);
+        draw();
+      };
+      document.querySelector('#angle').onclick = () => {
+        map.orbit(0, (Math.PI / 4 - map.tilt) / 0.006);
+        draw();
+      };
+      document.querySelector('#low').onclick = () => {
+        map.orbit(0, ((70 * Math.PI) / 180 - map.tilt) / 0.006);
+        draw();
+      };
+      await load();
+    </script>
+  </body>
+</html>
