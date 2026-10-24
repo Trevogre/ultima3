@@ -57,6 +57,12 @@ describe('optional reviewed tree cards', () => {
     expect(material.depthTest).toBe(true);
     expect(material.depthWrite).toBe(false);
     expect(trees.mesh.renderOrder).toBeLessThan(1);
+    const buildings = new BuildingBillboards({ value: false });
+    // Buildings must write depth before trees draw, allowing nearer trees to
+    // cover cities without making tree depth hide the later player cards.
+    expect(buildings.mesh.renderOrder).toBeLessThan(trees.mesh.renderOrder);
+    expect((buildings.mesh.material as MeshBasicMaterial).depthWrite).toBe(true);
+    buildings.dispose();
     const camera = new OrthographicCamera(-5, 5, 5, -5, 0.1, 500);
     camera.position.set(0, -10, 10);
     camera.up.set(0, 1, 1).normalize();

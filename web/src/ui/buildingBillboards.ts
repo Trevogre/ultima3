@@ -85,9 +85,11 @@ export class BuildingBillboards {
     };
     this.mesh = new InstancedMesh(this.geometry, this.material, MAX_CARDS);
     this.mesh.frustumCulled = false;
-    // Tree colour is behind actor cards and does not write depth against them.
-    // Opaque terrain cubes still occlude both kinds of card normally.
-    this.mesh.renderOrder = kind === 'trees' ? 0.9 : 1;
+    // Buildings establish scenery depth before vegetation draws. Nearer tree
+    // pixels cover buildings; farther tree pixels fail the depth test. Trees
+    // do not write depth, so the later actor pass keeps players visible.
+    // Opaque terrain cubes still occlude all cards normally.
+    this.mesh.renderOrder = kind === 'trees' ? 0.9 : 0.8;
     this.mesh.count = 0;
   }
 
