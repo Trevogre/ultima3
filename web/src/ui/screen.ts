@@ -25,6 +25,7 @@
 
 import { GraphicsSet, type ImageMap } from './graphics.ts';
 import { showSpriteSheet } from './spriteSheet.ts';
+import { daylightColour } from './daylight.ts';
 import { Keyboard } from './input.ts';
 import { LEVELS, levelLabel, SoundPlayer } from './sound.ts';
 import { MusicPlayer } from './music.ts';
@@ -979,6 +980,12 @@ export class Screen implements GameIO {
         { key: 'N', label: `Mountain cubes: ${onOff(this.view3D.mountains)}`, disabled },
         { key: 'M', label: `Mouse camera: ${onOff(this.view3D.mouseCamera)}`, disabled },
         {
+          key: 'Y',
+          label: `Day/night: ${onOff(this.view3D.dayNight)}`,
+          disabled,
+          hint: 'Cosmetic outdoor lighting over 96 surface turns. No effect on gameplay or dungeon light.',
+        },
+        {
           key: 'F',
           label: `Camera: ${this.view3D.fixedCamera ? 'Fixed' : 'Free'}`,
           disabled,
@@ -1009,8 +1016,9 @@ export class Screen implements GameIO {
             N: 'mountains',
             M: 'mouseCamera',
             F: 'fixedCamera',
+            Y: 'dayNight',
           } as const
-        )[key as 'D' | 'C' | 'L' | 'T' | 'W' | 'N' | 'M' | 'F'];
+        )[key as 'D' | 'C' | 'L' | 'T' | 'W' | 'N' | 'M' | 'F' | 'Y'];
         if (setting) this.set3DSettings({ ...this.view3D, [setting]: !this.view3D[setting] });
         else if (key === 'R') this.presentation.map.reset();
         else if (key === 'I' || key === 'O') {
@@ -2143,6 +2151,9 @@ export class Screen implements GameIO {
     if (!this.view) return;
     const map = this.presentation.map;
     map.beginFrame();
+    const outdoors = (world.combat?.previousLocation ?? world.party.location) !== Location.Dungeon;
+    map.setDaylight(this.view3D.dayNight && outdoors ? daylightColour(world.moonPhase[0], world.moonTimer[0]) : [1, 1, 1]);
+    map.setCombat(!!world.combat);
     map.setLandscape(world.combat || !this.view3D.distantTerrain ? null : buildLandscape(world, this.view), gfx, this.view.cells);
     map.setActorLayout(this.view.cells, this.partyStyle === 'grid');
     const tile = cell * 2;

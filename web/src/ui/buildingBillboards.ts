@@ -117,4 +117,8 @@ export class BuildingBillboards {
     this.geometry.dispose();
     this.mesh.dispose();
   }
+
+  setDaylight(colour: [number, number, number]): void {
+    this.material.color.setRGB(...colour);
+  }
 }

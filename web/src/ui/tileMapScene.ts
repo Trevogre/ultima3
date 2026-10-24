@@ -17,7 +17,7 @@ import type { GraphicsSet } from './graphics.ts';
 import { type Landscape, landscapeOffset } from '../game/landscape.ts';
 import { Shape } from '../game/tiles.ts';
 import type { ViewCell } from '../game/viewport.ts';
-import { mapCameraTarget, minimumMapZoom } from './mapCameraBounds.ts';
+import { battlefieldZoom, mapCameraTarget, minimumMapZoom } from './mapCameraBounds.ts';
 import { DEFAULT_3D_SETTINGS, type View3DSettings } from './view3DSettings.ts';
 import { buildingGround, isBuilding } from './billboardArt.ts';
 import { BuildingBillboards } from './buildingBillboards.ts';
@@ -62,6 +62,8 @@ export class TileMapScene {
   yaw = (DEFAULT_3D_SETTINGS.fixedRotation * Math.PI) / 180;
   tilt = (DEFAULT_3D_SETTINGS.fixedAngle * Math.PI) / 180;
   zoom = 1;
+  private combat = false;
+  private explorationZoom = 1;
 
   constructor(
     cell: number,
@@ -212,9 +214,9 @@ export class TileMapScene {
       if (this.landscapeSide) {
         this.landscapeSide = 0;
         this.fitX = this.fitY = 0;
-        this.zoom = Math.max(0.65, this.zoom);
-        this.updateCamera();
+        if (!this.combat) this.zoom = Math.max(0.65, this.zoom);
       }
+      this.updateCamera();
       this.buildings.faceCamera(this.camera, this.tilt);
       return;
     }
@@ -263,7 +265,18 @@ export class TileMapScene {
     return this.landscapeSide > 0;
   }
 
+  setCombat(combat: boolean): void {
+    if (combat === this.combat) return;
+    this.combat = combat;
+    if (combat) {
+      this.explorationZoom = this.zoom;
+      this.zoom = battlefieldZoom(this.visibleSide, this.yaw, this.tilt);
+    } else this.zoom = this.explorationZoom;
+    if (combat) this.updateCamera();
+  }
+
   private get minZoom(): number {
+    if (this.combat) return battlefieldZoom(this.visibleSide, this.yaw, this.tilt);
     if (this.inspectionMode) return this.landscapeSide ? this.visibleSide / (this.landscapeSide * 1.6) : 0.65;
     return minimumMapZoom(this.visibleSide, this.landscapeSide || this.visibleSide, this.yaw, this.tilt);
   }
@@ -290,6 +303,13 @@ export class TileMapScene {
 
   invert(): void {
     this.inverted.value = !this.inverted.value;
+    this.invalidate();
+  }
+
+  /** Tint only the map; menus, status text and the moon indicators stay bright. */
+  setDaylight(colour: [number, number, number]): void {
+    for (const material of this.materials) material.color.setRGB(...colour);
+    this.buildings.setDaylight(colour);
     this.invalidate();
   }
 
@@ -331,9 +351,11 @@ export class TileMapScene {
     // development inspection camera can pull back beyond its edges.
     this.zoom = Math.max(this.minZoom, this.zoom);
     const fit = Math.max(0, Math.min(1, (0.5 - this.zoom) / (0.5 - this.minZoom)));
-    const target = this.inspectionMode
-      ? { x: this.fitX * fit, y: this.fitY * fit }
-      : mapCameraTarget(this.visibleSide, this.landscapeSide || this.visibleSide, this.yaw, this.tilt, this.zoom, this.fitX, this.fitY);
+    const target = this.combat
+      ? { x: 0, y: 0 }
+      : this.inspectionMode
+        ? { x: this.fitX * fit, y: this.fitY * fit }
+        : mapCameraTarget(this.visibleSide, this.landscapeSide || this.visibleSide, this.yaw, this.tilt, this.zoom, this.fitX, this.fitY);
     const { x, y } = target;
     this.camera.position.set(x + 150 * s * st, y - 150 * c * st, 150 * ct);
     this.camera.up.set(-s * ct, c * ct, st);

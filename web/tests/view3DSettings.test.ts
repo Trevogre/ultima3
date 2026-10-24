@@ -3,6 +3,10 @@ import { DEFAULT_3D_SETTINGS, read3DSettings } from '../src/ui/view3DSettings.ts
 import { cutoutBackground } from '../src/ui/billboardArt.ts';
 
 describe('3D display preferences', () => {
+  it('enables cosmetic day/night by default while preserving an explicit Off choice', () => {
+    expect(read3DSettings({}).dayNight).toBe(true);
+    expect(read3DSettings({ dayNight: false }).dayNight).toBe(false);
+  });
   it('defaults map rotation to 5 independently of tilt and preserves valid saved rotation', () => {
     expect(read3DSettings({ fixedAngle: 45 })).toMatchObject({ fixedAngle: 45, fixedRotation: 5 });
     expect(read3DSettings({ fixedRotation: 120 }).fixedRotation).toBe(120);

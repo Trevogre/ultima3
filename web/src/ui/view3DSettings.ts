@@ -9,6 +9,7 @@ export interface View3DSettings {
   fixedCamera: boolean;
   fixedAngle: number;
   fixedRotation: number;
+  dayNight: boolean;
 }
 
 export const DEFAULT_3D_SETTINGS: Readonly<View3DSettings> = {
@@ -22,6 +23,7 @@ export const DEFAULT_3D_SETTINGS: Readonly<View3DSettings> = {
   fixedCamera: true,
   fixedAngle: 45,
   fixedRotation: 5,
+  dayNight: true,
 };
 
 /** Old or malformed preferences get defaults; explicit Off choices are preserved. */

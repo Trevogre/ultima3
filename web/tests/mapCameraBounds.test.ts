@@ -1,8 +1,28 @@
 import { describe, expect, it } from 'vitest';
 import { OrthographicCamera, Plane, Raycaster, Vector2, Vector3 } from 'three';
-import { mapCameraTarget, minimumMapZoom } from '../src/ui/mapCameraBounds.ts';
+import { battlefieldZoom, mapCameraTarget, minimumMapZoom } from '../src/ui/mapCameraBounds.ts';
 
 describe('gameplay camera coverage', () => {
+  it('fits the entire battlefield and raised sprites at every supported camera angle', () => {
+    for (const yaw of [0, Math.PI / 36, Math.PI / 4, Math.PI / 2, -Math.PI / 3]) {
+      for (const tilt of [0, Math.PI / 4, (70 * Math.PI) / 180]) {
+        const camera = new OrthographicCamera(-5.5, 5.5, 5.5, -5.5, 0.1, 500);
+        camera.position.set(150 * Math.sin(yaw) * Math.sin(tilt), -150 * Math.cos(yaw) * Math.sin(tilt), 150 * Math.cos(tilt));
+        camera.up.set(-Math.sin(yaw) * Math.cos(tilt), Math.cos(yaw) * Math.cos(tilt), Math.sin(tilt));
+        camera.lookAt(0, 0, 0);
+        camera.zoom = battlefieldZoom(11, yaw, tilt);
+        camera.updateProjectionMatrix();
+        camera.updateMatrixWorld();
+        for (const x of [-5.5, 5.5])
+          for (const y of [-5.5, 5.5])
+            for (const z of [0, 1]) {
+              const projected = new Vector3(x, y, z).project(camera);
+              expect(Math.abs(projected.x)).toBeLessThanOrEqual(0.91);
+              expect(Math.abs(projected.y)).toBeLessThanOrEqual(0.91);
+            }
+      }
+    }
+  });
   it('keeps the original top-down camera scale available', () => {
     expect(minimumMapZoom(11, 64, 0, 0)).toBe(11 / 64);
     expect(minimumMapZoom(11, 11, 0, 0)).toBe(1);

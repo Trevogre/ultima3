@@ -13,6 +13,12 @@ export function minimumMapZoom(viewSide: number, mapSide: number, yaw: number, t
   return (2 * Math.max(half.x, half.y)) / mapSide;
 }
 
+/** Fit the arena and one-tile-high cards/cubes, leaving a small border. */
+export function battlefieldZoom(side: number, yaw: number, tilt: number): number {
+  const span = side * (Math.abs(Math.cos(yaw)) + Math.abs(Math.sin(yaw)));
+  return (0.9 * side) / Math.max(span, span * Math.cos(tilt) + 2 * Math.sin(tilt));
+}
+
 /** Stay near the party, shifting inward only when the ground footprint reaches an edge. */
 export function mapCameraTarget(
   viewSide: number,

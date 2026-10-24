@@ -59,6 +59,13 @@ the existing art at runtime; combat markers and effects stay on the ground.
 Character and building cards stay above the flat ground at every camera angle,
 while extruded walls and mountains still occlude cards behind them.
 
+**Day/night**, enabled by default in 3D Settings, adds cosmetic lighting to
+the rendered outdoor map: full daylight, warm twilight and readable blue
+moonlight. A day lasts 96 surface turns, derived from Trammel's phase and
+timer, starting a new game at noon. The UI stays bright and dungeon light
+is unchanged. Turning it off restores the original colours. This affects
+the WebGL map only, with no changes to visibility or gameplay rules.
+
 Wall and mountain cubes start enabled. Each cube has a one-tile footprint and
 height, with the original tile texture repeated on all six faces. Its top matches
 the flat tile when viewed straight down. The two terrain types can be toggled
