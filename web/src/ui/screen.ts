@@ -292,6 +292,9 @@ export class Screen implements GameIO {
     this.cell = Math.floor(canvas.width / COLUMNS);
     this.presentation = new ThreeRenderer(canvas, this.cell, VIEW_SIZE);
     this.ctx = this.presentation.context;
+    this.presentation.map.onTreeModeChange = () => {
+      this.viewDirty = true;
+    };
     new MenuMouse(
       canvas,
       this.cell,
@@ -1000,6 +1003,14 @@ export class Screen implements GameIO {
         { key: 'W', label: `Wall cubes: ${onOff(this.view3D.walls)}`, disabled },
         { key: 'N', label: `Mountain cubes: ${onOff(this.view3D.mountains)}`, disabled },
         {
+          key: 'G',
+          label: `Trees: ${this.view3D.treeCards ? 'Cards' : 'Flat'}`,
+          disabled,
+          hint: this.gfx.forestCard
+            ? 'Separate tree cutouts over grass at angled views. Players stay in front.'
+            : 'This set has no reviewed cutout; forests stay flat.',
+        },
+        {
           key: 'E',
           label: `Mt steps: ${onOff(this.view3D.steppedMountains)}`,
           disabled,
@@ -1059,8 +1070,9 @@ export class Screen implements GameIO {
             S: 'contactShadows',
             E: 'steppedMountains',
             Z: 'recessedWater',
+            G: 'treeCards',
           } as const
-        )[key as 'D' | 'C' | 'L' | 'T' | 'W' | 'N' | 'M' | 'F' | 'Y' | 'S' | 'E' | 'Z'];
+        )[key as 'D' | 'C' | 'L' | 'T' | 'W' | 'N' | 'M' | 'F' | 'Y' | 'S' | 'E' | 'Z' | 'G'];
         if (setting) this.set3DSettings({ ...this.view3D, [setting]: !this.view3D[setting] });
         else if (key === 'R') this.presentation.map.reset();
         else if (key === 'I' || key === 'O') {
@@ -2256,7 +2268,13 @@ export class Screen implements GameIO {
       const dy = cell + Math.floor(i / VIEW_SIZE) * tile;
       gfx.drawShape(ctx, c.base, dx, dy, tile);
       if (c.base !== Shape.Void)
-        gfx.drawShape(map.terrainContext, this.view3D.buildings && isBuilding(c.base) ? buildingGround(c.base) : c.base, dx, dy, tile);
+        gfx.drawShape(
+          map.terrainContext,
+          this.view3D.buildings && isBuilding(c.base) ? buildingGround(c.base) : map.forestGround(c.base, gfx),
+          dx,
+          dy,
+          tile,
+        );
       this.drawViewportActors(ctx, c, dx, dy, tile);
       this.drawViewportActors(map.actorContext, c, dx, dy, tile, map.effectContext);
     }

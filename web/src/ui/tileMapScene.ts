@@ -18,7 +18,7 @@ import { type Landscape, landscapeOffset } from '../game/landscape.ts';
 import { Shape } from '../game/tiles.ts';
 import type { ViewCell } from '../game/viewport.ts';
 import { battlefieldZoom, mapCameraTarget, minimumMapZoom } from './mapCameraBounds.ts';
-import { DEFAULT_3D_SETTINGS, type View3DSettings } from './view3DSettings.ts';
+import { DEFAULT_3D_SETTINGS, useTreeCards, type View3DSettings } from './view3DSettings.ts';
 import { buildingGround, isBuilding } from './billboardArt.ts';
 import { BuildingBillboards } from './buildingBillboards.ts';
 import { TerrainCubes } from './terrainCubes.ts';
@@ -50,6 +50,8 @@ export class TileMapScene {
   private readonly materials: MeshBasicMaterial[] = [];
   private readonly inverted = { value: false };
   private readonly buildings = new BuildingBillboards(this.inverted);
+  private readonly trees = new BuildingBillboards(this.inverted, 'trees');
+  private treeMode = false;
   private readonly localTerrain = new Group();
   private readonly shadows = new ContactShadows();
   private shadowCells: ViewCell[] = [];
@@ -72,6 +74,7 @@ export class TileMapScene {
   private combat = false;
   private explorationZoom = 1;
   onCameraModeToggle: (() => void) | null = null;
+  onTreeModeChange: (() => void) | null = null;
 
   constructor(
     cell: number,
@@ -153,6 +156,7 @@ export class TileMapScene {
       this.partyCards.push({ mesh, x: (i % 2) / 2 - 0.25, y: 0.25 - Math.floor(i / 2) / 2, size: 0.5 });
     }
     this.scene.add(this.buildings.mesh);
+    this.scene.add(this.trees.mesh);
     this.landscapeCanvas.width = this.landscapeCanvas.height = 1024;
     this.landscapeContext = this.landscapeCanvas.getContext('2d')!;
     this.landscapeContext.imageSmoothingEnabled = false;
@@ -198,6 +202,8 @@ export class TileMapScene {
 
   /** Batch the entire landscape in one draw call, using a small animated tile atlas. */
   setLandscape(landscape: Landscape | null, gfx: GraphicsSet, cells: ViewCell[]): void {
+    this.trees.set(landscape, cells, gfx, this.treeCardsActive);
+    if (this.options.contactShadows) this.trees.forEachFootprint((x, y) => this.shadows.add(x, y, 1));
     this.buildings.set(landscape, cells, gfx, this.options.buildings);
     if (this.options.contactShadows && this.options.buildings) this.buildings.forEachFootprint((x, y) => this.shadows.add(x, y, 1));
     this.cubes.set(landscape, cells, this.options);
@@ -222,7 +228,8 @@ export class TileMapScene {
       if (shape === Shape.Void) continue; // hidden cells are solid black in every tile set
       const x = (shape % 16) * 64;
       const y = Math.floor(shape / 16) * 64;
-      if (this.options.buildings && isBuilding(shape)) gfx.drawShape(ctx, buildingGround(shape), x, y, 64);
+      if (this.forestGround(shape, gfx) !== shape) gfx.drawShape(ctx, Shape.Grass, x, y, 64);
+      else if (this.options.buildings && isBuilding(shape)) gfx.drawShape(ctx, buildingGround(shape), x, y, 64);
       else if (shape === Shape.Shrine || shape === Shape.Door) {
         gfx.drawShape(ctx, shape === Shape.Door ? Shape.Floor : Shape.Grass, x, y, 64);
         gfx.drawShape(ctx, shape, x, y, 64, { masked: true });
@@ -237,6 +244,7 @@ export class TileMapScene {
       }
       this.updateCamera();
       this.buildings.faceCamera(this.camera, this.tilt);
+      this.trees.faceCamera(this.camera, this.tilt);
       return;
     }
     const { side, partyX, partyY, wraps } = landscape;
@@ -331,6 +339,7 @@ export class TileMapScene {
   setDaylight(colour: [number, number, number]): void {
     for (const material of this.materials) material.color.setRGB(...colour);
     this.buildings.setDaylight(colour);
+    this.trees.setDaylight(colour);
     this.invalidate();
   }
 
@@ -378,7 +387,19 @@ export class TileMapScene {
     return this.options;
   }
 
+  private get treeCardsActive(): boolean {
+    return useTreeCards(this.options.treeCards, this.tilt, true);
+  }
+
+  forestGround(shape: number, gfx: GraphicsSet): number {
+    return shape === Shape.Forest && useTreeCards(this.options.treeCards, this.tilt, !!gfx.forestCard) ? Shape.Grass : shape;
+  }
+
   private updateCamera(): void {
+    if (this.treeMode !== this.treeCardsActive) {
+      this.treeMode = this.treeCardsActive;
+      this.onTreeModeChange?.();
+    }
     const s = Math.sin(this.yaw);
     const c = Math.cos(this.yaw);
     const st = Math.sin(this.tilt);
@@ -400,6 +421,7 @@ export class TileMapScene {
     this.camera.updateProjectionMatrix();
     this.faceActors();
     this.buildings.faceCamera(this.camera, this.tilt);
+    this.trees.faceCamera(this.camera, this.tilt);
     this.invalidate();
   }
 
@@ -422,6 +444,7 @@ export class TileMapScene {
     for (const geometry of this.geometries) geometry.dispose();
     for (const material of this.materials) material.dispose();
     this.buildings.dispose();
+    this.trees.dispose();
     this.shadows.dispose();
     this.landscapeMesh.dispose();
     this.cubes.dispose();

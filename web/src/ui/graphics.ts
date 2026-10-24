@@ -208,6 +208,8 @@ export class GraphicsSet {
     readonly hasClassFigures = false,
     /** How the set's machine showed its picture (display.ts): a monochrome colour, a light ground. */
     readonly display: DisplayStyle = {},
+    /** Separate reviewed forest cutout, never borrowed from another tile set. */
+    readonly forestCard: HTMLImageElement | null = null,
   ) {
     this.tileSize = tiles.width / TILE_COLUMNS;
     this.opaqueTiles = document.createElement('canvas');
@@ -263,6 +265,7 @@ export class GraphicsSet {
     }
     const moonStyle = MOON_STYLES[name];
     const moons = moonStyle ? paintMoons(moonStyle) : null;
+    const forestCard = await tryLoad('ForestCard', ['png'], false);
     return new GraphicsSet(
       tiles,
       applyMask(tiles, mask),
@@ -275,6 +278,7 @@ export class GraphicsSet {
       moons,
       CLASS_FIGURE_SETS.has(name),
       displayOf(name),
+      forestCard,
     );
   }
 

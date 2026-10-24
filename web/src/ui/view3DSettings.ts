@@ -17,6 +17,7 @@ export interface View3DSettings {
   rightDrag: boolean;
   wheelZoom: boolean;
   menuClicks: boolean;
+  treeCards: boolean;
 }
 
 export const DEFAULT_3D_SETTINGS: Readonly<View3DSettings> = {
@@ -38,9 +39,11 @@ export const DEFAULT_3D_SETTINGS: Readonly<View3DSettings> = {
   rightDrag: true,
   wheelZoom: true,
   menuClicks: true,
+  treeCards: false,
 };
 
 const DEPTH_OPTIONS = {
+  treeCards: false,
   enabled: true,
   characters: true,
   buildings: true,
@@ -55,6 +58,10 @@ const DEPTH_OPTIONS = {
 } as const;
 
 export type PresentationPreset = 'Classic' | 'Depth';
+
+export function useTreeCards(enabled: boolean, tilt: number, hasCutout: boolean): boolean {
+  return enabled && hasCutout && tilt > 0.001;
+}
 
 /** Presets are derived labels, never a second source of saved display state. */
 export function presentationPreset(settings: View3DSettings): PresentationPreset | 'Custom' {

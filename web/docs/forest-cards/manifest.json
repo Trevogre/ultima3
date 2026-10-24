@@ -1,0 +1,101 @@
+[
+  {
+    "set": "Standard",
+    "source": "Standard-Tiles.png",
+    "sourceSha256": "aaf504c8f381af702ff2f9f95a77432e893007eec870b09d7d123a33933735ae",
+    "card": "Standard-ForestCard.png",
+    "cardSha256": "13f627f16812806c4982fbd9f43b3fa9e0bde1e36bb4e768153b7d2270458e04",
+    "mask": "hand-traced tree/cluster silhouettes",
+    "width": 64,
+    "height": 64,
+    "retainedPixels": 2494
+  },
+  {
+    "set": "Lairware",
+    "source": "Lairware-Tiles.png",
+    "sourceSha256": "b8e85bd4006176fd532f012d983b8dfc54a10ed1be075d21e689a7dc47d3aece",
+    "card": "Lairware-ForestCard.png",
+    "cardSha256": "d8710d8c5799c852f3d8657c38905d7806856f82b15641d6e63249e02a658718",
+    "mask": "hand-traced tree/cluster silhouettes",
+    "width": 64,
+    "height": 64,
+    "retainedPixels": 2494
+  },
+  {
+    "set": "Nintendo",
+    "source": "Nintendo-Tiles.png",
+    "sourceSha256": "b63045d04a0ad38d48ad5c12453bfbd8fc405ea33da790ad62548beeacf58ac2",
+    "card": "Nintendo-ForestCard.png",
+    "cardSha256": "c17ac3bc79b53da714901f30ca10eb825cf0d2c3444487e861813d36682f9e63",
+    "mask": "reviewed edge-connected exterior colour",
+    "width": 32,
+    "height": 32,
+    "retainedPixels": 584
+  },
+  {
+    "set": "PC Ultima V",
+    "source": "PC Ultima V-Tiles.png",
+    "sourceSha256": "c42330da53052e32bdfc936e5c70a6cb8015fb4747a4dd6e65812c672b1cccb9",
+    "card": "PC Ultima V-ForestCard.png",
+    "cardSha256": "8fb275eaafd712bbbe6fdc70a16708940a50b3520161220cd34d682ac8af5ed8",
+    "mask": "reviewed edge-connected exterior colour",
+    "width": 32,
+    "height": 32,
+    "retainedPixels": 724
+  },
+  {
+    "set": "Apple II Color",
+    "source": "Apple II Color-Tiles.png",
+    "sourceSha256": "5c66e08f7e6c231e161bed679780047178d1b6c7af258c972f442b9b4cd75e72",
+    "card": "Apple II Color-ForestCard.png",
+    "cardSha256": "a6af5281d6ac91c155f55b847974ec5eadeb52d6836683c85d82931547672f28",
+    "mask": "reviewed edge-connected exterior colour",
+    "width": 32,
+    "height": 32,
+    "retainedPixels": 432
+  },
+  {
+    "set": "Apple II Mono",
+    "source": "Apple II Mono-Tiles.png",
+    "sourceSha256": "2ec049a166cefe7363644e070a64c95073073ab44ecd619f656705c5a74b8045",
+    "card": "Apple II Mono-ForestCard.png",
+    "cardSha256": "795b1da345b705d341318e8093b17de2a11281dece93cc680b9a86f717ae7942",
+    "mask": "reviewed edge-connected exterior colour",
+    "width": 32,
+    "height": 32,
+    "retainedPixels": 316
+  },
+  {
+    "set": "PC EGA",
+    "source": "PC EGA-Tiles.png",
+    "sourceSha256": "285d86dcf203059443c449ac889379067556894deb369daac9af2403502635ef",
+    "card": "PC EGA-ForestCard.png",
+    "cardSha256": "ded85041da5cf71a5c817641536f0e715f4958272ef8b9f208fe9bf8fa4513d9",
+    "mask": "reviewed edge-connected exterior colour",
+    "width": 16,
+    "height": 16,
+    "retainedPixels": 96
+  },
+  {
+    "set": "PC CGA",
+    "source": "PC CGA-Tiles.gif",
+    "sourceSha256": "538396cadd2936f3ef25d73e9f2e1f65944d1cb0e8b5e9069649c5bb8954c0d3",
+    "card": "PC CGA-ForestCard.png",
+    "cardSha256": "52e4af4b30be9cf86dae1e61f38a38e373ed6005235a0befb721efe90dd35bd1",
+    "mask": "reviewed edge-connected exterior colour",
+    "width": 16,
+    "height": 16,
+    "retainedPixels": 96
+  },
+  {
+    "set": "Commodore 64",
+    "source": "Commodore 64-Tiles.gif",
+    "sourceSha256": "5a9a19e1951bd9b783bcbe555d8e0d6828151d32605b7ff22b2c9094ab2b056d",
+    "card": "Commodore 64-ForestCard.png",
+    "cardSha256": "c2b187269a1117e56a616bf282478b3af042964f7323cb44df159d3ecee0b731",
+    "mask": "reviewed edge-connected exterior colour",
+    "width": 16,
+    "height": 16,
+    "retainedPixels": 81
+  }
+]

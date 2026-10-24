@@ -54,3 +54,8 @@ proposing any cutout. Never borrow another tile set's trees.
 Stepped mountains and recessed water remain later geometry work. New side
 art, repainted foliage and reconstructed hidden portions belong to a
 separate future Expanded-art mode.
+
+## Subsequent implementation
+
+The later optional [tree-card review](../forest-cards/README.md) admits nine
+set-specific cutouts. This initial audit remains a record of the original sheets.

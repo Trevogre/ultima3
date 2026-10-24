@@ -15,12 +15,12 @@ import { type Landscape, landscapeOffset } from '../game/landscape.ts';
 import type { ViewCell } from '../game/viewport.ts';
 import { Shape } from '../game/tiles.ts';
 import type { GraphicsSet } from './graphics.ts';
-import { buildingArt, isBuilding } from './billboardArt.ts';
+import { buildingArt } from './billboardArt.ts';
 import { cardGroundLift } from './cardGroundLift.ts';
 
 const SHAPES = [Shape.Town, Shape.Castle, Shape.Dungeon, Shape.Shrine] as number[];
 
-/** Static landmarks use the same discovered scenery data as the ground, never the raw secret map. */
+/** Static building/tree cards use filtered scenery, never the raw secret map. */
 export class BuildingBillboards {
   readonly mesh: InstancedMesh;
   private readonly canvas = document.createElement('canvas');
@@ -33,8 +33,13 @@ export class BuildingBillboards {
   private readonly matrix = new Matrix4();
   private readonly position = new Vector3();
   private readonly scale = new Vector3(1, 1, 1);
+  private readonly shapes: number[];
 
-  constructor(inverted: { value: boolean }) {
+  constructor(
+    inverted: { value: boolean },
+    private readonly kind: 'buildings' | 'trees' = 'buildings',
+  ) {
+    this.shapes = kind === 'trees' ? [Shape.Forest] : SHAPES;
     this.canvas.width = 256;
     this.canvas.height = 64;
     this.ctx = this.canvas.getContext('2d')!;
@@ -49,7 +54,7 @@ export class BuildingBillboards {
       transparent: true,
       alphaTest: 0.01,
       depthTest: true,
-      depthWrite: true,
+      depthWrite: kind === 'buildings',
       side: DoubleSide,
       toneMapped: false,
     });
@@ -66,21 +71,25 @@ export class BuildingBillboards {
     };
     this.mesh = new InstancedMesh(this.geometry, this.material, 4096);
     this.mesh.frustumCulled = false;
-    this.mesh.renderOrder = 1;
+    // Tree colour is behind actor cards and does not write depth against them.
+    // Opaque terrain cubes still occlude both kinds of card normally.
+    this.mesh.renderOrder = kind === 'trees' ? 0.9 : 1;
     this.mesh.count = 0;
   }
 
   set(landscape: Landscape | null, cells: ViewCell[], gfx: GraphicsSet, enabled: boolean): void {
+    enabled = enabled && (this.kind === 'buildings' || !!gfx.forestCard);
     this.positions.length = 0;
     this.mesh.visible = enabled;
     this.mesh.count = 0;
     if (!enabled) return;
     this.ctx.clearRect(0, 0, 256, 64);
-    SHAPES.forEach((shape, i) => this.ctx.drawImage(buildingArt(gfx, shape), i * 64, 0));
+    if (this.kind === 'trees') this.ctx.drawImage(gfx.forestCard!, 0, 0, 64, 64);
+    else SHAPES.forEach((shape, i) => this.ctx.drawImage(buildingArt(gfx, shape), i * 64, 0));
     this.texture.needsUpdate = true;
     const add = (shape: number, x: number, y: number) => {
-      if (!isBuilding(shape)) return;
-      this.slots.setX(this.positions.length, SHAPES.indexOf(shape));
+      if (!this.shapes.includes(shape)) return;
+      this.slots.setX(this.positions.length, this.shapes.indexOf(shape));
       this.positions.push({ x, y });
     };
     if (landscape) {
@@ -92,7 +101,7 @@ export class BuildingBillboards {
       const side = Math.sqrt(cells.length);
       cells.forEach((cell, i) =>
         add(
-          isBuilding(cell.base) ? cell.base : (cell.overlay ?? Shape.Void),
+          this.shapes.includes(cell.base) ? cell.base : (cell.overlay ?? Shape.Void),
           (i % side) - (side - 1) / 2,
           (side - 1) / 2 - Math.floor(i / side),
         ),
