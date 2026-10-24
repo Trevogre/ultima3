@@ -25,6 +25,7 @@ export function terrainElevation(shape: number, recessedWater: boolean): number 
 
 /** Vegetation and landmarks keep their artwork on top, with ground on the sides. */
 export function shorelineTexture(shape: number): number {
+  if (shorelineUsesBackground(shape)) return Shape.Wall + 4;
   if ([Shape.Forest, Shape.Brush, Shape.Town, Shape.Castle, Shape.Shrine].includes(shape as never)) return Shape.Grass;
   return shape === Shape.Dungeon ? Shape.Mountains : shape;
 }
@@ -48,7 +49,7 @@ export function isCoastalLand(shapes: ArrayLike<number>, side: number, index: nu
   });
 }
 
-/** Sign lettering belongs on the top; sample only its background on vertical sides. */
+/** Sign lettering belongs on top; vertical sides use the plain counter material. */
 export function shorelineUsesBackground(shape: number): boolean {
   return shape !== Shape.Door && isLetter(shape * 2);
 }

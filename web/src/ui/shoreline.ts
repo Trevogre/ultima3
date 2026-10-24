@@ -4,7 +4,7 @@ import type { ViewCell } from '../game/viewport.ts';
 import { isCoastalLand, shorelineTexture, shorelineUsesBackground } from './terrainDepth.ts';
 import { terrainCubeGeometry } from './terrainCubes.ts';
 
-/** Shore sides use land textures, with plain backgrounds beneath town signs. */
+/** Shore sides use land textures, with plain counter surfaces beneath town signs. */
 export class Shoreline {
   // Full-size upright UVs; the water occludes the submerged part rather than
   // compressing the entire texture into the exposed 0.2-tile strip.

@@ -26,7 +26,7 @@ import { drawBuildingGround, isBuilding } from './billboardArt.ts';
 import { BuildingBillboards, buildingSlide } from './buildingBillboards.ts';
 import { TerrainCubes } from './terrainCubes.ts';
 import { Shoreline } from './shoreline.ts';
-import { raisedTerrain, shorelineTexture, terrainElevation } from './terrainDepth.ts';
+import { raisedTerrain, shorelineTexture, shorelineUsesBackground, terrainElevation } from './terrainDepth.ts';
 import { confineCard } from './cardClearance.ts';
 import { castsContactShadow, ContactShadows } from './contactShadows.ts';
 import { useCharacterCutouts } from './characterMask.ts';
@@ -262,7 +262,7 @@ export class TileMapScene {
       shader.uniforms.mapInverted = this.inverted;
       shader.vertexShader = `attribute vec2 mapTile;\nattribute float shorelineBackground;\n${shader.vertexShader}`.replace(
         '#include <uv_vertex>',
-        '#include <uv_vertex>\nvMapUv = (mapTile + mix(vMapUv, vec2(4.5 / 64.0, 59.5 / 64.0), shorelineBackground * (abs(normal.z) < 0.5 ? 1.0 : 0.0))) / 16.0;',
+        `#include <uv_vertex>\nvec2 sideTile = vec2(${(Shape.Wall + 4) % 16}.0, ${15 - Math.floor((Shape.Wall + 4) / 16)}.0);\nvMapUv = (mix(mapTile, sideTile, shorelineBackground * (abs(normal.z) < 0.5 ? 1.0 : 0.0)) + vMapUv) / 16.0;`,
       );
       shader.fragmentShader = `uniform bool mapInverted;\n${shader.fragmentShader}`.replace(
         '#include <dithering_fragment>',
@@ -403,6 +403,7 @@ export class TileMapScene {
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, 1024, 1024);
     const atlasShapes = new Set(shapes);
+    if (shapes.some(shorelineUsesBackground)) atlasShapes.add(Shape.Wall + 4);
     // Shore sides can need grass even when all visible land is forest.
     if (this.options.recessedWater) for (const shape of shapes) atlasShapes.add(shorelineTexture(shape));
     for (const shape of atlasShapes) {

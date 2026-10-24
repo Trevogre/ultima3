@@ -1,5 +1,6 @@
 import {
   BoxGeometry,
+  BufferAttribute,
   CanvasTexture,
   Color,
   DirectionalLight,
@@ -23,7 +24,6 @@ import type { GraphicsSet } from './graphics.ts';
 import { hasTerrainModel, modelGroundColour } from './modelAssets.ts';
 import { ModelHeadings, type ModelActor } from './modelActors.ts';
 import { sunShadow } from './sunShadows.ts';
-import { barrierHeight } from './terrainDepth.ts';
 import type { ModelSet } from './modelSets.ts';
 import { ModelPaint, colourPart } from './modelPaint.ts';
 import type { AnimatedModel } from './modelRigs.ts';
@@ -39,7 +39,6 @@ export class ModelScene {
   private readonly paint = new ModelPaint();
   private readonly paintedMaterial = this.paint.material();
   private readonly groundMaterial = this.paint.material(true);
-  private readonly signSideMaterial = new MeshLambertMaterial({ color: 0x80502f });
   private modelSet: ModelSet = 'Low-poly';
   private readonly groundPaintSlots = new InstancedBufferAttribute(new Float32Array(4096), 1);
   private readonly actors = new Map<string, { rig: AnimatedModel; motion: ModelMotion; actor: ModelActor }>();
@@ -125,6 +124,7 @@ export class ModelScene {
       this.group.remove(sign.mesh);
       sign.texture.dispose();
       sign.material.dispose();
+      sign.mesh.geometry.dispose();
       sign.mesh.dispose();
     }
     this.signs.clear();
@@ -263,11 +263,28 @@ export class ModelScene {
       texture.colorSpace = SRGBColorSpace;
       texture.magFilter = NearestFilter;
       const material = new MeshLambertMaterial({ map: texture });
-      const mesh = new InstancedMesh(
-        this.groundGeometry,
-        [this.signSideMaterial, this.signSideMaterial, this.signSideMaterial, this.signSideMaterial, material, this.signSideMaterial],
-        4096,
-      );
+      // Share the plain counter's exact geometry, paint slots and vertex colours.
+      // Only its upper face receives the letter; its sides remain counter material.
+      const geometry = MODEL_ASSET_SETS[this.modelSet].scenery(Shape.Wall + 4);
+      const position = geometry.getAttribute('position'),
+        normal = geometry.getAttribute('normal');
+      const uv = geometry.getAttribute('uv') ?? new BufferAttribute(new Float32Array(position.count * 2), 2);
+      geometry.setAttribute('uv', uv);
+      geometry.clearGroups();
+      let start = 0,
+        last = -1;
+      for (let i = 0; i < position.count; i += 3) {
+        const top = normal.getZ(i) > 0.99 && position.getZ(i) > 0.499;
+        const slot = top ? 1 : 0;
+        if (slot !== last) {
+          if (i > start) geometry.addGroup(start, i - start, last);
+          start = i;
+          last = slot;
+        }
+        if (top) for (let j = i; j < i + 3; j++) uv.setXY(j, position.getX(j) + 0.5, position.getY(j) + 0.5);
+      }
+      geometry.addGroup(start, position.count - start, last);
+      const mesh = new InstancedMesh(geometry, [this.modelSet === 'Van Gogh' ? this.paintedMaterial : this.material, material], 4096);
       mesh.count = 0;
       mesh.frustumCulled = false;
       mesh.receiveShadow = true;
@@ -277,8 +294,7 @@ export class ModelScene {
       this.group.add(mesh);
     }
     // Functional sign art stays on the top of a solid block, never a billboard.
-    const height = barrierHeight(shape);
-    this.matrix.makeScale(1, 1, height).setPosition(x, y, height / 2);
+    this.matrix.makeTranslation(x, y, 0);
     sign.mesh.setMatrixAt(sign.mesh.count++, this.matrix);
   }
 
@@ -360,7 +376,6 @@ export class ModelScene {
     this.paintedMaterial.color.setRGB(...colour);
     this.flagMaterial.color.setRGB(colour[0] * 0.25, colour[1] * 0.5, colour[2] * 0.85);
     this.groundMaterial.color.setRGB(...colour);
-    this.signSideMaterial.color.setHex(0x80502f).multiply(this.colour.setRGB(...colour));
     for (const sign of this.signs.values()) sign.material.color.setRGB(...colour);
   }
 
@@ -386,13 +401,13 @@ export class ModelScene {
       batch.dispose();
     }
     for (const sign of this.signs.values()) {
+      sign.mesh.geometry.dispose();
       sign.mesh.dispose();
       sign.texture.dispose();
       sign.material.dispose();
     }
     this.material.dispose();
     this.groundMaterial.dispose();
-    this.signSideMaterial.dispose();
     this.unknownMaterial.dispose();
     this.groundGeometry.dispose();
     this.ground.dispose();

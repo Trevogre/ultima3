@@ -23,6 +23,13 @@
           <option>Models</option>
         </select></label
       >
+      <label
+        >3D set
+        <select id="model-set">
+          <option>Low-poly</option>
+          <option>Van Gogh</option>
+        </select></label
+      >
     </div>
     <canvas aria-label="Wall clearance fixture"></canvas>
     <p>
@@ -53,7 +60,12 @@
         draw();
       }
       function draw() {
-        map.setOptions({ ...DEFAULT_3D_SETTINGS, fixedCamera: false, renderStyle: document.querySelector('#style').value });
+        map.setOptions({
+          ...DEFAULT_3D_SETTINGS,
+          fixedCamera: false,
+          renderStyle: document.querySelector('#style').value,
+          modelSet: document.querySelector('#model-set').value,
+        });
         map.beginFrame();
         map.setDaylight([1, 1, 1]);
         map.setSun(3, 12, true);
@@ -91,6 +103,7 @@
       }
       document.querySelector('#tiles').onchange = load;
       document.querySelector('#style').onchange = draw;
+      document.querySelector('#model-set').onchange = draw;
       document.querySelector('#orbit').onclick = () => {
         map.orbit(Math.PI / 4 / 0.006, 0);
         draw();

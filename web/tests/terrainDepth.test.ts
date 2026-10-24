@@ -1,7 +1,9 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+import { TileMapScene } from '../src/ui/tileMapScene.ts';
+import type { GraphicsSet } from '../src/ui/graphics.ts';
 import { Matrix4, MeshBasicMaterial } from 'three';
 import { Shape } from '../src/game/tiles.ts';
-import { MOUNTAIN_STEPS, terrainElevation, isCoastalLand, shorelineUsesBackground } from '../src/ui/terrainDepth.ts';
+import { MOUNTAIN_STEPS, terrainElevation, isCoastalLand, shorelineTexture, shorelineUsesBackground } from '../src/ui/terrainDepth.ts';
 import { TerrainCubes } from '../src/ui/terrainCubes.ts';
 import { Shoreline } from '../src/ui/shoreline.ts';
 import { applyPresentationPreset, DEFAULT_3D_SETTINGS, read3DSettings } from '../src/ui/view3DSettings.ts';
@@ -12,6 +14,24 @@ import { buildViewport } from '../src/game/viewport.ts';
 import { buildLandscape } from '../src/game/landscape.ts';
 
 describe('optional terrain depth', () => {
+  it('loads the selected counter texture for letter sides even without visible plain counters or lowered water', () => {
+    const ctx = new Proxy(
+      { getImageData: () => ({ data: new Uint8ClampedArray(64 * 64 * 4) }) },
+      { get: (obj, key) => (Reflect.get(obj, key) as unknown) ?? (() => {}) },
+    );
+    vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => ctx }) });
+    const map = new TileMapScene(16, 3, () => {}),
+      drawShape = vi.fn();
+    try {
+      map.setOptions({ ...DEFAULT_3D_SETTINGS, buildings: false, recessedWater: false });
+      const cells = Array.from({ length: 9 }, (_, i) => ({ base: i === 4 ? MapValue.LetterA / 2 : Shape.Floor }));
+      map.setLandscape(null, { drawShape } as unknown as GraphicsSet, cells);
+      expect(drawShape.mock.calls.some((call) => call[1] === Shape.Wall + 4)).toBe(true);
+    } finally {
+      map.dispose();
+      vi.unstubAllGlobals();
+    }
+  });
   it('stacks mountain tiers within one tile using the original atlas tile on each tier', () => {
     const material = new MeshBasicMaterial();
     const cubes = new TerrainCubes(material);
@@ -68,6 +88,8 @@ describe('optional terrain depth', () => {
     shore.set(null, signs, true);
     expect(shore.mesh.count).toBe(2);
     expect(shore.backgrounds.getX(0)).toBe(1);
+    expect([shore.slots.getX(0), shore.slots.getY(0)]).toEqual([(Shape.Wall + 4) % 16, 15 - Math.floor((Shape.Wall + 4) / 16)]);
+    expect(shorelineTexture(MapValue.LetterA / 2)).toBe(Shape.Wall + 4);
     expect(shore.backgrounds.getX(1)).toBe(0);
     expect(shorelineUsesBackground(MapValue.LetterT / 2)).toBe(true);
     expect(shorelineUsesBackground(Shape.Grass)).toBe(false);

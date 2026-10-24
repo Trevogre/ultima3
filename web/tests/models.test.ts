@@ -21,12 +21,43 @@ describe('separate low-poly presentation', () => {
       const sign = scene.group.children.filter((c): c is InstancedMesh => c instanceof InstancedMesh).at(-1)!;
       const matrix = new Matrix4();
       sign.getMatrixAt(0, matrix);
-      expect(new Vector3(0, 0, 0.5).applyMatrix4(matrix).z).toBe(0.5);
-      expect(new Vector3(0, 0, -0.5).applyMatrix4(matrix).z).toBe(0);
+      sign.geometry.computeBoundingBox();
+      expect(sign.geometry.boundingBox!.max.clone().applyMatrix4(matrix).z).toBeCloseTo(0.5);
+      expect(sign.geometry.boundingBox!.min.clone().applyMatrix4(matrix).z).toBeCloseTo(0);
       expect(sign.castShadow).toBe(true);
     } finally {
       scene.dispose();
       vi.unstubAllGlobals();
+    }
+  });
+  it.each(['Low-poly', 'Van Gogh'] as const)('shares the plain counter geometry and side material for letter blocks in %s', (set) => {
+    const ctx = new Proxy({}, { get: () => () => {} });
+    vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => ctx }) });
+    const scene = new ModelScene();
+    try {
+      scene.setSet(set);
+      scene.setLandscape(
+        null,
+        [76, Shape.Wall + 4, Shape.Floor, Shape.Void].map((base) => ({ base })),
+        { drawShape() {} } as unknown as GraphicsSet,
+        true,
+      );
+      const meshes = scene.group.children.filter((c): c is InstancedMesh => c instanceof InstancedMesh);
+      const sign = meshes.find((mesh) => Array.isArray(mesh.material))!;
+      if (!Array.isArray(sign.material)) throw new Error('missing letter top material');
+      const sideMaterial = sign.material[0];
+      const counter = meshes.find((mesh) => mesh.material === sideMaterial)!;
+      expect(sign.geometry.getAttribute('position').array).toEqual(counter.geometry.getAttribute('position').array);
+      expect(sign.geometry.getAttribute('color').array).toEqual(counter.geometry.getAttribute('color').array);
+      expect(sign.geometry.groups.some((g) => g.materialIndex === 1)).toBe(true);
+      for (const group of sign.geometry.groups)
+        if (group.materialIndex === 1)
+          for (let i = group.start; i < group.start + group.count; i++) {
+            expect(sign.geometry.getAttribute('normal').getZ(i)).toBeCloseTo(1);
+            expect(sign.geometry.getAttribute('position').getZ(i)).toBeCloseTo(0.5);
+          }
+    } finally {
+      scene.dispose();
     }
   });
   it('migrates to cards, remembers models and preserves Classic / Depth transitions', () => {
