@@ -15,7 +15,7 @@ import { PlayerRecord } from './player.ts';
 import { addGold } from './actions.ts';
 import { FOOD_MAX } from './party.ts';
 import { gearCard } from './cards.ts';
-import { shopDialogue } from './dialogue.ts';
+import { shopDialogue, npcSpeaker } from './dialogue.ts';
 import { hearClue } from './journal.ts';
 
 const Msg = {
@@ -85,11 +85,25 @@ function priceOf(world: World, index: number): number {
 }
 
 /** Mirrors `Shop()`. `shop` is the Y coordinate & 7; `member` is 0..3. */
-export async function shop(world: World, io: GameIO, shopNumber: number, member: number): Promise<void> {
-  const speaker = {
-    id: `shop:${world.current.id}:${world.x}:${world.y}`,
-    gender: shopNumber === 6 ? ('male' as const) : ('other' as const),
-  };
+export async function shop(world: World, io: GameIO, shopNumber: number, member: number, merchant = -1): Promise<void> {
+  if (merchant < 0) {
+    let nearest = Infinity;
+    for (let i = 0; i < 32; i++)
+      if (world.monsters.type(i) === 0x40) {
+        const distance = Math.abs(world.monsters.x(i) - world.x) + Math.abs(world.monsters.y(i) - world.y);
+        if (distance < nearest && distance <= 2) {
+          nearest = distance;
+          merchant = i;
+        }
+      }
+  }
+  const speaker =
+    merchant >= 0
+      ? npcSpeaker(world, merchant)
+      : {
+          id: `shop:${world.current.id}:${shopNumber}`,
+          gender: shopNumber === 6 ? ('male' as const) : ('other' as const),
+        };
   io.beginDialogue?.(speaker);
   io = shopDialogue(world, io, speaker);
   const p = world.member(member);

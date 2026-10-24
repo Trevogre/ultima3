@@ -42,6 +42,7 @@ import { Screen } from './ui/screen.ts';
 import { TILE_SETS } from './ui/help.ts';
 import { DEFAULT_3D_SETTINGS, read3DSettings, type View3DSettings } from './ui/view3DSettings.ts';
 
+import { loadNpcAddon } from './ui/npcVoices.ts';
 import { readSpeechPreferences, DEFAULT_SPEECH, type SpeechPreferences } from './ui/dialogueSpeech.ts';
 
 const PREFS_KEY = 'ultima3.settings';
@@ -288,6 +289,7 @@ async function start(): Promise<void> {
   screen.scanlines = prefs.scanlines;
   screen.set3DSettings(prefs.view3D);
   screen.dialogueSpeech.settings = prefs.npcSpeech;
+  screen.dialogueSpeech.setCatalog(await loadNpcAddon(resources));
   screen.setAudioMuted(prefs.audioMuted);
   window.addEventListener('pagehide', () => screen.dialogueSpeech.stop());
   canvas.focus();

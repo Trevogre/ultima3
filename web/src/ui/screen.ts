@@ -1340,6 +1340,7 @@ export class Screen implements GameIO {
             : this.dialogueSpeech.status ||
               'Browser voices read conversations. Menus and game messages stay silent. Local voices work offline.',
         },
+        { key: 'C', label: 'NPC voices & catalog', hint: 'Unique placed characters, original lines and individual voice assignments.' },
         { key: 'L', label: `Speech level: ${levelLabel(this.dialogueSpeech.settings.level)}`, disabled: !this.dialogueSpeech.supported },
         { key: 'H', label: `Male: ${this.dialogueSpeech.label('male').slice(0, 12)}`, disabled: !this.dialogueSpeech.supported },
         { key: 'E', label: `Female: ${this.dialogueSpeech.label('female').slice(0, 12)}`, disabled: !this.dialogueSpeech.supported },
@@ -1352,6 +1353,9 @@ export class Screen implements GameIO {
       ],
       async (key, place) => {
         switch (key) {
+          case 'C':
+            await showSpriteSheet(this.keyboard, { title: 'NPC voices & catalog', file: 'npcs.html' });
+            break;
           case 'V':
             this.dialogueSpeech.settings = { ...this.dialogueSpeech.settings, enabled: !this.dialogueSpeech.settings.enabled };
             break;

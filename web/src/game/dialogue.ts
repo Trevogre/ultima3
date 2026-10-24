@@ -1,5 +1,6 @@
 import type { World } from './world.ts';
 import type { GameIO } from './io.ts';
+import { namedNpc, npcId } from './npcCatalog.ts';
 import { MapValue } from './tiles.ts';
 
 export type VoiceGender = 'male' | 'female' | 'other';
@@ -7,25 +8,13 @@ export interface DialogueSpeaker {
   id: string;
   gender: VoiceGender;
 }
-/** Reviewed named characters; generic roles/sprites do not establish gender. */
-const NAMED_VOICES: Record<string, VoiceGender> = {
-  '400/3': 'male', // Iolo
-  '400/4': 'female', // Gwino (Gwenno)
-  '400/8': 'male', // Chuckles
-  '402/6': 'male', // Dupre
-  '402/10': 'male', // Chuckles
-  '405/3': 'male', // Jolly Joe
-  '405/4': 'male', // Baby Bob
-  '406/3': 'male', // Sentri
-  '406/4': 'male', // Shamino
-};
 export function npcSpeaker(world: World, mon: number): DialogueSpeaker {
   return {
-    id: `npc:${world.current.id}:${mon}`,
+    id: npcId(world.current.id, mon),
     gender:
       world.monsters.type(mon) === MapValue.LordBritish
         ? 'male'
-        : (NAMED_VOICES[`${world.current.id}/${world.monsters.talkIndex(mon)}`] ?? 'other'),
+        : (namedNpc(world.current.id, world.monsters.talkIndex(mon))?.gender ?? 'other'),
   };
 }
 export function sayMessage(world: World, io: GameIO, message: number, speaker: DialogueSpeaker): void {
@@ -37,6 +26,7 @@ export function shopDialogue(world: World, io: GameIO, speaker: DialogueSpeaker)
   const prose = new Set([...world.resources.strings.Pub, ...world.resources.strings.Radrion]);
   return new Proxy(io, {
     get(target, key) {
+      if (key === 'speakLine') return (text: string) => target.speakLine?.(text, speaker);
       if (key === 'printMessage')
         return (n: number) => {
           target.printMessage(n);

@@ -59,6 +59,7 @@ export default defineConfig({
       input: {
         main: fileURLToPath(new URL('index.html', import.meta.url)),
         tiles: fileURLToPath(new URL('tiles.html', import.meta.url)),
+        npcs: fileURLToPath(new URL('npcs.html', import.meta.url)),
       },
     },
   },

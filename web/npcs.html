@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>NPC voices & catalog</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font: 15px/1.5 system-ui;
+        background: #11151e;
+        color: #e9e7df;
+      }
+      body {
+        margin: 0;
+      }
+      header {
+        padding: 18px 24px;
+        background: #1c2432;
+        border-bottom: 1px solid #405067;
+      }
+      h1 {
+        margin: 0;
+        font: 600 24px Georgia;
+      }
+      p {
+        margin: 6px 0;
+        color: #b7c6d9;
+      }
+      input,
+      select,
+      button,
+      textarea {
+        font: inherit;
+        background: #202a3a;
+        color: inherit;
+        border: 1px solid #536881;
+        border-radius: 5px;
+        padding: 7px;
+      }
+      button {
+        cursor: pointer;
+      }
+      button:hover {
+        background: #35435b;
+      }
+      label {
+        display: grid;
+        gap: 4px;
+        margin: 12px 0;
+      }
+      main {
+        display: grid;
+        grid-template-columns: minmax(260px, 340px) minmax(0, 1fr);
+        max-width: 1450px;
+        margin: auto;
+      }
+      aside {
+        padding: 16px;
+        border-right: 1px solid #405067;
+      }
+      #people {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+        max-height: 70vh;
+        overflow: auto;
+      }
+      #people button {
+        text-align: left;
+      }
+      #people button[aria-pressed='true'] {
+        border-color: #e7c776;
+        background: #35435b;
+      }
+      article {
+        padding: 20px 28px;
+        max-width: 900px;
+      }
+      h2 {
+        margin: 0;
+      }
+      small {
+        color: #aebdd1;
+      }
+      code {
+        color: #e7c776;
+        overflow-wrap: anywhere;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0 20px;
+      }
+      .actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        margin: 16px 0;
+      }
+      pre {
+        white-space: pre-wrap;
+        font: 15px/1.5 system-ui;
+        background: #1a2230;
+        padding: 12px;
+        border-radius: 5px;
+      }
+      #status {
+        min-height: 25px;
+        color: #e7c776;
+      }
+      textarea {
+        min-height: 70px;
+      }
+      #import {
+        display: none;
+      }
+      @media (max-width: 700px) {
+        main {
+          display: block;
+        }
+        #people {
+          max-height: 220px;
+        }
+        aside {
+          border-right: 0;
+          border-bottom: 1px solid #405067;
+        }
+        .grid {
+          grid-template-columns: 1fr;
+        }
+        article {
+          padding: 16px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>NPC voices & catalog</h1>
+      <p>Every placed character has an individual identity. Original dialogue stays authoritative; AI expansion is disabled.</p>
+      <div class="actions">
+        <button id="export">Export NPC addon</button><button id="jobs">Export audio jobs</button
+        ><button id="import-button">Import addon</button><input type="file" id="import" accept="application/json,.json" />
+      </div>
+      <div id="status" role="status"></div>
+    </header>
+    <main>
+      <aside>
+        <label>Search characters<input id="search" type="search" placeholder="Name, role or stable ID" /></label
+        ><label
+          >Location<select id="location">
+            <option value="">All maps</option>
+          </select></label
+        >
+        <p id="count"></p>
+        <div id="people" aria-label="Characters"></div>
+      </aside>
+      <article id="detail" hidden>
+        <h2 id="heading"></h2>
+        <code id="identity"></code>
+        <p id="origin"></p>
+        <div class="grid">
+          <label>Display name<input id="name" /></label
+          ><label
+            >Gender / voice hint<select id="gender">
+              <option value="other">Unknown / other</option>
+              <option value="female">Female</option>
+              <option value="male">Male</option>
+            </select></label
+          ><label>Pronouns (authored, optional)<input id="pronouns" placeholder="Not specified" /></label
+          ><label>Browser voice<select id="voice"></select></label
+          ><label>Pitch <output id="pitch-value"></output><input id="pitch" type="range" min="0.5" max="2" step="0.01" /></label
+          ><label>Speaking rate <output id="rate-value"></output><input id="rate" type="range" min="0.5" max="1.5" step="0.01" /></label>
+        </div>
+        <label>Direction for a future voice generator<textarea id="direction"></textarea></label
+        ><small
+          >Browser speech uses the selected voice, pitch and rate. Direction is preparation for future recorded/generated voices. Gender is
+          not inferred from a generic sprite.</small
+        >
+        <div class="actions">
+          <button id="preview">Preview this character</button><button id="stop">Stop speech</button
+          ><button id="reset">Reset this character</button>
+        </div>
+        <h3>Original dialogue</h3>
+        <small>Shopkeepers include a shared conditional prose pool. Price templates are not queued for sample generation.</small>
+        <div id="lines"></div>
+      </article>
+    </main>
+    <script type="module" src="/src/npcEditor.ts"></script>
+  </body>
+</html>

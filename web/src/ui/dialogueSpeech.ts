@@ -1,4 +1,6 @@
 import type { DialogueSpeaker, VoiceGender } from '../game/dialogue.ts';
+import type { NpcAddon, NpcRecord } from '../game/npcCatalog.ts';
+import { resolveNpc } from './npcVoices.ts';
 import { LEVELS, validLevel } from './sound.ts';
 export interface SpeechPreferences {
   enabled: boolean;
@@ -71,6 +73,10 @@ export class DialogueSpeech {
   private queued = 0;
   private generation = 0;
   private held = new Set<SpeechSynthesisUtterance>();
+  private catalog = new Map<string, NpcRecord>();
+  setCatalog(addon: NpcAddon): void {
+    this.catalog = new Map(addon.npcs.map((npc) => [npc.id, npc]));
+  }
   status = '';
   constructor(
     private readonly synth: SpeechSynthesis | null = typeof speechSynthesis === 'undefined' ? null : speechSynthesis,
@@ -127,14 +133,16 @@ export class DialogueSpeech {
     if (!line) return;
     if (this.current !== speaker.id || this.queued >= 8) this.begin(speaker);
     const u = this.utterance!(line);
-    const voice = chooseSpeechVoice(this.voices(), speaker.gender, this.prefs[`${speaker.gender}Voice`]);
+    const npc = resolveNpc(this.catalog, speaker.id);
+    const gender = npc?.gender ?? speaker.gender;
+    const voice = chooseSpeechVoice(this.voices(), gender, npc?.voice.voiceURI || this.prefs[`${gender}Voice`]);
     if (voice) {
       u.voice = voice;
       u.lang = voice.lang;
     } else u.lang = 'en-US';
     u.volume = this.prefs.level / LEVELS;
-    u.rate = 1;
-    u.pitch = 1;
+    u.rate = npc?.voice.rate ?? 1;
+    u.pitch = npc?.voice.pitch ?? 1;
     const generation = this.generation;
     const done = () => {
       if (generation === this.generation) {

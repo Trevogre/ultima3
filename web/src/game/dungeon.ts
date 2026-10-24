@@ -334,8 +334,11 @@ async function encounter(world: World, io: GameIO, cell: number, arrived = true)
       if (!arrived) return;
       io.showImage('TimeLord');
       io.music(Music.Shrine);
-      io.beginDialogue?.({ id: 'time-lord', gender: 'male' });
-      sayMessage(world, io, Msg.TimeLord, { id: 'time-lord', gender: 'male' });
+      {
+        const speaker = { id: `time-lord:${world.current.id}:${d.level}:${world.x}:${world.y}`, gender: 'male' as const };
+        io.beginDialogue?.(speaker);
+        sayMessage(world, io, Msg.TimeLord, speaker);
+      }
       await io.waitKey();
       io.print('\n');
       io.redrawMap();
