@@ -11,6 +11,12 @@ export function terrainElevation(shape: number, recessedWater: boolean): number 
   return recessedWater && shape === Shape.Water ? -WATER_DEPTH : 0;
 }
 
+/** Vegetation and landmarks keep their artwork on top, with ground on the sides. */
+export function shorelineTexture(shape: number): number {
+  if ([Shape.Forest, Shape.Brush, Shape.Town, Shape.Castle, Shape.Shrine].includes(shape as never)) return Shape.Grass;
+  return shape === Shape.Dungeon ? Shape.Mountains : shape;
+}
+
 /** Only known, visible cardinal water neighbours create shoreline sides. */
 export function isCoastalLand(shapes: ArrayLike<number>, side: number, index: number, wraps: boolean): boolean {
   const shape = shapes[index];

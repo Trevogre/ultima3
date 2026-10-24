@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Matrix4, MeshBasicMaterial } from 'three';
 import { Shape } from '../src/game/tiles.ts';
-import { MOUNTAIN_STEPS, terrainElevation, isCoastalLand, WATER_DEPTH } from '../src/ui/terrainDepth.ts';
+import { MOUNTAIN_STEPS, terrainElevation, isCoastalLand } from '../src/ui/terrainDepth.ts';
 import { TerrainCubes } from '../src/ui/terrainCubes.ts';
 import { Shoreline } from '../src/ui/shoreline.ts';
 import { applyPresentationPreset, DEFAULT_3D_SETTINGS, read3DSettings } from '../src/ui/view3DSettings.ts';
@@ -54,9 +54,16 @@ describe('optional terrain depth', () => {
     expect(shore.mesh.count).toBe(1);
     expect([shore.slots.getX(0), shore.slots.getY(0)]).toEqual([Shape.Grass, 15]);
     shore.geometry.computeBoundingBox();
-    expect(shore.geometry.boundingBox!.min.z).toBeCloseTo(-WATER_DEPTH);
+    expect(shore.geometry.boundingBox!.min.z).toBeCloseTo(-1);
     expect(shore.geometry.boundingBox!.max.z).toBeCloseTo(0);
     expect(shore.geometry.drawRange).toEqual({ start: 0, count: 24 });
+    const positions = shore.geometry.getAttribute('position');
+    const uv = shore.geometry.getAttribute('uv');
+    for (let i = 0; i < 16; i++) expect(uv.getY(i)).toBeCloseTo(positions.getZ(i) + 1);
+    const forestCells = [Shape.Forest, Shape.Water, Shape.Brush, Shape.Water].map((base) => ({ base }));
+    shore.set(null, forestCells, true);
+    expect(shore.mesh.count).toBe(2);
+    for (let i = 0; i < shore.mesh.count; i++) expect([shore.slots.getX(i), shore.slots.getY(i)]).toEqual([Shape.Grass, 15]);
     shore.set(null, cells, false);
     expect(shore.mesh.count).toBe(0);
     shore.dispose();

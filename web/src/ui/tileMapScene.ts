@@ -23,7 +23,7 @@ import { buildingGround, isBuilding } from './billboardArt.ts';
 import { BuildingBillboards } from './buildingBillboards.ts';
 import { TerrainCubes } from './terrainCubes.ts';
 import { Shoreline } from './shoreline.ts';
-import { terrainElevation } from './terrainDepth.ts';
+import { shorelineTexture, terrainElevation } from './terrainDepth.ts';
 import { castsContactShadow, ContactShadows } from './contactShadows.ts';
 import { cardGroundLift } from './cardGroundLift.ts';
 
@@ -215,7 +215,10 @@ export class TileMapScene {
     const ctx = this.landscapeContext;
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, 1024, 1024);
-    for (const shape of new Set(shapes)) {
+    const atlasShapes = new Set(shapes);
+    // Shore sides can need grass even when all visible land is forest.
+    if (this.options.recessedWater) for (const shape of shapes) atlasShapes.add(shorelineTexture(shape));
+    for (const shape of atlasShapes) {
       if (shape === Shape.Void) continue; // hidden cells are solid black in every tile set
       const x = (shape % 16) * 64;
       const y = Math.floor(shape / 16) * 64;

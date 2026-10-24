@@ -1,11 +1,14 @@
-import { BoxGeometry, InstancedBufferAttribute, InstancedMesh, Matrix4, type MeshBasicMaterial } from 'three';
+import { InstancedBufferAttribute, InstancedMesh, Matrix4, type MeshBasicMaterial } from 'three';
 import { landscapeOffset, type Landscape } from '../game/landscape.ts';
 import type { ViewCell } from '../game/viewport.ts';
-import { isCoastalLand, WATER_DEPTH } from './terrainDepth.ts';
+import { isCoastalLand, shorelineTexture } from './terrainDepth.ts';
+import { terrainCubeGeometry } from './terrainCubes.ts';
 
 /** Exposed shoreline sides repeat the neighbouring land tile's own texture. */
 export class Shoreline {
-  readonly geometry = new BoxGeometry(1, 1, WATER_DEPTH).translate(0, 0, -WATER_DEPTH / 2);
+  // Full-size upright UVs; the water occludes the submerged part rather than
+  // compressing the entire texture into the exposed 0.2-tile strip.
+  readonly geometry = terrainCubeGeometry().translate(0, 0, -1);
   readonly slots = new InstancedBufferAttribute(new Float32Array(4096 * 2), 2);
   readonly mesh: InstancedMesh;
   private readonly matrix = new Matrix4();
@@ -34,7 +37,8 @@ export class Shoreline {
         ? -landscapeOffset(Math.floor(i / side), landscape.partyY, side, landscape.wraps)
         : (side - 1) / 2 - Math.floor(i / side);
       this.mesh.setMatrixAt(this.mesh.count, this.matrix.makeTranslation(x, y, 0));
-      this.slots.setXY(this.mesh.count++, shapes[i] % 16, 15 - Math.floor(shapes[i] / 16));
+      const texture = shorelineTexture(shapes[i]);
+      this.slots.setXY(this.mesh.count++, texture % 16, 15 - Math.floor(texture / 16));
     }
     this.mesh.instanceMatrix.needsUpdate = true;
     this.slots.needsUpdate = true;

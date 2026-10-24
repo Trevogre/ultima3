@@ -106,8 +106,11 @@ stay one tile wide and high. Both terrain types use the original visibility
 mask and change no movement or line-of-sight rules.
 
 **Lower water** recesses water by 0.2 tiles, including its ships, sea creatures,
-whirlpool and effects. Shoreline sides reuse the adjacent land tile's texture;
-there is no new side art or seabed. Only visible water neighbours create shore
+whirlpool and effects. Shoreline supports are full-height blocks below ground,
+with upright, full-size side textures; water hides the submerged portion.
+Forest and brush sides use the set's grass texture, keeping vegetation on top.
+Other sides reuse the land's ground texture; there is no new side art or seabed.
+Only visible water neighbours create shore
 sides, including across wrapping maps. Off restores the original flat surface.
 The Depth preset uses cube mountains and lowered water. Both options are remembered independently in 3D
 Settings, and work in the local viewport and distant terrain, including combat.
