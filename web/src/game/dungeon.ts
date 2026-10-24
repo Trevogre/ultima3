@@ -13,6 +13,7 @@
  * ui/dungeonView.ts turns that into pixels.
  */
 
+import { sayMessage } from './dialogue.ts';
 import { World, DungeonCell } from './world.ts';
 import { nextMapMode, VIEW_NAMES } from './automap.ts';
 import { type GameIO, Key, Sound, Music, deathSound } from './io.ts';
@@ -333,7 +334,8 @@ async function encounter(world: World, io: GameIO, cell: number, arrived = true)
       if (!arrived) return;
       io.showImage('TimeLord');
       io.music(Music.Shrine);
-      io.printMessage(Msg.TimeLord);
+      io.beginDialogue?.({ id: 'time-lord', gender: 'male' });
+      sayMessage(world, io, Msg.TimeLord, { id: 'time-lord', gender: 'male' });
       await io.waitKey();
       io.print('\n');
       io.redrawMap();

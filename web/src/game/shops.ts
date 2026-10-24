@@ -15,6 +15,7 @@ import { PlayerRecord } from './player.ts';
 import { addGold } from './actions.ts';
 import { FOOD_MAX } from './party.ts';
 import { gearCard } from './cards.ts';
+import { shopDialogue } from './dialogue.ts';
 import { hearClue } from './journal.ts';
 
 const Msg = {
@@ -85,6 +86,12 @@ function priceOf(world: World, index: number): number {
 
 /** Mirrors `Shop()`. `shop` is the Y coordinate & 7; `member` is 0..3. */
 export async function shop(world: World, io: GameIO, shopNumber: number, member: number): Promise<void> {
+  const speaker = {
+    id: `shop:${world.current.id}:${world.x}:${world.y}`,
+    gender: shopNumber === 6 ? ('male' as const) : ('other' as const),
+  };
+  io.beginDialogue?.(speaker);
+  io = shopDialogue(world, io, speaker);
   const p = world.member(member);
   switch (shopNumber) {
     case 0:
@@ -468,6 +475,11 @@ async function horses(world: World, io: GameIO): Promise<void> {
   io.printMessage(Msg.HorsesCost);
   io.print(String(cost));
   io.printMessage(Msg.WillYouBuy);
+  const messages = world.resources.strings.Messages;
+  io.speakLine?.(`${messages[Msg.Emporium - 1]}${world.party.size}${messages[Msg.HorsesCost - 1]}${cost}${messages[Msg.WillYouBuy - 1]}`, {
+    id: `shop:${world.current.id}:${world.x}:${world.y}`,
+    gender: 'other',
+  });
   if (!(await yesNo(io))) {
     io.print('N\n\n');
     io.printMessage(Msg.TooBad);

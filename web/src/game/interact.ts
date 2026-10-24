@@ -70,6 +70,7 @@ const Msg = {
 // ---------------------------------------------------------------------------
 
 import { speech } from './talk.ts';
+import { npcSpeaker, sayMessage } from './dialogue.ts';
 import { hearTownLine, hearClue, journalCheck, knownWords } from './journal.ts';
 export { speech };
 
@@ -167,13 +168,17 @@ export async function transactToward(world: World, io: GameIO, dx: number, dy: n
 export async function talkTo(world: World, io: GameIO, mon: number, member: number): Promise<void> {
   const p = world.member(member);
   const m = world.monsters;
+  const speaker = npcSpeaker(world, mon);
+  io.beginDialogue?.(speaker);
   if (m.type(mon) !== MapValue.LordBritish) {
     const person = m.talkIndex(mon);
     if (person === 0) {
-      io.printMessage(world.party.exodusDestroyed ? Msg.ExodusNoMore : Msg.GoodDay);
+      sayMessage(world, io, world.party.exodusDestroyed ? Msg.ExodusNoMore : Msg.GoodDay, speaker);
       return;
     }
-    io.print(speech(world.current.talk, person));
+    const line = speech(world.current.talk, person);
+    io.print(line);
+    io.speakLine?.(line, speaker);
     const town = world.resources.mapNames.get(world.current.id);
     if (town && hearTownLine(world, town, person)) journalCheck(world, io);
     return;
@@ -181,33 +186,33 @@ export async function talkTo(world: World, io: GameIO, mon: number, member: numb
 
   // Lord British raises levels once the character has the experience.
   io.music(Music.LordBritish);
-  io.printMessage(Msg.WelcomeMyChild);
+  sayMessage(world, io, Msg.WelcomeMyChild, speaker);
   world.journal.lordBritish = true;
-  await lordBritishSpeaks(world, io, p);
+  await lordBritishSpeaks(world, io, p, speaker);
   journalCheck(world, io);
 }
 
 /** The rest of the audience: level up, or one of the king's excuses. */
-async function lordBritishSpeaks(world: World, io: GameIO, p: PlayerRecord): Promise<void> {
+async function lordBritishSpeaks(world: World, io: GameIO, p: PlayerRecord, speaker: ReturnType<typeof npcSpeaker>): Promise<void> {
   const level = p.bytes[30];
   let hpmax = p.maxHitPoints;
   if (hpmax % 100 === 50) hpmax -= 50; // old 150/250 style values
   hpmax = Math.floor(hpmax / 100);
   if (level < hpmax) {
-    io.printMessage(world.party.exodusDestroyed ? Msg.SosariaThanks : Msg.ExperienceMore);
+    sayMessage(world, io, world.party.exodusDestroyed ? Msg.SosariaThanks : Msg.ExperienceMore, speaker);
     return;
   }
-  if (hpmax >= 25 && !world.party.exodusDestroyed) return io.printMessage(Msg.NoMore);
+  if (hpmax >= 25 && !world.party.exodusDestroyed) return sayMessage(world, io, Msg.NoMore, speaker);
   if (hpmax > 4 && !(p.marks & 0x80)) {
     hearClue(world, 'LB:mark');
-    return io.printMessage(Msg.SeekMarkOfKings);
+    return sayMessage(world, io, Msg.SeekMarkOfKings, speaker);
   }
   const newMax = Math.min(9950, p.maxHitPoints + 100);
   const gained = newMax - p.maxHitPoints;
   p.bytes[28] = Math.floor(newMax / 256);
   p.bytes[29] = newMax % 256;
   p.addHitPoints(gained); // this port: the new hit points are also given, not just room for them
-  io.printMessage(Msg.ThouArtGreater);
+  sayMessage(world, io, Msg.ThouArtGreater, speaker);
   await io.flashTiles();
   io.sound(Sound.LBLevelRise);
   await io.flashTiles();

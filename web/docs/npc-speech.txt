@@ -1,0 +1,37 @@
+Browser NPC speech
+
+Settings/Pause > Audio > NPC speech: On/Off. Off by default; remembered in
+local display/audio preferences, never game saves. Speech has its own level
+and Male / Female / Other voice selectors. Each selector offers Automatic,
+the browser's voice list and a preview. Other handles NPCs whose gender is
+not identified. A vanished saved voice falls back without deleting the choice.
+
+NPC dialogue is explicitly routed through optional GameIO hooks. Ordinary
+scrolling output, menus, shop item lists, typed keys, journal notifications
+and combat text are silent. Town lines, default greetings, Lord British's
+replies, the Time Lord, shop prose and purchased pub/oracle verses are spoken. Text and all
+gameplay timing remain unchanged. A new conversation interrupts the old one;
+a short bounded queue preserves consecutive replies. Mute, disabling speech,
+pause/focus loss and page exit cancel outstanding speech without replaying it.
+
+The browser API has no gender property. Automatic selection uses conservative
+voice-name hints and English language availability, preferring local voices.
+Known named NPC hints live in game/dialogue.ts; generic roles and sprites do
+not imply gender. Explicit voice choices override Automatic, including voices
+of other languages. No pitch-shifting is used to simulate gender.
+
+Speech uses speechSynthesis and SpeechSynthesisUtterance, with no new service,
+API key, downloaded voice pack or audio dependency. Installed local voices
+work offline; browser online voices may require a connection. Browser/device
+support and voices vary. Unsupported browsers disable these controls. Browser
+speech errors never interrupt the game; the Audio menu exposes an unavailable
+or blocked-voice hint. Voice lists are read again for each line/menu iteration
+because browsers can populate them asynchronously.
+
+Reference: https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesisVoice
+Reference: https://developer.mozilla.org/en-US/docs/Web/API/SpeechSynthesis
+
+Save-free live check: tools/preview-dialogue-speech.html. Nothing speaks until
+Talk or Preview is pressed. Unit tests inject a mock synthesizer and exercise
+voice choice, fallback, late voice discovery, mute, cancellation, bounded queues,
+unsupported APIs, stale error events and actual game dialogue routing.

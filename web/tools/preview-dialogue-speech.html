@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" /><title>Browser NPC speech preview</title>
+  <style>
+    body {
+      max-width: 850px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #101725;
+      color: #f4e7c9;
+      font: 18px system-ui;
+    }
+    label,
+    button,
+    select {
+      margin: 8px;
+      font: inherit;
+    }
+    section {
+      padding: 18px;
+      background: #1b2941;
+      border: 1px solid #c6a65c;
+      margin: 20px 0;
+    }
+    p {
+      line-height: 1.5;
+    }
+    #line {
+      font: 24px Georgia;
+      min-height: 60px;
+    }
+  </style>
+  <h1>NPC speech — browser voice check</h1>
+  <p>No preferences or saves are changed. Speech uses the installed browser API. Nothing speaks until a button is pressed.</p>
+  <label><input id="enabled" type="checkbox" />NPC speech</label
+  ><label><input id="mute" type="checkbox" />Mute audio</label>
+  <section>
+    <label
+      >Character
+      <select id="gender">
+        <option value="other">Unknown / other</option>
+        <option value="male">Lord British</option>
+        <option value="female">Gwino</option>
+      </select></label
+    ><br />
+    <label
+      >Voice
+      <select id="voice">
+        <option value="">Automatic</option>
+      </select></label
+    ><button id="preview">Preview voice</button>
+  </section>
+  <button id="talk">Talk to character</button
+  ><button id="next">Start another conversation</button
+  ><button id="stop">Stop speech</button>
+  <p id="line"></p>
+  <p id="status"></p>
+  <script type="module">
+    import { DialogueSpeech } from '/src/ui/dialogueSpeech.ts';
+    const speech = new DialogueSpeech();
+    let number = 0;
+    const gender = () => document.querySelector('#gender').value;
+    function voices() {
+      const select = document.querySelector('#voice');
+      select.replaceChildren(new Option('Automatic', ''));
+      for (const voice of speech.voices())
+        select.append(new Option(`${voice.name} · ${voice.lang}${voice.localService ? ' · local' : ' · online'}`, voice.voiceURI));
+      status();
+    }
+    function settings() {
+      speech.settings = {
+        ...speech.settings,
+        enabled: document.querySelector('#enabled').checked,
+        [`${gender()}Voice`]: document.querySelector('#voice').value,
+      };
+      speech.muted = document.querySelector('#mute').checked;
+      status();
+    }
+    function status() {
+      document.querySelector('#status').textContent =
+        `Speech API: ${speech.supported ? 'available' : 'unavailable'}. Available voices: ${speech.voices().length}. NPC speech: ${speech.settings.enabled ? 'On' : 'Off'}. ${speech.supported && speechSynthesis.speaking ? 'Speaking.' : 'Idle.'} ${speech.status}`;
+    }
+    function talk() {
+      const who = gender();
+      const line =
+        who === 'male'
+          ? 'WELCOME MY CHILD. EXPERIENCE MORE!'
+          : who === 'female'
+            ? 'GWINO SINGS:\nMUH EH OYE OH!'
+            : 'WELCOME TO THE CIRCLE OF LIGHT!';
+      document.querySelector('#line').textContent = line.replaceAll('\n', ' ');
+      const speaker = { id: `npc:${number}`, gender: who };
+      speech.begin(speaker);
+      speech.speak(line, speaker);
+      status();
+    }
+    document.querySelector('#enabled').onchange = settings;
+    document.querySelector('#mute').onchange = settings;
+    document.querySelector('#voice').onchange = settings;
+    document.querySelector('#gender').onchange = () => {
+      document.querySelector('#voice').value = speech.settings[`${gender()}Voice`];
+      status();
+    };
+    document.querySelector('#preview').onclick = () => {
+      speech.preview(gender());
+      status();
+    };
+    document.querySelector('#talk').onclick = talk;
+    document.querySelector('#next').onclick = () => {
+      number++;
+      talk();
+    };
+    document.querySelector('#stop').onclick = () => {
+      speech.stop();
+      status();
+    };
+    if (speech.supported) speechSynthesis.addEventListener('voiceschanged', voices);
+    window.addEventListener('pagehide', () => speech.stop());
+    voices();
+    setInterval(status, 500);
+  </script>
+</html>

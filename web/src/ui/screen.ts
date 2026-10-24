@@ -1,3 +1,5 @@
+import { DialogueSpeech } from './dialogueSpeech.ts';
+import type { DialogueSpeaker, VoiceGender } from '../game/dialogue.ts';
 /**
  * screen.ts
  *
@@ -179,6 +181,13 @@ function dungeonMapPiece(value: number): number {
 }
 
 export class Screen implements GameIO {
+  readonly dialogueSpeech = new DialogueSpeech();
+  beginDialogue(speaker: DialogueSpeaker): void {
+    this.dialogueSpeech.begin(speaker);
+  }
+  speakLine(text: string, speaker: DialogueSpeaker): void {
+    this.dialogueSpeech.speak(text, speaker);
+  }
   view3D: View3DSettings = { ...DEFAULT_3D_SETTINGS };
   private readonly presentation: ThreeRenderer;
   private readonly ctx: CanvasRenderingContext2D;
@@ -337,6 +346,7 @@ export class Screen implements GameIO {
     // box stands in, as before, and focus alone starts the game again.
     keyboard.onPause = (reason) => {
       this.musicPlayer.pause();
+      this.dialogueSpeech.stop();
       if (reason === 'focus' && !this.pauseShown) keyboard.push(Key.Pause);
     };
     keyboard.onResume = (pausedMs) => {
@@ -991,6 +1001,7 @@ export class Screen implements GameIO {
 
   setAudioMuted(muted: boolean): void {
     this.audioMuted = muted;
+    this.dialogueSpeech.muted = muted;
     this.sounds.muted = muted;
     this.musicPlayer.muted = muted;
     this.presentation.map.audioOn = !muted;
@@ -1290,9 +1301,41 @@ export class Screen implements GameIO {
         { key: 'M', label: `Music: ${onOff(this.musicPlayer.enabled)}` },
         { key: 'O', label: `Style: ${this.musicPlayer.style}`, hint: this.musicPlayer.styleHint },
         { key: 'U', label: `Music level: ${levelLabel(this.musicPlayer.level)}` },
+        {
+          key: 'V',
+          label: `NPC speech: ${onOff(this.dialogueSpeech.settings.enabled)}`,
+          disabled: !this.dialogueSpeech.supported,
+          hint: !this.dialogueSpeech.supported
+            ? 'Browser speech is unavailable here.'
+            : this.dialogueSpeech.status ||
+              'Browser voices read conversations. Menus and game messages stay silent. Local voices work offline.',
+        },
+        { key: 'L', label: `Speech level: ${levelLabel(this.dialogueSpeech.settings.level)}`, disabled: !this.dialogueSpeech.supported },
+        { key: 'H', label: `Male: ${this.dialogueSpeech.label('male').slice(0, 12)}`, disabled: !this.dialogueSpeech.supported },
+        { key: 'E', label: `Female: ${this.dialogueSpeech.label('female').slice(0, 12)}`, disabled: !this.dialogueSpeech.supported },
+        {
+          key: 'N',
+          label: `Other: ${this.dialogueSpeech.label('other').slice(0, 12)}`,
+          disabled: !this.dialogueSpeech.supported,
+          hint: 'Used when the game does not identify an NPC gender. Each voice menu includes a preview.',
+        },
       ],
       async (key, place) => {
         switch (key) {
+          case 'V':
+            this.dialogueSpeech.settings = { ...this.dialogueSpeech.settings, enabled: !this.dialogueSpeech.settings.enabled };
+            break;
+          case 'L':
+            await this.dialLevel('Speech level', this.dialogueSpeech.settings.level, place, (level) => {
+              this.dialogueSpeech.settings = { ...this.dialogueSpeech.settings, level };
+              this.dialogueSpeech.preview('other');
+            });
+            break;
+          case 'H':
+          case 'E':
+          case 'N':
+            await this.chooseDialogueVoice(key === 'H' ? 'male' : key === 'E' ? 'female' : 'other');
+            break;
           case 'S':
             // Standard, Lairware, Off, round again.
             if (!w.soundEnabled) {
@@ -1329,6 +1372,51 @@ export class Screen implements GameIO {
         }
       },
     );
+  }
+
+  private async chooseDialogueVoice(gender: VoiceGender): Promise<void> {
+    const key = `${gender}Voice` as const;
+    for (;;) {
+      const voices = this.dialogueSpeech
+        .voices()
+        .sort(
+          (a, b) =>
+            Number(/^en(?:-|$)/i.test(b.lang)) - Number(/^en(?:-|$)/i.test(a.lang)) ||
+            Number(b.localService) - Number(a.localService) ||
+            a.name.localeCompare(b.name),
+        );
+      const options: MenuOption[] = [
+        { key: 'A', label: 'Automatic', hint: 'Prefer an available English voice suited to known characters; local voices first.' },
+        ...voices.map((voice) => ({
+          key: '',
+          label: `${voice.name.slice(0, 24)} (${voice.lang})`,
+          hint: voice.localService ? 'Installed local voice. Works offline.' : 'Browser-provided online voice; may need a connection.',
+        })),
+        {
+          key: 'P',
+          label: 'Preview selected voice',
+          hint: this.audioMuted
+            ? 'Unmute audio to hear the preview.'
+            : this.dialogueSpeech.status || 'Hear a short sample without starting a conversation.',
+        },
+        { key: 'B', label: 'Back' },
+      ];
+      const selected = voices.findIndex((v) => v.voiceURI === this.dialogueSpeech.settings[key]) + 1;
+      const picked = await this.runMenu(
+        `${gender === 'other' ? 'Other' : gender === 'male' ? 'Male' : 'Female'} voice`,
+        options,
+        1,
+        undefined,
+        Math.max(0, selected),
+      );
+      if (picked < 0 || picked === options.length - 1) return;
+      if (picked === options.length - 2) this.dialogueSpeech.preview(gender);
+      else {
+        this.dialogueSpeech.settings = { ...this.dialogueSpeech.settings, [key]: picked === 0 ? '' : voices[picked - 1].voiceURI };
+        this.onSettingsChange?.();
+        this.dialogueSpeech.preview(gender);
+      }
+    }
   }
 
   /**

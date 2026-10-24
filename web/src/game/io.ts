@@ -1,3 +1,4 @@
+import type { DialogueSpeaker } from './dialogue.ts';
 /**
  * io.ts
  *
@@ -100,6 +101,9 @@ export const Music = {
 export type SpellFlash = 'caster' | 'target' | 'window';
 
 export interface GameIO {
+  /** Optional spoken NPC dialogue, separate from menus and scrolling output. */
+  beginDialogue?(speaker: DialogueSpeaker): void;
+  speakLine?(text: string, speaker: DialogueSpeaker): void;
   /** Optional presentation-only action cue for articulated model renderers. */
   animateActor?(id: string, action: 'attack' | 'cast', yaw?: number): void;
   /** Print to the scrolling message area. `\n` starts a new line. (`UPrintWin`) */

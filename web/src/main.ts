@@ -42,6 +42,8 @@ import { Screen } from './ui/screen.ts';
 import { TILE_SETS } from './ui/help.ts';
 import { DEFAULT_3D_SETTINGS, read3DSettings, type View3DSettings } from './ui/view3DSettings.ts';
 
+import { readSpeechPreferences, DEFAULT_SPEECH, type SpeechPreferences } from './ui/dialogueSpeech.ts';
+
 const PREFS_KEY = 'ultima3.settings';
 
 /** What the Settings menu can change, as remembered between visits. */
@@ -66,6 +68,7 @@ interface Prefs {
   musicLevel: number;
   musicStyle: MusicStyle;
   audioMuted: boolean;
+  npcSpeech: SpeechPreferences;
   dungeonMap: MapMode;
   /** The virtual controller shown; on first visit, shown on a touch screen. */
   touchPad: boolean;
@@ -88,6 +91,7 @@ const DEFAULT_PREFS: Prefs = {
   musicLevel: LEVELS,
   musicStyle: 'Classic',
   audioMuted: false,
+  npcSpeech: { ...DEFAULT_SPEECH },
   dungeonMap: 'off',
   touchPad: typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches,
 };
@@ -98,6 +102,7 @@ function loadPrefs(): Prefs {
     const saved = raw ? (JSON.parse(raw) as Partial<Prefs>) : {};
     const prefs = { ...DEFAULT_PREFS, ...saved };
     prefs.view3D = read3DSettings(saved.view3D);
+    prefs.npcSpeech = readSpeechPreferences(saved.npcSpeech);
     // Apple II Color TV was dropped when scanlines became a setting; Apple II Color is its art without the fringing.
     if (prefs.tiles === 'Apple II Color TV') prefs.tiles = 'Apple II Color';
     if (!TILE_SETS.includes(prefs.tiles)) prefs.tiles = DEFAULT_PREFS.tiles;
@@ -282,7 +287,9 @@ async function start(): Promise<void> {
   screen.tileSetName = tiles;
   screen.scanlines = prefs.scanlines;
   screen.set3DSettings(prefs.view3D);
+  screen.dialogueSpeech.settings = prefs.npcSpeech;
   screen.setAudioMuted(prefs.audioMuted);
+  window.addEventListener('pagehide', () => screen.dialogueSpeech.stop());
   canvas.focus();
 
   // Whatever changes a setting (the menu, a gamepad press, Escape in a fight), remember it.
@@ -292,6 +299,7 @@ async function start(): Promise<void> {
       inputMode: screen.inputMode,
       view3D: screen.view3D,
       audioMuted: screen.audioMuted,
+      npcSpeech: screen.dialogueSpeech.settings,
       // A set asked for in the address (development) is this page's alone: the one remembered stays.
       tiles: screen.tileSetName === tilesAsked ? prefs.tiles : screen.tileSetName,
       scanlines: screen.scanlines,
