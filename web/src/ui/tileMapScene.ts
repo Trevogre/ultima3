@@ -41,6 +41,7 @@ import { cardGroundLift } from './cardGroundLift.ts';
 import { ModelScene } from './modelScene.ts';
 import type { ModelActor } from './modelActors.ts';
 import { WindowLights, windowNight } from './windowLights.ts';
+import type { DoorState } from './doorStates.ts';
 import { DoorCards } from './doorCards.ts';
 
 export interface ScreenRect {
@@ -313,7 +314,14 @@ export class TileMapScene {
   }
 
   /** Batch the entire landscape in one draw call, using a small animated tile atlas. */
-  setLandscape(landscape: Landscape | null, gfx: GraphicsSet, cells: ViewCell[], location?: LocalMapLocation): void {
+  setLandscape(
+    landscape: Landscape | null,
+    gfx: GraphicsSet,
+    cells: ViewCell[],
+    location?: LocalMapLocation,
+    doors: DoorState[] = [],
+    doorContext?: object,
+  ): void {
     const faces =
       this.options.buildings && this.options.mountains && (this.modelMode || this.tilt > 0.001)
         ? dungeonFaces(landscape, cells, location)
@@ -340,7 +348,7 @@ export class TileMapScene {
     this.groundEffects.forEach((mesh, i) => {
       mesh.material = cells[i].overlay === Shape.Whirlpool ? this.waterEffectsMaterial : this.materials[2];
     });
-    this.doors.set(landscape, cells, gfx, this.doorCardsActive && !this.modelMode);
+    this.doors.set(landscape, cells, gfx, this.doorCardsActive && !this.modelMode, doors, location, doorContext);
     this.solidCells.clear();
     const solids = landscape?.shapes ?? cells.map((c) => c.base);
     const solidSide = landscape?.side ?? Math.sqrt(cells.length);
@@ -556,7 +564,7 @@ export class TileMapScene {
     this.buildings.setWindowNight(this.tilt > 0.001 ? windowNight(colour) : 0);
     this.townFigures.setDaylight(colour);
     this.entranceFaces.material.color.setRGB(...colour);
-    this.doors.material.color.setRGB(...colour);
+    this.doors.setDaylight(colour);
     this.models.setDaylight(colour);
     for (const material of this.materials) material.color.setRGB(...colour);
     this.buildings.setDaylight(colour);
@@ -745,6 +753,7 @@ export class TileMapScene {
   }
 
   animate(time: number, active: boolean): void {
+    if (this.doors.animate(time, active)) this.invalidate();
     if (this.models.animate(time, active && this.modelMode)) this.invalidate();
     if (active && this.lava.mesh.visible && this.lava.mesh.count > 0) {
       this.lava.time.value = time / 1000;

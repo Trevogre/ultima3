@@ -7,7 +7,7 @@ import type { ViewCell } from '../src/game/viewport.ts';
 
 afterEach(() => vi.unstubAllGlobals());
 describe('fixed door cards', () => {
-  it('spans the opening at the tile centre with a grounded, two-sided vertical plane', () => {
+  it('spans the opening with a grounded, two-sided solid leaf and textured top', () => {
     vi.stubGlobal('document', {
       createElement: () => ({
         width: 0,
@@ -36,7 +36,7 @@ describe('fixed door cards', () => {
     const position = doors.geometry.getAttribute('position');
     for (let i = 0; i < position.count; i++) {
       const point = new Vector3().fromBufferAttribute(position, i).applyMatrix4(matrix);
-      expect(point.y).toBeCloseTo(0);
+      expect(Math.abs(point.y)).toBeCloseTo(0.045);
       expect(Math.abs(point.x)).toBeCloseTo(0.5);
       expect(point.z).toBeGreaterThan(0);
       expect(point.z).toBeLessThan(1.002);
@@ -47,14 +47,35 @@ describe('fixed door cards', () => {
     doors.mesh.getMatrixAt(0, matrix);
     for (let i = 0; i < position.count; i++) {
       const point = new Vector3().fromBufferAttribute(position, i).applyMatrix4(matrix);
-      expect(point.x).toBeCloseTo(0);
+      expect(Math.abs(point.x)).toBeCloseTo(0.045);
       expect(Math.abs(point.y)).toBeCloseTo(0.5);
     }
+    // Unlock replaces the centre tile with floor, but retains a hinged leaf.
+    const context = {};
+    const closed = [{ x: 1, y: 1, open: false }];
+    doors.set(null, cells, gfx, true, closed, undefined, context);
+    doors.animate(0, true);
+    cells[4] = { base: Shape.Floor };
+    doors.set(null, cells, gfx, true, [{ x: 1, y: 1, open: true }], undefined, context);
+    expect(doors.mesh.count).toBe(1);
+    for (let time = 50; time <= 600; time += 50) doors.animate(time, true);
+    doors.mesh.getMatrixAt(0, matrix);
+    const swung = new Vector3().setFromMatrixPosition(matrix);
+    expect(swung.x).toBeCloseTo(-0.5);
+    expect(swung.y).toBeCloseTo(-0.5);
+    // An already-open saved door starts open rather than replaying its swing.
+    doors.set(null, cells, gfx, true, [{ x: 1, y: 1, open: true }], undefined, {});
+    const restored = new Matrix4();
+    doors.mesh.getMatrixAt(0, restored);
+    expect(restored.elements).toEqual(matrix.elements);
+    expect(doors.edgeMaterial.map).not.toBe(doors.material.map);
     doors.set(null, cells, gfx, false);
     expect(doors.mesh.count).toBe(0);
     expect(doors.mesh.visible).toBe(false);
     cells[4] = { base: Shape.Void, overlay: Shape.Door };
     doors.set(null, cells, gfx, true);
+    expect(doors.mesh.count).toBe(0);
+    doors.set(null, cells, gfx, true, [{ x: 1, y: 1, open: true }]);
     expect(doors.mesh.count).toBe(0);
     doors.set({ side: 3, partyX: 0, partyY: 0, wraps: true, shapes: new Uint8Array([72, 72, 72, 72, 72, 72, 72, 72, 93]) }, [], gfx, true);
     expect(doors.mesh.count).toBe(1);

@@ -1,0 +1,97 @@
+<!doctype html>
+<html>
+  <body style="margin: 0; background: #202024; color: white; font: 16px sans-serif">
+    <select id="set">
+      <option>Van Gogh</option>
+      <option>Standard</option>
+      <option>Macintosh B&amp;W</option>
+    </select>
+    <button id="unlock">Unlock left door</button><button id="reset">Reset doors</button><button id="rotate">Rotate</button>
+    <span>Right door is already open. This preview does not use saves or keys.</span><canvas></canvas>
+    <script type="module">
+      import * as T from 'three';
+      import { DoorCards } from '/src/ui/doorCards.ts';
+      import { GraphicsSet } from '/src/ui/graphics.ts';
+      import { Shape } from '/src/game/tiles.ts';
+      const renderer = new T.WebGLRenderer({ canvas: document.querySelector('canvas') });
+      renderer.setSize(1000, 700);
+      renderer.setClearColor('#202024');
+      const scene = new T.Scene(),
+        camera = new T.OrthographicCamera(-4.3, 4.3, 3.01, -3.01, 0.1, 100);
+      const doors = new DoorCards({ value: false });
+      scene.add(doors.mesh);
+      const ground = new T.Group();
+      scene.add(ground);
+      let gfx,
+        context = {},
+        yaw = 0.3,
+        open = false;
+      const cells = Array.from({ length: 49 }, () => ({ base: Shape.Floor }));
+      cells[3 * 7 + 1].base = cells[3 * 7 + 3].base = cells[3 * 7 + 5].base = Shape.Wall;
+      function update() {
+        cells[3 * 7 + 2] = { base: open ? Shape.Floor : Shape.Door };
+        doors.set(
+          null,
+          cells,
+          gfx,
+          true,
+          [
+            { x: 2, y: 3, open },
+            { x: 4, y: 3, open: true },
+          ],
+          undefined,
+          context,
+        );
+      }
+      function pose() {
+        camera.position.set(12 * Math.sin(yaw), -12 * Math.cos(yaw), 9);
+        camera.up.set(0, 0, 1);
+        camera.lookAt(0, 0, 0.1);
+      }
+      pose();
+      async function load() {
+        gfx = await GraphicsSet.load(document.querySelector('#set').value, '/graphics/');
+        for (const mesh of ground.children) {
+          mesh.geometry.dispose();
+          mesh.material.map?.dispose();
+          mesh.material.dispose();
+        }
+        ground.clear();
+        for (let i = 0; i < 49; i++) {
+          const c = document.createElement('canvas');
+          c.width = c.height = 64;
+          gfx.drawShape(c.getContext('2d'), cells[i].base === Shape.Wall ? Shape.Wall : Shape.Floor, 0, 0, 64);
+          const texture = new T.CanvasTexture(c);
+          texture.colorSpace = T.SRGBColorSpace;
+          texture.magFilter = T.NearestFilter;
+          const wall = cells[i].base === Shape.Wall;
+          const mesh = new T.Mesh(wall ? new T.BoxGeometry(1, 1, 1) : new T.PlaneGeometry(1, 1), new T.MeshBasicMaterial({ map: texture }));
+          mesh.position.set((i % 7) - 3, 3 - Math.floor(i / 7), wall ? 0.5 : 0);
+          ground.add(mesh);
+        }
+        update();
+      }
+      function frame(time) {
+        doors.animate(time, true);
+        renderer.render(scene, camera);
+        requestAnimationFrame(frame);
+      }
+      document.querySelector('#unlock').onclick = () => {
+        open = true;
+        update();
+      };
+      document.querySelector('#reset').onclick = () => {
+        open = false;
+        context = {};
+        update();
+      };
+      document.querySelector('#rotate').onclick = () => {
+        yaw += Math.PI / 2;
+        pose();
+      };
+      document.querySelector('#set').onchange = load;
+      await load();
+      requestAnimationFrame(frame);
+    </script>
+  </body>
+</html>

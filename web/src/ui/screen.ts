@@ -1,3 +1,4 @@
+import { mapDoors } from './doorStates.ts';
 import { DialogueSpeech } from './dialogueSpeech.ts';
 import type { DialogueSpeaker, VoiceGender } from '../game/dialogue.ts';
 /**
@@ -2525,6 +2526,8 @@ export class Screen implements GameIO {
       gfx,
       this.view.cells,
       world.combat ? undefined : { mapId: world.current.id, originX: this.view.originX, originY: this.view.originY, side: world.mapSize },
+      mapDoors(world),
+      world.current,
     );
     map.setActorLayout(this.view.cells, this.partyStyle === 'grid');
     const sightActors = townSightActors(world, this.view);

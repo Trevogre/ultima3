@@ -1,0 +1,25 @@
+Solid door leaves in the sprite-based 3D view
+
+DoorCards now uses a tile-wide, one-tile-high box with 0.09-tile thickness.
+Both broad faces retain the selected set's fitted door artwork. A narrow strip
+of the same painting textures the edges, top and bottom; edges are shaded slightly
+for readability. UVs keep the front/back and vertical grain upright in Z-up space.
+Classic and full-overhead presentation retain their original flat tiles.
+
+Unlock still consumes a key and changes the map tile to floor exactly as before.
+mapDoors reads the pristine resource to retain the identity of the removed leaf,
+then compares the current tile (or an occupying monster's under-tile). The renderer
+admits these records only where its filtered terrain is known, not Void.
+No new save data or gameplay state is needed: existing unlocked save tiles work.
+
+A visible closed-to-open transition swings the leaf 90 degrees around its side
+hinge over half a second, with eased motion. The hinge and neighboring-wall
+orientation are fixed in world space, independent of camera rotation. The leaf
+remains at 90 degrees after unlocking. A previously open door first encountered
+or loaded from a save starts open. Returning to a freshly loaded town clears the
+presentation cache. Animation follows map pause/visibility and does not advance
+the gameplay clock. Model-set geometry is unchanged by this sprite-door change.
+
+Save-free visual review: /tools/preview-door-swing.html.
+Shows a closed door and an already-open door, Unlock, Reset, Rotate and tile sets.
+Tests: doorCards.test.ts, doorStates.test.ts and the existing unlock tests.
