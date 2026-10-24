@@ -1,0 +1,278 @@
+[
+  {
+    "set": "Standard",
+    "source": "public/graphics/Standard-Tiles.png",
+    "sha256": "aaf504c8f381af702ff2f9f95a77432e893007eec870b09d7d123a33933735ae",
+    "mask": null,
+    "mask_sha256": null,
+    "frames": [
+      {
+        "frame": 0,
+        "pixels": 4096,
+        "transparent_pixels": 0,
+        "partial_alpha_pixels": 0,
+        "grass_rgb_matches": 9
+      },
+      {
+        "frame": 1,
+        "pixels": 4096,
+        "transparent_pixels": 4046,
+        "partial_alpha_pixels": 50,
+        "grass_rgb_matches": 4032
+      }
+    ]
+  },
+  {
+    "set": "Lairware",
+    "source": "public/graphics/Lairware-Tiles.png",
+    "sha256": "b8e85bd4006176fd532f012d983b8dfc54a10ed1be075d21e689a7dc47d3aece",
+    "mask": null,
+    "mask_sha256": null,
+    "frames": [
+      {
+        "frame": 0,
+        "pixels": 4096,
+        "transparent_pixels": 0,
+        "partial_alpha_pixels": 0,
+        "grass_rgb_matches": 889
+      },
+      {
+        "frame": 1,
+        "pixels": 4096,
+        "transparent_pixels": 0,
+        "partial_alpha_pixels": 0,
+        "grass_rgb_matches": 4084
+      }
+    ]
+  },
+  {
+    "set": "PC VGA",
+    "source": "public/graphics/PC VGA-Tiles.png",
+    "sha256": "13dbbebf3cb510981dcf211f4e4d1d7f80c94719cab5aeea0eda24b0669b1750",
+    "mask": null,
+    "mask_sha256": null,
+    "frames": [
+      {
+        "frame": 0,
+        "pixels": 1024,
+        "transparent_pixels": 0,
+        "partial_alpha_pixels": 0,
+        "grass_rgb_matches": 303
+      },
+      {
+        "frame": 1,
+        "pixels": 1024,
+        "transparent_pixels": 0,
+        "partial_alpha_pixels": 0,
+        "grass_rgb_matches": 1024
+      }
+    ]
+  },
+  {
+    "set": "Nintendo",
+    "source": "public/graphics/Nintendo-Tiles.png",
+    "sha256": "b63045d04a0ad38d48ad5c12453bfbd8fc405ea33da790ad62548beeacf58ac2",
+    "mask": null,
+    "mask_sha256": null,
+    "frames": [
+      {
+        "frame": 0,
+        "pixels": 1024,
+        "transparent_pixels": 0,
+        "partial_alpha_pixels": 0,
+        "grass_rgb_matches": 436
+      },
+      {
+        "frame": 1,
+        "pixels": 1024,
+        "transparent_pixels": 1024,
+        "partial_alpha_pixels": 0,
+        "grass_rgb_matches": 1024
+      }
+    ]
+  },
+  {
+    "set": "PC Ultima V",
+    "source": "public/graphics/PC Ultima V-Tiles.png",
+    "sha256": "c42330da53052e32bdfc936e5c70a6cb8015fb4747a4dd6e65812c672b1cccb9",
+    "mask": null,
+    "mask_sha256": null,
+    "frames": [
+      {
+        "frame": 0,
+        "pixels": 1024,
+        "transparent_pixels": 0,
+        "partial_alpha_pixels": 0,
+        "grass_rgb_matches": 396
+      },
+      {
+        "frame": 1,
+        "pixels": 1024,
+        "transparent_pixels": 0,
+        "partial_alpha_pixels": 0,
+        "grass_rgb_matches": 1024
+      }
+    ]
+  },
+  {
+    "set": "PC MCGA",
+    "source": "public/graphics/PC MCGA-Tiles.png",
+    "sha256": "969ddf5a8fb394871d89f6f9e44e72d1afde28c4e11da21fccb905735d2eb355",
+    "mask": null,
+    "mask_sha256": null,
+    "frames": [
+      {
+        "frame": 0,
+        "pixels": 1024,
+        "transparent_pixels": 0,
+        "partial_alpha_pixels": 0,
+        "grass_rgb_matches": 240
+      },
+      {
+        "frame": 1,
+        "pixels": 1024,
+        "transparent_pixels": 0,
+        "partial_alpha_pixels": 0,
+        "grass_rgb_matches": 1020
+      }
+    ]
+  },
+  {
+    "set": "Apple II Color",
+    "source": "public/graphics/Apple II Color-Tiles.png",
+    "sha256": "5c66e08f7e6c231e161bed679780047178d1b6c7af258c972f442b9b4cd75e72",
+    "mask": null,
+    "mask_sha256": null,
+    "frames": [
+      {
+        "frame": 0,
+        "pixels": 1024,
+        "transparent_pixels": 0,
+        "partial_alpha_pixels": 0,
+        "grass_rgb_matches": 606
+      },
+      {
+        "frame": 1,
+        "pixels": 1024,
+        "transparent_pixels": 0,
+        "partial_alpha_pixels": 0,
+        "grass_rgb_matches": 1024
+      }
+    ]
+  },
+  {
+    "set": "Apple II Mono",
+    "source": "public/graphics/Apple II Mono-Tiles.png",
+    "sha256": "2ec049a166cefe7363644e070a64c95073073ab44ecd619f656705c5a74b8045",
+    "mask": null,
+    "mask_sha256": null,
+    "frames": [
+      {
+        "frame": 0,
+        "pixels": 1024,
+        "transparent_pixels": 0,
+        "partial_alpha_pixels": 0,
+        "grass_rgb_matches": 714
+      },
+      {
+        "frame": 1,
+        "pixels": 1024,
+        "transparent_pixels": 0,
+        "partial_alpha_pixels": 0,
+        "grass_rgb_matches": 1022
+      }
+    ]
+  },
+  {
+    "set": "Macintosh B&W",
+    "source": "public/graphics/Macintosh BW-Tiles.gif",
+    "sha256": "fa19f42be1763b9b9bf2b04ed1c7ad9ef02c9763d7c64920b1cfbd53a1c6f923",
+    "mask": null,
+    "mask_sha256": null,
+    "frames": [
+      {
+        "frame": 0,
+        "pixels": 576,
+        "transparent_pixels": 0,
+        "partial_alpha_pixels": 0,
+        "grass_rgb_matches": 360
+      },
+      {
+        "frame": 1,
+        "pixels": 576,
+        "transparent_pixels": 0,
+        "partial_alpha_pixels": 0,
+        "grass_rgb_matches": 576
+      }
+    ]
+  },
+  {
+    "set": "PC EGA",
+    "source": "public/graphics/PC EGA-Tiles.png",
+    "sha256": "285d86dcf203059443c449ac889379067556894deb369daac9af2403502635ef",
+    "mask": null,
+    "mask_sha256": null,
+    "frames": [
+      {
+        "frame": 0,
+        "pixels": 256,
+        "transparent_pixels": 0,
+        "partial_alpha_pixels": 0,
+        "grass_rgb_matches": 158
+      },
+      {
+        "frame": 1,
+        "pixels": 256,
+        "transparent_pixels": 0,
+        "partial_alpha_pixels": 0,
+        "grass_rgb_matches": 255
+      }
+    ]
+  },
+  {
+    "set": "PC CGA",
+    "source": "public/graphics/PC CGA-Tiles.gif",
+    "sha256": "538396cadd2936f3ef25d73e9f2e1f65944d1cb0e8b5e9069649c5bb8954c0d3",
+    "mask": null,
+    "mask_sha256": null,
+    "frames": [
+      {
+        "frame": 0,
+        "pixels": 256,
+        "transparent_pixels": 0,
+        "partial_alpha_pixels": 0,
+        "grass_rgb_matches": 158
+      },
+      {
+        "frame": 1,
+        "pixels": 256,
+        "transparent_pixels": 0,
+        "partial_alpha_pixels": 0,
+        "grass_rgb_matches": 256
+      }
+    ]
+  },
+  {
+    "set": "Commodore 64",
+    "source": "public/graphics/Commodore 64-Tiles.gif",
+    "sha256": "5a9a19e1951bd9b783bcbe555d8e0d6828151d32605b7ff22b2c9094ab2b056d",
+    "mask": null,
+    "mask_sha256": null,
+    "frames": [
+      {
+        "frame": 0,
+        "pixels": 256,
+        "transparent_pixels": 0,
+        "partial_alpha_pixels": 0,
+        "grass_rgb_matches": 167
+      },
+      {
+        "frame": 1,
+        "pixels": 256,
+        "transparent_pixels": 0,
+        "partial_alpha_pixels": 0,
+        "grass_rgb_matches": 255
+      }
+    ]
+  }
+]

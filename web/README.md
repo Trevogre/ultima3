@@ -47,6 +47,12 @@ the whirlpool and first-person dungeon views have no contact shadows.
 Shadows test against terrain depth, so foreground cubes occlude them, and
 their opacity is independent of day/night lighting. Source artwork is untouched.
 
+The [forest feasibility audit](docs/forest-audit/README.md) compares both
+forest and grass sheet frames across all twelve sets. No populated forest
+frame has usable existing transparency; future layered forests require
+reviewed, set-specific masks. Forests remain flat, and no replacement art
+or automatic terrain cutouts are enabled.
+
 Three.js owns the visible canvas using WebGL 2. The interface is an unlit,
 screen-sized plane; the map has its own scene and orthographic camera, clipped
 to the map window. The default fixed orthographic view tilts 45° from straight down with a 5° map
