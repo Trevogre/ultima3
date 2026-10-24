@@ -392,7 +392,8 @@ export class TileMapScene {
   }
 
   forestGround(shape: number, gfx: GraphicsSet): number {
-    return shape === Shape.Forest && useTreeCards(this.options.treeCards, this.tilt, !!gfx.forestCard) ? Shape.Grass : shape;
+    const hasCutout = shape === Shape.Forest ? !!gfx.forestCard : shape === Shape.Brush && !!gfx.brushCards;
+    return useTreeCards(this.options.treeCards, this.tilt, hasCutout) ? Shape.Grass : shape;
   }
 
   private updateCamera(): void {

@@ -40,3 +40,24 @@ tile boundary. Other sets keep their reviewed cluster cards.
 
 Each tree gets a smaller contact shadow at its own base. Players remain in
 front. Straight-down views continue to use the untouched original tile.
+
+## Brush cards
+
+![Original brush, reviewed cutout, and cutout over grass](brush-review.png)
+
+The same **Trees/brush: Cards** setting also raises brush. Standard has four
+independent clumps anchored at native pixels (16,19), (46,33), (16,50), and
+(46,63). Original colours and scale remain intact, including the clipped
+bottom clump. Smaller shadows sit at their individual bases.
+
+Nintendo, PC Ultima V, Apple II Color, Apple II Mono, PC EGA, PC CGA, and
+Commodore 64 use reviewed cluster masks. Lairware, PC MCGA, PC VGA and
+Macintosh B&W brush remain flat pending separate mask review. Forest and brush
+support are independent; no unsupported brush is replaced by grass.
+
+Regenerate with `python3 web/tools/prepare-brush-cards.py`. The Standard
+silhouettes are traced; the seven cluster masks remove only their reviewed
+edge-connected exterior colour, preserving enclosed details. Source RGB
+preservation is asserted, and source/output hashes are in `brush-manifest.json`.
+No original sheet is changed. Overhead views retain the original brush tiles;
+players stay in front of cards and foreground cubes still occlude them.

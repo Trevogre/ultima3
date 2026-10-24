@@ -211,6 +211,7 @@ export class GraphicsSet {
     /** Separate reviewed forest cutout, never borrowed from another tile set. */
     readonly forestCard: HTMLImageElement | null = null,
     readonly treeCards: HTMLImageElement | null = null,
+    readonly brushCards: HTMLImageElement | null = null,
   ) {
     this.tileSize = tiles.width / TILE_COLUMNS;
     this.opaqueTiles = document.createElement('canvas');
@@ -268,6 +269,7 @@ export class GraphicsSet {
     const moons = moonStyle ? paintMoons(moonStyle) : null;
     const forestCard = await tryLoad('ForestCard', ['png'], false);
     const treeCards = await tryLoad('TreeCards', ['png'], false);
+    const brushCards = await tryLoad('BrushCards', ['png'], false);
     return new GraphicsSet(
       tiles,
       applyMask(tiles, mask),
@@ -282,6 +284,7 @@ export class GraphicsSet {
       displayOf(name),
       forestCard,
       treeCards,
+      brushCards,
     );
   }
 

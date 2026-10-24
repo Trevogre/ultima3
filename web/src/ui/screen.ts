@@ -1004,11 +1004,12 @@ export class Screen implements GameIO {
         { key: 'N', label: `Mountain cubes: ${onOff(this.view3D.mountains)}`, disabled },
         {
           key: 'G',
-          label: `Trees: ${this.view3D.treeCards ? 'Cards' : 'Flat'}`,
+          label: `Trees/brush: ${this.view3D.treeCards ? 'Cards' : 'Flat'}`,
           disabled,
-          hint: this.gfx.forestCard
-            ? 'Separate tree cutouts over grass at angled views. Players stay in front.'
-            : 'This set has no reviewed cutout; forests stay flat.',
+          hint:
+            this.gfx.forestCard || this.gfx.brushCards
+              ? 'Separate tree cutouts over grass at angled views. Players stay in front.'
+              : 'This set has no reviewed cutout; forests stay flat.',
         },
         {
           key: 'E',

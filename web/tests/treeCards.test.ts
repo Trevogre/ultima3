@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { createHash } from 'node:crypto';
 import { MeshBasicMaterial, OrthographicCamera, Matrix4, Vector3 } from 'three';
-import { BuildingBillboards, STANDARD_TREE_ANCHORS } from '../src/ui/buildingBillboards.ts';
+import { BuildingBillboards, STANDARD_TREE_ANCHORS, STANDARD_BRUSH_ANCHORS } from '../src/ui/buildingBillboards.ts';
 import type { GraphicsSet } from '../src/ui/graphics.ts';
 import { Shape } from '../src/game/tiles.ts';
 import { DEFAULT_3D_SETTINGS, presentationPreset, read3DSettings, useTreeCards } from '../src/ui/view3DSettings.ts';
@@ -28,10 +28,12 @@ describe('optional reviewed tree cards', () => {
       sourceSha256: string;
       cardSha256: string;
     }[];
+    const brush = JSON.parse(readFileSync(new URL('../docs/forest-cards/brush-manifest.json', import.meta.url), 'utf8')) as typeof manifest;
+    expect(brush).toHaveLength(8);
     expect(manifest).toHaveLength(9);
     expect(manifest.map((m) => m.set)).not.toContain('PC VGA');
     expect(manifest.map((m) => m.set)).not.toContain('Macintosh B&W');
-    for (const item of manifest) {
+    for (const item of [...manifest, ...brush]) {
       for (const [name, hash] of [
         [item.source, item.sourceSha256],
         [item.card, item.cardSha256],
@@ -92,6 +94,22 @@ describe('optional reviewed tree cards', () => {
     trees.forEachFootprint((x, y, size) => footprints.push([x, y, size]));
     expect(footprints).toHaveLength(3);
     expect(footprints.every((f) => f[2] === 0.45)).toBe(true);
+    // Standard brush has four independently anchored clumps, even if no
+    // forest cutout is available. Unsupported brush must not become grass.
+    trees.set(null, [{ base: Shape.Brush }], { brushCards: { width: 256 } } as GraphicsSet, true);
+    expect(trees.mesh.count).toBe(4);
+    trees.faceCamera(camera, (70 * Math.PI) / 180);
+    STANDARD_BRUSH_ANCHORS.forEach(([px, py], i) => {
+      trees.mesh.getMatrixAt(i, matrix);
+      const base = new Vector3(px / 64 - 0.5, 0.5 - py / 64, 0).applyMatrix4(matrix);
+      expect(base.x).toBeCloseTo(px / 64 - 0.5);
+      expect(base.y).toBeCloseTo(0.5 - py / 64);
+      expect(base.z).toBeCloseTo(0.002);
+    });
+    trees.set(null, [{ base: Shape.Brush }], gfx, true);
+    expect(trees.mesh.count).toBe(0);
+    trees.set(null, [{ base: Shape.Brush }], { brushCards: { width: 16 } } as GraphicsSet, true);
+    expect(trees.mesh.count).toBe(1);
     trees.set(null, [{ base: Shape.Forest }], { forestCard: null } as GraphicsSet, true);
     expect(trees.mesh.count).toBe(0);
     trees.dispose();

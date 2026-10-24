@@ -24,7 +24,13 @@ export const STANDARD_TREE_ANCHORS = [
   [48, 55],
   [18, 63],
 ] as const;
-const MAX_CARDS = 4096 * 3;
+export const STANDARD_BRUSH_ANCHORS = [
+  [16, 19],
+  [46, 33],
+  [16, 50],
+  [46, 63],
+] as const;
+const MAX_CARDS = 4096 * 4;
 const SHAPES = [Shape.Town, Shape.Castle, Shape.Dungeon, Shape.Shrine] as number[];
 
 /** Static building/tree cards use filtered scenery, never the raw secret map. */
@@ -47,8 +53,8 @@ export class BuildingBillboards {
     inverted: { value: boolean },
     private readonly kind: 'buildings' | 'trees' = 'buildings',
   ) {
-    this.shapes = kind === 'trees' ? [Shape.Forest] : SHAPES;
-    this.canvas.width = 256;
+    this.shapes = kind === 'trees' ? [Shape.Forest, Shape.Brush] : SHAPES;
+    this.canvas.width = 512;
     this.canvas.height = 64;
     this.ctx = this.canvas.getContext('2d')!;
     this.ctx.imageSmoothingEnabled = false;
@@ -70,7 +76,7 @@ export class BuildingBillboards {
       shader.uniforms.mapInverted = inverted;
       shader.vertexShader = `attribute float buildingTile;\n${shader.vertexShader}`.replace(
         '#include <uv_vertex>',
-        '#include <uv_vertex>\nvMapUv.x = (buildingTile + vMapUv.x) / 4.0;',
+        '#include <uv_vertex>\nvMapUv.x = (buildingTile + vMapUv.x) / 8.0;',
       );
       shader.fragmentShader = `uniform bool mapInverted;\n${shader.fragmentShader}`.replace(
         '#include <dithering_fragment>',
@@ -86,26 +92,30 @@ export class BuildingBillboards {
   }
 
   set(landscape: Landscape | null, cells: ViewCell[], gfx: GraphicsSet, enabled: boolean): void {
-    enabled = enabled && (this.kind === 'buildings' || !!gfx.forestCard);
+    enabled = enabled && (this.kind === 'buildings' || !!gfx.forestCard || !!gfx.brushCards);
     this.positions.length = 0;
     this.mesh.visible = enabled;
     this.mesh.count = 0;
     if (!enabled) return;
-    this.ctx.clearRect(0, 0, 256, 64);
+    this.ctx.clearRect(0, 0, 512, 64);
     const separateTrees = this.kind === 'trees' && !!gfx.treeCards;
     if (separateTrees) this.ctx.drawImage(gfx.treeCards, 0, 0, 192, 64);
-    else if (this.kind === 'trees') this.ctx.drawImage(gfx.forestCard!, 0, 0, 64, 64);
-    else SHAPES.forEach((shape, i) => this.ctx.drawImage(buildingArt(gfx, shape), i * 64, 0));
+    else if (this.kind === 'trees' && gfx.forestCard) this.ctx.drawImage(gfx.forestCard, 0, 0, 64, 64);
+    else if (this.kind === 'buildings') SHAPES.forEach((shape, i) => this.ctx.drawImage(buildingArt(gfx, shape), i * 64, 0));
+    if (this.kind === 'trees' && gfx.brushCards) this.ctx.drawImage(gfx.brushCards, 256, 0, gfx.brushCards.width > 64 ? 256 : 64, 64);
     this.texture.needsUpdate = true;
     const add = (shape: number, x: number, y: number) => {
       if (!this.shapes.includes(shape)) return;
-      if (separateTrees) {
-        STANDARD_TREE_ANCHORS.forEach((anchor, slot) => {
-          this.slots.setX(this.positions.length, slot);
+      if (this.kind === 'trees' && ((shape === Shape.Forest && !gfx.forestCard) || (shape === Shape.Brush && !gfx.brushCards))) return;
+      const separateBrush = this.kind === 'trees' && shape === Shape.Brush && gfx.brushCards!.width > 64;
+      if ((separateTrees && shape === Shape.Forest) || separateBrush) {
+        const anchors = separateBrush ? STANDARD_BRUSH_ANCHORS : STANDARD_TREE_ANCHORS;
+        anchors.forEach((anchor, slot) => {
+          this.slots.setX(this.positions.length, (separateBrush ? 4 : 0) + slot);
           this.positions.push({ x: x + anchor[0] / 64 - 0.5, y: y + 0.5 - anchor[1] / 64, anchor });
         });
       } else {
-        this.slots.setX(this.positions.length, this.shapes.indexOf(shape));
+        this.slots.setX(this.positions.length, this.kind === 'trees' && shape === Shape.Brush ? 4 : this.shapes.indexOf(shape));
         this.positions.push({ x, y });
       }
     };
