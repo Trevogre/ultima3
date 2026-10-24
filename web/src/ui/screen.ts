@@ -44,6 +44,7 @@ import { PlayerRecord, levelUpDue, statusLetter } from '../game/player.ts';
 import { commandMenu, hasMagic } from '../game/context.ts';
 import { memberShape } from '../game/combat.ts';
 import { TILE_SETS, helpPages, PAGE_ROWS, PAGE_WIDTH } from './help.ts';
+import { modelActors } from './modelActors.ts';
 import { journalCard, journalSnapshot, journalTop, wordCard, type JournalLine } from '../game/journal.ts';
 import { TIPS, tipPages, type Tip } from '../game/tips.ts';
 import { CHEATS } from '../game/cheats.ts';
@@ -1004,126 +1005,136 @@ export class Screen implements GameIO {
     const disabled = !this.presentation.supports3D;
     await this.settingsList(
       '3D Settings',
-      () => [
-        {
-          key: 'D',
-          label: `3D map: ${onOff(this.view3D.enabled)}`,
-          disabled,
-          hint: disabled ? '3D view is unavailable on this device.' : 'Off restores the classic flat view.',
-        },
-        {
-          key: 'C',
-          label: `Characters: ${this.view3D.characters ? 'Cards' : 'Flat'}`,
-          disabled,
-          hint: 'Cards turn to face the camera. Flat keeps character sprites on the ground.',
-        },
-        {
-          key: 'L',
-          label: `Buildings: ${this.view3D.buildings ? 'Cards' : 'Flat'}`,
-          disabled,
-          hint: 'Town, castle, dungeon and shrine artwork stands up as camera-facing cards.',
-        },
-        { key: 'T', label: `Distant land: ${onOff(this.view3D.distantTerrain)}`, disabled },
-        { key: 'W', label: `Wall cubes: ${onOff(this.view3D.walls)}`, disabled },
-        { key: 'N', label: `Mountain cubes: ${onOff(this.view3D.mountains)}`, disabled },
-        {
-          key: 'G',
-          label: `Trees/brush: ${this.view3D.treeCards ? 'Cards' : 'Flat'}`,
-          disabled,
-          hint:
-            this.gfx.forestCard || this.gfx.brushCards
-              ? 'Tree/brush cutouts over grass. Nearer foliage can cover characters.'
-              : 'This set has no reviewed cutout; forests stay flat.',
-        },
-        {
-          key: 'E',
-          label: `Mt steps: ${onOff(this.view3D.steppedMountains)}`,
-          disabled,
-          hint: 'Stepped mountains using this set’s existing mountain texture. Requires Mountain cubes.',
-        },
-        {
-          key: 'Z',
-          label: `Lower water: ${onOff(this.view3D.recessedWater)}`,
-          disabled,
-          hint: 'Recess water and add shore sides using neighbouring land textures.',
-        },
-        {
-          key: 'Q',
-          label: `Zoom: ${this.view3D.zoomFiltering}`,
-          disabled,
-          hint: 'Crisp pixels, Stable distant textures, or Auto blending as tiles shrink.',
-        },
-        {
-          key: 'H',
-          label: `Soft fog: ${onOff(this.view3D.softFog)}`,
-          disabled,
-          hint: 'Fade explored ground edges inward. Unknown terrain stays hidden.',
-        },
-        {
-          key: 'V',
-          label: `Face shading: ${onOff(this.view3D.terrainShading)}`,
-          disabled,
-          hint: 'Subtle shading distinguishes cube sides using the original textures.',
-        },
-        {
-          key: 'U',
-          label: `Water glints: ${onOff(this.view3D.waterHighlights)}`,
-          disabled,
-          hint: 'Restrained animated highlights over this tile set’s water artwork.',
-        },
-        {
-          key: 'A',
-          label: `Alpha water: ${onOff(this.view3D.alphaWater)}`,
-          disabled,
-          hint: 'See submerged shore blocks. Enable Lower water for depth.',
-        },
-        {
-          key: 'J',
-          label: `Sun shadows: ${onOff(this.view3D.sunShadows)}`,
-          disabled,
-          hint: 'East-to-west sun casts card silhouettes. Long at dawn/dusk; no sun shadows at night.',
-        },
-        {
-          key: 'K',
-          label: `Grass depth: ${onOff(this.view3D.grassDepth)}`,
-          disabled,
-          hint: this.gfx.grass
-            ? 'Short grass cards; fade overhead and far away. Original grass stays beneath.'
-            : 'No reviewed grass cutout for this set; grass remains flat.',
-        },
-        { key: 'M', label: `Mouse camera: ${onOff(this.view3D.mouseCamera)}`, disabled },
-        {
-          key: 'S',
-          label: `Shadows: ${onOff(this.view3D.contactShadows)}`,
-          disabled,
-          hint: 'Contact shadows beneath visible land cards. No changes to sprite art.',
-        },
-        {
-          key: 'Y',
-          label: `Day/night: ${onOff(this.view3D.dayNight)}`,
-          disabled,
-          hint: 'Cosmetic outdoor lighting over 96 surface turns. No effect on gameplay or dungeon light.',
-        },
-        {
-          key: 'F',
-          label: `Camera: ${this.view3D.fixedCamera ? 'Fixed' : 'Free'}`,
-          disabled,
-          hint: 'F4 switches fixed angled view and free mouse camera. Scroll zooms in either mode.',
-        },
-        { key: 'R', label: 'Reset camera', disabled },
-        {
-          key: 'O',
-          label: `Rotation: ${this.view3D.fixedRotation}`,
-          disabled,
-          hint: 'Map rotation in degrees. Default 5; independent of camera tilt.',
-        },
-        {
-          key: 'I',
-          label: `Tilt: ${this.view3D.fixedAngle}`,
-          disabled,
-          hint: 'Degrees from straight down. Choose 0 for overhead; default 45.',
-        },
-      ],
+      () =>
+        [
+          {
+            key: 'D',
+            label: `3D map: ${onOff(this.view3D.enabled)}`,
+            disabled,
+            hint: disabled ? '3D view is unavailable on this device.' : 'Off restores the classic flat view.',
+          },
+          {
+            key: 'P',
+            label: `Style: ${this.view3D.renderStyle === 'Models' ? 'Low-poly' : 'Tile cards'}`,
+            disabled,
+            hint: 'Low-poly uses solid mesh prototypes. Tile-specific controls below apply to Tile cards.',
+          },
+          {
+            key: 'C',
+            label: `Characters: ${this.view3D.characters ? 'Cards' : 'Flat'}`,
+            disabled,
+            hint: 'Cards turn to face the camera. Flat keeps character sprites on the ground.',
+          },
+          {
+            key: 'L',
+            label: `Buildings: ${this.view3D.buildings ? 'Cards' : 'Flat'}`,
+            disabled,
+            hint: 'Town, castle, dungeon and shrine artwork stands up as camera-facing cards.',
+          },
+          { key: 'T', label: `Distant land: ${onOff(this.view3D.distantTerrain)}`, disabled },
+          { key: 'W', label: `Wall cubes: ${onOff(this.view3D.walls)}`, disabled },
+          { key: 'N', label: `Mountain cubes: ${onOff(this.view3D.mountains)}`, disabled },
+          {
+            key: 'G',
+            label: `Trees/brush: ${this.view3D.treeCards ? 'Cards' : 'Flat'}`,
+            disabled,
+            hint:
+              this.gfx.forestCard || this.gfx.brushCards
+                ? 'Tree/brush cutouts over grass. Nearer foliage can cover characters.'
+                : 'This set has no reviewed cutout; forests stay flat.',
+          },
+          {
+            key: 'E',
+            label: `Mt steps: ${onOff(this.view3D.steppedMountains)}`,
+            disabled,
+            hint: 'Stepped mountains using this set’s existing mountain texture. Requires Mountain cubes.',
+          },
+          {
+            key: 'Z',
+            label: `Lower water: ${onOff(this.view3D.recessedWater)}`,
+            disabled,
+            hint: 'Recess water and add shore sides using neighbouring land textures.',
+          },
+          {
+            key: 'Q',
+            label: `Zoom: ${this.view3D.zoomFiltering}`,
+            disabled,
+            hint: 'Crisp pixels, Stable distant textures, or Auto blending as tiles shrink.',
+          },
+          {
+            key: 'H',
+            label: `Soft fog: ${onOff(this.view3D.softFog)}`,
+            disabled,
+            hint: 'Fade explored ground edges inward. Unknown terrain stays hidden.',
+          },
+          {
+            key: 'V',
+            label: `Face shading: ${onOff(this.view3D.terrainShading)}`,
+            disabled,
+            hint: 'Subtle shading distinguishes cube sides using the original textures.',
+          },
+          {
+            key: 'U',
+            label: `Water glints: ${onOff(this.view3D.waterHighlights)}`,
+            disabled,
+            hint: 'Restrained animated highlights over this tile set’s water artwork.',
+          },
+          {
+            key: 'A',
+            label: `Alpha water: ${onOff(this.view3D.alphaWater)}`,
+            disabled,
+            hint: 'See submerged shore blocks. Enable Lower water for depth.',
+          },
+          {
+            key: 'J',
+            label: `Sun shadows: ${onOff(this.view3D.sunShadows)}`,
+            disabled,
+            hint: 'East-to-west sun casts card silhouettes. Long at dawn/dusk; no sun shadows at night.',
+          },
+          {
+            key: 'K',
+            label: `Grass depth: ${onOff(this.view3D.grassDepth)}`,
+            disabled,
+            hint: this.gfx.grass
+              ? 'Short grass cards; fade overhead and far away. Original grass stays beneath.'
+              : 'No reviewed grass cutout for this set; grass remains flat.',
+          },
+          { key: 'M', label: `Mouse camera: ${onOff(this.view3D.mouseCamera)}`, disabled },
+          {
+            key: 'S',
+            label: `Shadows: ${onOff(this.view3D.contactShadows)}`,
+            disabled,
+            hint: 'Contact shadows beneath visible land cards. No changes to sprite art.',
+          },
+          {
+            key: 'Y',
+            label: `Day/night: ${onOff(this.view3D.dayNight)}`,
+            disabled,
+            hint: 'Cosmetic outdoor lighting over 96 surface turns. No effect on gameplay or dungeon light.',
+          },
+          {
+            key: 'F',
+            label: `Camera: ${this.view3D.fixedCamera ? 'Fixed' : 'Free'}`,
+            disabled,
+            hint: 'F4 switches fixed angled view and free mouse camera. Scroll zooms in either mode.',
+          },
+          { key: 'R', label: 'Reset camera', disabled },
+          {
+            key: 'O',
+            label: `Rotation: ${this.view3D.fixedRotation}`,
+            disabled,
+            hint: 'Map rotation in degrees. Default 5; independent of camera tilt.',
+          },
+          {
+            key: 'I',
+            label: `Tilt: ${this.view3D.fixedAngle}`,
+            disabled,
+            hint: 'Degrees from straight down. Choose 0 for overhead; default 45.',
+          },
+        ].map((option) => ({
+          ...option,
+          disabled: option.disabled || (this.view3D.renderStyle === 'Models' && 'CLWNGEQHVUAKS'.includes(option.key)),
+        })),
       async (key) => {
         const setting = (
           {
@@ -1149,6 +1160,7 @@ export class Screen implements GameIO {
           } as const
         )[key as 'D' | 'C' | 'L' | 'T' | 'W' | 'N' | 'M' | 'F' | 'Y' | 'S' | 'E' | 'Z' | 'G' | 'H' | 'V' | 'U' | 'A' | 'J' | 'K'];
         if (setting) this.set3DSettings({ ...this.view3D, [setting]: !this.view3D[setting] });
+        else if (key === 'P') this.set3DSettings({ ...this.view3D, renderStyle: this.view3D.renderStyle === 'Cards' ? 'Models' : 'Cards' });
         else if (key === 'Q') {
           const modes = ['Crisp', 'Stable', 'Auto'] as const;
           this.set3DSettings({ ...this.view3D, zoomFiltering: modes[(modes.indexOf(this.view3D.zoomFiltering) + 1) % modes.length] });
@@ -1190,9 +1202,16 @@ export class Screen implements GameIO {
               disabled: !this.presentation.supports3D,
               hint: 'Existing tile art with depth, cards, lighting and contact shadows.',
             },
+            {
+              key: 'M',
+              label: 'Low-poly (preview)',
+              disabled: !this.presentation.supports3D,
+              hint: 'Actual mesh terrain and directional figures. Early model-family prototypes.',
+            },
             { key: 'B', label: 'Back' },
           ]);
-          if (picked === 0 || picked === 1) this.set3DSettings(applyPresentationPreset(this.view3D, picked === 0 ? 'Classic' : 'Depth'));
+          if (picked >= 0 && picked <= 2)
+            this.set3DSettings(applyPresentationPreset(this.view3D, (['Classic', 'Depth', 'Models'] as const)[picked]));
         } else if (key === 'L') this.scanlines = !this.scanlines;
       },
     );
@@ -2353,6 +2372,13 @@ export class Screen implements GameIO {
     map.setCombat(!!world.combat);
     map.setLandscape(world.combat || !this.view3D.distantTerrain ? null : buildLandscape(world, this.view), gfx, this.view.cells);
     map.setActorLayout(this.view.cells, this.partyStyle === 'grid');
+    if (map.modelMode)
+      map.setModelActors(
+        modelActors(world, this.view, world.inTownOrCastle ? 'line' : 'grid'),
+        `${world.current.id}:${world.combat ? 'combat' : 'map'}`,
+        world.combat ? VIEW_SIZE : world.mapSize,
+        !world.combat && (world.onSurface || world.party.location === Location.Ambrosia),
+      );
     const tile = cell * 2;
     for (let i = 0; i < this.view.cells.length; i++) {
       const c = this.view.cells[i];
@@ -2376,6 +2402,13 @@ export class Screen implements GameIO {
 
   /** The same sprite composition supplies the legacy screen and the native map's actor layer. */
   private drawViewportActors(ctx: CanvasRenderingContext2D, c: ViewCell, dx: number, dy: number, tile: number, effectContext = ctx): void {
+    if (ctx === this.presentation.map.actorContext && this.presentation.map.modelMode) {
+      if (c.hit) {
+        if (this.burstTiles) this.drawBurst(dx, dy, tile, c.hit.frame, effectContext);
+        else this.gfx.drawShape(effectContext, c.hit.shape, dx, dy, tile, { masked: true, altFrame: true });
+      }
+      return;
+    }
     if (
       ctx === this.presentation.map.actorContext &&
       this.view3D.sunShadows &&

@@ -33,6 +33,8 @@ import { GrassDepth } from './grassDepth.ts';
 import { SunShadows } from './sunShadows.ts';
 import { WaterSurface } from './waterSurface.ts';
 import { cardGroundLift } from './cardGroundLift.ts';
+import { ModelScene } from './modelScene.ts';
+import type { ModelActor } from './modelActors.ts';
 
 export interface ScreenRect {
   x: number;
@@ -44,6 +46,7 @@ export interface ScreenRect {
 /** Batched whole-map scenery plus local terrain and visibility-limited actor quads. */
 export class TileMapScene {
   readonly scene = new Scene();
+  private readonly models = new ModelScene();
   readonly camera: OrthographicCamera;
   readonly rect: ScreenRect;
   readonly terrainContext: CanvasRenderingContext2D;
@@ -96,6 +99,15 @@ export class TileMapScene {
   get classicView(): boolean {
     return !this.options.enabled;
   }
+  get modelMode(): boolean {
+    return this.options.renderStyle === 'Models';
+  }
+  get modelShadows(): boolean {
+    return this.modelMode && this.models.shadowEnabled;
+  }
+  setModelActors(actors: ModelActor[], context: string, side: number, wraps: boolean): void {
+    if (this.modelMode) this.models.setActors(actors, context, side, wraps);
+  }
   onCameraModeToggle: (() => void) | null = null;
   onCardModeChange: (() => void) | null = null;
 
@@ -106,6 +118,7 @@ export class TileMapScene {
     readonly inspectionMode = false,
   ) {
     this.visibleSide = side;
+    this.scene.add(this.models.group);
     const size = side * 2 * cell;
     this.rect = { x: cell, y: cell, w: size, h: size };
     const contexts = [false, true, true].map((transparent, layer) => {
@@ -255,6 +268,37 @@ export class TileMapScene {
 
   /** Batch the entire landscape in one draw call, using a small animated tile atlas. */
   setLandscape(landscape: Landscape | null, gfx: GraphicsSet, cells: ViewCell[]): void {
+    this.models.group.visible = this.modelMode;
+    if (this.modelMode) {
+      this.models.setLandscape(landscape, cells, gfx, this.options.recessedWater);
+      for (const mesh of [
+        this.grass.mesh,
+        this.water.mesh,
+        this.fog.mesh,
+        this.trees.mesh,
+        this.buildings.mesh,
+        this.cubes.mesh,
+        this.shoreline.mesh,
+        this.landscapeMesh,
+        this.localTerrain,
+        this.shadows.mesh,
+        this.sunShadows.actors.mesh,
+        this.sunShadows.buildings.mesh,
+        this.sunShadows.trees.mesh,
+      ])
+        mesh.visible = false;
+      this.landscapeSide = landscape?.side ?? 0;
+      this.fitX = landscape ? (landscape.wraps ? -0.5 : (landscape.side - 1) / 2 - landscape.partyX) : 0;
+      this.fitY = landscape ? (landscape.wraps ? 0.5 : landscape.partyY - (landscape.side - 1) / 2) : 0;
+      this.groundEffects.forEach((mesh, i) => {
+        mesh.position.z = terrainElevation(cells[i].base, this.options.recessedWater) + 0.01;
+      });
+      this.updateCamera();
+      return;
+    }
+    this.localTerrain.visible = true;
+    this.shadows.mesh.visible = true;
+    for (const mesh of [this.water.mesh, this.fog.mesh, this.cubes.mesh, this.shoreline.mesh]) mesh.visible = true;
     this.grass.set(cells, gfx, this.options.grassDepth, landscape);
     this.water.set(landscape, cells, gfx, this.options);
     this.fog.set(landscape, cells, this.options.softFog, this.options.recessedWater);
@@ -348,10 +392,10 @@ export class TileMapScene {
     const centre = Math.floor(cells.length / 2);
     const split = this.options.characters && partyGrid && !!cells[centre].party;
     this.actorCards.forEach(({ mesh }, i) => {
-      mesh.visible = i !== centre || !split;
+      mesh.visible = !this.modelMode && (i !== centre || !split);
     });
     this.partyCards.forEach(({ mesh }) => {
-      mesh.visible = split;
+      mesh.visible = !this.modelMode && split;
     });
     this.faceActors();
   }
@@ -406,6 +450,7 @@ export class TileMapScene {
 
   /** Tint only the map; menus, status text and the moon indicators stay bright. */
   setDaylight(colour: [number, number, number]): void {
+    this.models.setDaylight(colour);
     for (const material of this.materials) material.color.setRGB(...colour);
     this.buildings.setDaylight(colour);
     this.trees.setDaylight(colour);
@@ -415,11 +460,13 @@ export class TileMapScene {
   }
 
   setSun(phase: number, timer: number, outdoors: boolean): void {
+    this.models.setSun(phase, timer, outdoors && this.options.sunShadows);
     this.sunShadows.setSun(phase, timer, outdoors && this.options.sunShadows);
   }
 
   /** Called only after actual visible card artwork has been drawn. */
   addActorShadow(x: number, y: number, size: number, shape: number): void {
+    if (this.modelMode) return;
     if (!this.options.characters) return;
     const tile = this.rect.w / this.visibleSide;
     const col = (x - this.rect.x) / tile;
@@ -520,6 +567,7 @@ export class TileMapScene {
     this.camera.zoom = this.zoom;
     this.camera.updateProjectionMatrix();
     this.grass.faceCamera(this.camera, this.tilt, (this.rect.w / this.visibleSide) * this.zoom);
+    if (this.modelMode) this.grass.mesh.visible = false;
     this.faceActors();
     this.buildings.faceCamera(this.camera, this.tilt);
     this.trees.faceCamera(this.camera, this.tilt);
@@ -549,6 +597,7 @@ export class TileMapScene {
   }
 
   dispose(): void {
+    this.models.dispose();
     this.grass.dispose();
     this.sunShadows.dispose();
     this.water.dispose();

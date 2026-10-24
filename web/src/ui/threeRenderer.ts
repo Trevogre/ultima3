@@ -9,6 +9,7 @@ import {
   MeshBasicMaterial,
   NearestFilter,
   NoToneMapping,
+  PCFSoftShadowMap,
   OrthographicCamera,
   PlaneGeometry,
   Scene,
@@ -127,6 +128,7 @@ export class ThreeRenderer {
       this.renderer.outputColorSpace = SRGBColorSpace;
       this.renderer.toneMapping = NoToneMapping;
       this.renderer.autoClear = false;
+      this.renderer.shadowMap.type = PCFSoftShadowMap;
       this.controls = new MapCameraControls(canvas, this.map);
       this.fallback = null;
       canvas.addEventListener('webglcontextlost', this.onLost);
@@ -177,6 +179,7 @@ export class ThreeRenderer {
       this.renderer.clear();
       this.renderer.render(this.scene, this.camera);
       if (presentation.mapVisible) {
+        this.renderer.shadowMap.enabled = this.map.modelShadows;
         const r = this.map.rect;
         this.renderer.setViewport(r.x, height - r.y - r.h, r.w, r.h);
         this.renderer.setScissor(r.x, height - r.y - r.h, r.w, r.h);

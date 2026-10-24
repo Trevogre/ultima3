@@ -1,6 +1,7 @@
 export type ZoomFiltering = 'Crisp' | 'Stable' | 'Auto';
 
 export interface View3DSettings {
+  renderStyle: 'Cards' | 'Models';
   enabled: boolean;
   characters: boolean;
   buildings: boolean;
@@ -31,6 +32,7 @@ export interface View3DSettings {
 }
 
 export const DEFAULT_3D_SETTINGS: Readonly<View3DSettings> = {
+  renderStyle: 'Cards',
   enabled: true,
   characters: true,
   buildings: true,
@@ -61,6 +63,7 @@ export const DEFAULT_3D_SETTINGS: Readonly<View3DSettings> = {
 };
 
 const DEPTH_OPTIONS = {
+  renderStyle: 'Cards',
   treeCards: false,
   zoomFiltering: 'Auto',
   softFog: true,
@@ -82,7 +85,7 @@ const DEPTH_OPTIONS = {
   recessedWater: true,
 } as const;
 
-export type PresentationPreset = 'Classic' | 'Depth';
+export type PresentationPreset = 'Classic' | 'Depth' | 'Models';
 
 export function useTreeCards(enabled: boolean, tilt: number, hasCutout: boolean): boolean {
   return enabled && hasCutout && tilt > 0.001;
@@ -91,13 +94,15 @@ export function useTreeCards(enabled: boolean, tilt: number, hasCutout: boolean)
 /** Presets are derived labels, never a second source of saved display state. */
 export function presentationPreset(settings: View3DSettings): PresentationPreset | 'Custom' {
   if (!settings.enabled) return 'Classic';
+  if (settings.renderStyle === 'Models') return 'Models';
   return (Object.keys(DEPTH_OPTIONS) as (keyof typeof DEPTH_OPTIONS)[]).every((key) => settings[key] === DEPTH_OPTIONS[key])
     ? 'Depth'
     : 'Custom';
 }
 
 export function applyPresentationPreset(settings: View3DSettings, preset: PresentationPreset): View3DSettings {
-  return preset === 'Classic' ? { ...settings, enabled: false } : { ...settings, ...DEPTH_OPTIONS };
+  if (preset === 'Classic') return { ...settings, enabled: false };
+  return { ...settings, ...DEPTH_OPTIONS, renderStyle: preset === 'Models' ? 'Models' : 'Cards' };
 }
 
 /** Old or malformed preferences get defaults; explicit Off choices are preserved. */
@@ -105,11 +110,12 @@ export function read3DSettings(value: unknown): View3DSettings {
   const settings = { ...DEFAULT_3D_SETTINGS };
   if (!value || typeof value !== 'object') return settings;
   for (const key of Object.keys(settings) as (keyof View3DSettings)[]) {
-    if (key === 'fixedAngle' || key === 'fixedRotation' || key === 'zoomFiltering') continue;
+    if (key === 'fixedAngle' || key === 'fixedRotation' || key === 'zoomFiltering' || key === 'renderStyle') continue;
     const saved: unknown = Reflect.get(value, key);
     if (typeof saved === 'boolean') settings[key] = saved;
   }
   const filtering: unknown = Reflect.get(value, 'zoomFiltering');
+  if (Reflect.get(value, 'renderStyle') === 'Models') settings.renderStyle = 'Models';
   if (filtering === 'Crisp' || filtering === 'Stable' || filtering === 'Auto') settings.zoomFiltering = filtering;
   const angle: unknown = Reflect.get(value, 'fixedAngle');
   if (typeof angle === 'number' && Number.isFinite(angle) && angle >= 0 && angle <= 70) settings.fixedAngle = angle;

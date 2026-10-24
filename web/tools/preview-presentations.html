@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Expanded art and model preview</title>
+  </head>
+  <body style="margin: 0; background: #20292b; color: #eee; font: 16px system-ui">
+    <div style="padding: 12px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap">
+      <label
+        >Style
+        <select id="style">
+          <option>Models</option>
+          <option>Cards</option>
+        </select></label
+      >
+      <label
+        >Tiles
+        <select id="tiles">
+          <option>Van Gogh</option>
+          <option>Standard</option>
+          <option>Macintosh B&amp;W</option>
+        </select></label
+      >
+      <button id="orbit">Rotate 90°</button><button id="overhead">Overhead</button><button id="angle">45° tilt</button>
+      <button id="zoom">Zoom</button><button id="night">Day/night</button><button id="move">Walk east</button>
+      <span>Isolated fixture — no game saves or preferences.</span>
+    </div>
+    <canvas aria-label="Presentation preview"></canvas>
+    <p id="result" style="margin: 12px"></p>
+    <script type="module">
+      import * as T from 'three';
+      import { GraphicsSet } from '/src/ui/graphics.ts';
+      import { TileMapScene } from '/src/ui/tileMapScene.ts';
+      import { DEFAULT_3D_SETTINGS } from '/src/ui/view3DSettings.ts';
+      import { Shape } from '/src/game/tiles.ts';
+      const canvas = document.querySelector('canvas');
+      const renderer = new T.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
+      renderer.setSize(900, 900);
+      renderer.outputColorSpace = T.SRGBColorSpace;
+      renderer.shadowMap.type = T.PCFSoftShadowMap;
+      const map = new TileMapScene(32, 11, () => {}, true);
+      const landscape = { side: 19, partyX: 9, partyY: 9, wraps: false, shapes: new Uint8Array(19 * 19).fill(Shape.Grass) };
+      for (let y = 0; y < 19; y++)
+        for (let x = 0; x < 19; x++) {
+          let s = Shape.Grass;
+          if (x < 3 || x > 15 || y < 3 || y > 15) s = Shape.Void;
+          else if (x >= 12) s = Shape.Water;
+          else if ((x + y * 3) % 13 === 0) s = Shape.Forest;
+          else if ((x * 3 + y) % 17 === 0) s = Shape.Brush;
+          if (x === 5 && y >= 5 && y <= 10) s = Shape.Mountains;
+          landscape.shapes[y * 19 + x] = s;
+        }
+      landscape.shapes[7 * 19 + 8] = Shape.Town;
+      landscape.shapes[5 * 19 + 10] = Shape.Castle;
+      landscape.shapes[11 * 19 + 10] = Shape.Shrine;
+      landscape.shapes[5 * 19 + 5] = Shape.Dungeon;
+      let gfx,
+        night = false,
+        step = 0;
+      const cells = Array.from({ length: 121 }, (_, i) => ({ base: landscape.shapes[(Math.floor(i / 11) + 4) * 19 + (i % 11) + 4] }));
+      async function load() {
+        gfx = await GraphicsSet.load(document.querySelector('#tiles').value, '/graphics/');
+        draw();
+      }
+      function draw() {
+        const style = document.querySelector('#style').value;
+        map.setOptions({ ...DEFAULT_3D_SETTINGS, renderStyle: style, fixedCamera: false, treeCards: true });
+        map.beginFrame();
+        map.setDaylight(night ? [0.53, 0.61, 0.8] : [1, 1, 1]);
+        map.setSun(night ? 0 : 4, 12, true);
+        map.setLandscape(landscape, gfx, cells);
+        map.setActorLayout(cells, false);
+        cells.forEach((c, i) => {
+          const x = 32 + (i % 11) * 64,
+            y = 32 + Math.floor(i / 11) * 64;
+          gfx.drawShape(
+            map.terrainContext,
+            c.base === Shape.Forest || c.base === Shape.Brush
+              ? map.forestGround(c.base, gfx)
+              : [Shape.Town, Shape.Castle, Shape.Shrine].includes(c.base)
+                ? Shape.Grass
+                : c.base,
+            x,
+            y,
+            64,
+          );
+        });
+        const actors = [
+          { id: 'fighter', shape: 136, x: step * 0.25 - 0.25, y: -0.25, worldX: 9 + step, worldY: 9, size: 0.65, ground: Shape.Grass },
+          { id: 'wizard', shape: 140, x: 0.4, y: 0.25, worldX: 9, worldY: 9, size: 0.65, ground: Shape.Grass },
+          { id: 'orc', shape: 48, x: -2, y: 1, worldX: 7, worldY: 8, size: 1, ground: Shape.Grass },
+        ];
+        actors.forEach((a) => {
+          const x = 32 + (a.x + 5.5 - a.size / 2) * 64,
+            y = 32 + (5.5 - a.y - a.size / 2) * 64;
+          gfx.drawShape(map.actorContext, a.shape, x, y, 64 * a.size, { masked: true, card: true });
+        });
+        map.setModelActors(actors, 'fixture', 19, false);
+        map.changed();
+        render();
+        document.querySelector('#result').textContent =
+          `${style} · ${document.querySelector('#tiles').value} · heading follows movement; orbit only changes the camera.`;
+      }
+      function render() {
+        renderer.shadowMap.enabled = map.modelShadows;
+        renderer.render(map.scene, map.camera);
+      }
+      document.querySelector('#tiles').onchange = load;
+      document.querySelector('#style').onchange = draw;
+      document.querySelector('#orbit').onclick = () => {
+        map.orbit(Math.PI / 2 / 0.006, 0);
+        render();
+      };
+      document.querySelector('#overhead').onclick = () => {
+        map.orbit(0, -1000);
+        render();
+      };
+      document.querySelector('#angle').onclick = () => {
+        map.orbit(0, (Math.PI / 4 - map.tilt) / 0.006);
+        render();
+      };
+      document.querySelector('#zoom').onclick = () => {
+        map.zoomBy(map.zoom === 1 ? 800 : -800);
+        render();
+      };
+      document.querySelector('#night').onclick = () => {
+        night = !night;
+        draw();
+      };
+      document.querySelector('#move').onclick = () => {
+        step = (step + 1) % 5;
+        draw();
+      };
+      await load();
+    </script>
+  </body>
+</html>

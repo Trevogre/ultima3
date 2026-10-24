@@ -1,0 +1,31 @@
+Low-poly model preview
+
+Settings > Visuals > Presentation > Low-poly (preview), or toggle Style in
+3D Settings. Classic and Depth remain available. The selected historical
+or painterly tile set is preserved when switching model styles.
+
+This initial pass uses locally authored procedural solid meshes, not a paid
+asset provider. Model factories in modelAssets.ts cover terrain, trees,
+brush, houses, castles, cave entrances, walls, shrines, chests, horses,
+ships, portals, and directional humanoid / creature families. They use
+faceted geometry with vertex colours, instancing, real depth testing and
+directional light/shadow maps. They do not billboard toward the camera.
+The next art stage can replace individual factories with reviewed GLBs.
+
+Characters keep a presentation-only heading inferred from movement. Stable
+party/monster IDs preserve it across redraws; wrapping map seams are handled
+and large teleports do not turn a figure. Camera rotation never changes
+heading. Party grid and follower layouts are supported. Actor selection
+uses the ordinary visibility-filtered viewport; scenery uses the explored
+landscape. No game state or exploration is written by this renderer.
+
+This is a model-family prototype, not 96 individually sculpted, animated
+assets. Several enemies intentionally share a family mesh; weapons/armour
+are not yet exact equipment models. Functional letter tiles remain textures
+on solid ground blocks. Menus and first-person dungeons keep their existing
+renderers. Tile-specific card/filter/cube controls apply to the tile style;
+camera, distant terrain, lowered water, sun shadows and day/night also work
+with models. Real model shadows use the same world-space sun clock.
+
+Safe visual fixture: /tools/preview-presentations.html. It owns synthetic
+terrain and actors and never reads or writes saves or display preferences.
