@@ -7,6 +7,7 @@ alongside their prompts so this packing step is repeatable without a provider.
 from pathlib import Path
 import hashlib
 import json
+import math
 from PIL import Image, ImageDraw
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -115,31 +116,74 @@ forest.save(OUT / 'Van Gogh-ForestCard.png')
 for index, plants in [(2,bushes),(3,forest)]:
     for frame in range(2):
         tile=get(1,frame); tile.alpha_composite(plants); put(index,frame,tile)
+
+# These generated rows have their own seams, unlike the rest of the draft.
+# Use ONE complete painting per subject. Only the flag cloth may animate.
+building_specs = {
+    6: {'crop': (0,477,88,550), 'flag': (45,0,92,24),
+        'outline': [(15,35),(36,35),(36,0),(45,0),(45,35),(60,35),(60,61),(93,16),(97,16),(125,62),(125,127),(15,127)]},
+    7: {'crop': (0,552,88,628), 'flag': (66,0,107,25),
+        'outline': [(10,23),(59,23),(59,0),(68,0),(68,23),(124,23),(124,127),(10,127)]},
+}
+building_masks = {}
+for index,spec in building_specs.items():
+    base=draft.crop(spec['crop']).resize((N,N),Image.Resampling.LANCZOS)
+    base.putalpha(255)
+    alternate=base.copy()
+    x0,y0,x1,y1=spec['flag']
+    def blue(pixel):
+        r,g,b,a=pixel
+        return b>100 and b>g*1.08 and b>r*1.4
+    # Move existing paint strokes within the blue cloth. Architecture, pole,
+    # silhouette and backdrop remain byte-identical; no second castle painting.
+    for y in range(y0,y1):
+        for x in range(x0,x1):
+            sy=max(y0,min(y1-1,y+round(3*math.sin((x-x0)*0.18+0.9))))
+            if blue(base.getpixel((x,y))) and blue(base.getpixel((x,sy))):
+                alternate.putpixel((x,y),base.getpixel((x,sy)))
+    put(index,0,base);put(index,1,alternate)
+    # Reviewed generous silhouettes, not colour removal: blue windows and cool
+    # stone edges belong to the building. The surrounding paint stays on ground.
+    mask=Image.new('L',(N,N)); painter=ImageDraw.Draw(mask)
+    painter.polygon(spec['outline'],fill=255)
+    painter.rectangle((x0,y0,x1-1,y1-1),fill=255)
+    building_masks[index]=mask
 atlas.save(OUT / 'Van Gogh-Tiles.png')
 
 # Buildings get explicit cutouts: the new painted grass is not pixel-identical
 # to the separate grass tile, so the historical background matcher cannot work.
 building_cards=Image.new('RGBA',(8*N,N))
+building_grounds=Image.new('RGBA',(8*N,N))
 for slot,index in enumerate([6,7,5,62]):
     for frame in range(2):
         tile=get(index,frame)
         if index in [6,7]:
-            # Flood only cold exterior ground. Enclosed blue doors are retained.
-            px=tile.load(); seen=set(); queue=[(x,y) for x in range(N) for y in [0,N-1]]+[(x,y) for y in range(N) for x in [0,N-1]]
-            for x,y in queue:
-                if (x,y) in seen: continue
-                seen.add((x,y)); r,g,b,a=px[x,y]
-                if a and not (g>r*1.05 or b>r*1.12): continue
-                px[x,y]=(0,0,0,0)
-                for nx,ny in [(x-1,y),(x+1,y),(x,y-1),(x,y+1)]:
-                    if 0<=nx<N and 0<=ny<N and (nx,ny) not in seen: queue.append((nx,ny))
+            mask=building_masks[index]
+            ground=tile.copy()
+            ground.paste(get(1,0),(0,0),mask)
+            tile.putalpha(mask)
         elif index==5:
             # Reviewed cave arch region, excluding the surrounding mountain.
             mask=Image.new('L',(N,N)); d=ImageDraw.Draw(mask)
             d.ellipse((18,44,91,150),fill=255)
             tile.putalpha(mask)
+            ground=get(4,0)
+        else:
+            ground=get(1,0)
         building_cards.alpha_composite(tile,((slot+frame*4)*N,0))
+        building_grounds.alpha_composite(ground,((slot+frame*4)*N,0))
 building_cards.save(OUT / 'Van Gogh-BuildingCards.png')
+building_grounds.save(OUT / 'Van Gogh-BuildingGrounds.png')
+
+# Side-by-side production review: flat frame A/B, then card A/B over backdrop.
+building_review=Image.new('RGBA',(4*256,2*280),'#777777')
+for row,index in enumerate([6,7]):
+    for frame in range(2):
+        building_review.alpha_composite(get(index,frame).resize((256,256)),(frame*256,row*280+24))
+        card=building_cards.crop(((row+frame*4)*N,0,(row+frame*4+1)*N,N))
+        building_review.alpha_composite(card.resize((256,256)),((2+frame)*256,row*280+24))
+ImageDraw.Draw(building_review).text((8,4),'Town / castle: flat A, flat B, card A, card B',fill='white')
+building_review.convert('RGB').save(DOC/'building-review.png')
 
 # Neutral background inspection sheet makes alpha holes visible in review.
 review=Image.new('RGBA',atlas.size,'#777777'); review.alpha_composite(atlas)

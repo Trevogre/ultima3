@@ -20,8 +20,14 @@ The functional alternate I/door and spell HIT symbols retain their slots.
 Trees and brush came from a second generation. Seven independent cutouts
 are fitted to native source bounds and trunk anchors, then composed over
 the new grass to form the flat tiles. Cards and overhead art therefore use
-the same pixels. Building cards are separate new-art cutouts, paired with
-their alternate frames. Characters use the atlas's own alpha.
+the same pixels. Town and castle use corrected row-specific source crops,
+one static painting per building, and flag-cloth-only animation. Reviewed
+silhouette envelopes preserve blue windows and shaded stone; no colour
+key removes building detail. BuildingGrounds preserves the original painted
+surroundings on the ground beneath the card. The covered foundation uses
+this set's existing grass, rather than removing the surrounding painting.
+Characters use the atlas's own alpha. building-review.png compares both
+flat and standing frames. Tests check the shipped PNG pixels directly.
 
 This is a first art pass, not a claim that every generated silhouette is
 final. UI, font and first-person dungeon art currently use the existing

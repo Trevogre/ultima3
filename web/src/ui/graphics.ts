@@ -220,6 +220,8 @@ export class GraphicsSet {
     readonly vegetation: { image: HTMLImageElement; layout: VegetationLayout } | null = null,
     /** Optional expanded-art building cutouts: four subjects, then four alternate frames. */
     readonly buildingCards: HTMLImageElement | null = null,
+    /** Expanded-art surroundings preserved beneath the standing building. */
+    readonly buildingGrounds: HTMLImageElement | null = null,
   ) {
     this.tileSize = tiles.width / TILE_COLUMNS;
     this.opaqueTiles = document.createElement('canvas');
@@ -298,6 +300,7 @@ export class GraphicsSet {
       grassCards && GRASS_LAYOUTS[name] ? { image: grassCards, patches: GRASS_LAYOUTS[name] } : null,
       vegetationCards && VEGETATION_LAYOUTS[name] ? { image: vegetationCards, layout: VEGETATION_LAYOUTS[name] } : null,
       await tryLoad('BuildingCards', ['png'], false),
+      await tryLoad('BuildingGrounds', ['png'], false),
     );
   }
 

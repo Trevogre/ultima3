@@ -9,6 +9,24 @@ export function buildingGround(shape: number): number {
   return shape === Shape.Dungeon ? Shape.Mountains : Shape.Grass;
 }
 
+/** Keep an expanded set's painted surroundings in world space below its card. */
+export function drawBuildingGround(
+  ctx: CanvasRenderingContext2D,
+  gfx: GraphicsSet,
+  shape: number,
+  x: number,
+  y: number,
+  size: number,
+): void {
+  const slot = ([Shape.Town, Shape.Castle, Shape.Dungeon, Shape.Shrine] as number[]).indexOf(shape);
+  if (gfx.buildingGrounds && slot >= 0) {
+    const sourceSize = gfx.buildingGrounds.height;
+    const rect = gfx.tileRect(shape >> 1);
+    const frame = Math.floor(rect.x / rect.w) % 2;
+    ctx.drawImage(gfx.buildingGrounds, (slot + frame * 4) * sourceSize, 0, sourceSize, sourceSize, x, y, size, size);
+  } else gfx.drawShape(ctx, buildingGround(shape), x, y, size);
+}
+
 /** Remove only background connected to an image edge, keeping enclosed details intact. */
 export function cutoutBackground(pixels: Uint8ClampedArray, ground: Uint8ClampedArray, width: number, height: number): void {
   const rgba = (i: number): string => `${pixels[i * 4]},${pixels[i * 4 + 1]},${pixels[i * 4 + 2]}`;

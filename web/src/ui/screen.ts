@@ -38,7 +38,7 @@ import type { ScreenRect } from './tileMapScene.ts';
 import { buildLandscape } from '../game/landscape.ts';
 import { Shape } from '../game/tiles.ts';
 import { applyPresentationPreset, presentationPreset, DEFAULT_3D_SETTINGS, type View3DSettings } from './view3DSettings.ts';
-import { buildingGround, isBuilding } from './billboardArt.ts';
+import { drawBuildingGround, isBuilding } from './billboardArt.ts';
 import { World, holdCombatMark, STARVATION_MODES, TIMER_MODES } from '../game/world.ts';
 import { PlayerRecord, levelUpDue, statusLetter } from '../game/player.ts';
 import { commandMenu, hasMagic } from '../game/context.ts';
@@ -2385,14 +2385,10 @@ export class Screen implements GameIO {
       const dx = cell + (i % VIEW_SIZE) * tile;
       const dy = cell + Math.floor(i / VIEW_SIZE) * tile;
       gfx.drawShape(ctx, c.base, dx, dy, tile);
-      if (c.base !== Shape.Void)
-        gfx.drawShape(
-          map.terrainContext,
-          this.view3D.buildings && isBuilding(c.base) ? buildingGround(c.base) : map.forestGround(c.base, gfx),
-          dx,
-          dy,
-          tile,
-        );
+      if (c.base !== Shape.Void) {
+        if (this.view3D.buildings && isBuilding(c.base)) drawBuildingGround(map.terrainContext, gfx, c.base, dx, dy, tile);
+        else gfx.drawShape(map.terrainContext, map.forestGround(c.base, gfx), dx, dy, tile);
+      }
       this.drawViewportActors(ctx, c, dx, dy, tile);
       this.drawViewportActors(map.actorContext, c, dx, dy, tile, map.effectContext);
     }

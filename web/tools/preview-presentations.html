@@ -33,6 +33,7 @@
       import { TileMapScene } from '/src/ui/tileMapScene.ts';
       import { DEFAULT_3D_SETTINGS } from '/src/ui/view3DSettings.ts';
       import { Shape } from '/src/game/tiles.ts';
+      import { drawBuildingGround, isBuilding } from '/src/ui/billboardArt.ts';
       const canvas = document.querySelector('canvas');
       const renderer = new T.WebGLRenderer({ canvas, antialias: true, preserveDrawingBuffer: true });
       renderer.setSize(900, 900);
@@ -73,17 +74,15 @@
         cells.forEach((c, i) => {
           const x = 32 + (i % 11) * 64,
             y = 32 + Math.floor(i / 11) * 64;
-          gfx.drawShape(
-            map.terrainContext,
-            c.base === Shape.Forest || c.base === Shape.Brush
-              ? map.forestGround(c.base, gfx)
-              : [Shape.Town, Shape.Castle, Shape.Shrine].includes(c.base)
-                ? Shape.Grass
-                : c.base,
-            x,
-            y,
-            64,
-          );
+          if (isBuilding(c.base)) drawBuildingGround(map.terrainContext, gfx, c.base, x, y, 64);
+          else
+            gfx.drawShape(
+              map.terrainContext,
+              c.base === Shape.Forest || c.base === Shape.Brush ? map.forestGround(c.base, gfx) : c.base,
+              x,
+              y,
+              64,
+            );
         });
         const actors = [
           { id: 'fighter', shape: 136, x: step * 0.25 - 0.25, y: -0.25, worldX: 9 + step, worldY: 9, size: 0.65, ground: Shape.Grass },

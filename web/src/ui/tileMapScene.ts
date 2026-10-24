@@ -19,7 +19,7 @@ import { Shape } from '../game/tiles.ts';
 import type { ViewCell } from '../game/viewport.ts';
 import { battlefieldZoom, mapCameraTarget, minimumMapZoom } from './mapCameraBounds.ts';
 import { DEFAULT_3D_SETTINGS, useTreeCards, type View3DSettings } from './view3DSettings.ts';
-import { buildingGround, isBuilding } from './billboardArt.ts';
+import { drawBuildingGround, isBuilding } from './billboardArt.ts';
 import { BuildingBillboards, buildingSlide } from './buildingBillboards.ts';
 import { TerrainCubes } from './terrainCubes.ts';
 import { Shoreline } from './shoreline.ts';
@@ -350,7 +350,7 @@ export class TileMapScene {
       const x = (shape % 16) * 64;
       const y = Math.floor(shape / 16) * 64;
       if (this.forestGround(shape, gfx) !== shape) gfx.drawShape(ctx, Shape.Grass, x, y, 64);
-      else if (this.options.buildings && isBuilding(shape)) gfx.drawShape(ctx, buildingGround(shape), x, y, 64);
+      else if (this.options.buildings && isBuilding(shape)) drawBuildingGround(ctx, gfx, shape, x, y, 64);
       else if (shape === Shape.Shrine || shape === Shape.Door) {
         gfx.drawShape(ctx, shape === Shape.Door ? Shape.Floor : Shape.Grass, x, y, 64);
         gfx.drawShape(ctx, shape, x, y, 64, { masked: true });
