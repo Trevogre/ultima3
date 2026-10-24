@@ -1,0 +1,26 @@
+Night windows (Depth / sprite cards)
+
+Van Gogh town and castle cards have reviewed warm window regions. Only dark,
+blue window pixels inside those regions gain emission; architecture, flags and
+classic tiles retain their source pixels. Both animated building cutouts remove
+the reviewed background gaps below their flags without changing RGB artwork.
+
+With day/night lighting enabled, known settlement cards spill warm light over
+nearby ground, fading within 3.5 tiles. The strength follows the existing cosmetic
+daylight colour, rather than a second clock. Full overhead and model scenes omit
+these sprite-card lights. Disabling day/night removes both glow and spill.
+
+Light pools use the visibility-filtered landscape. Unknown cells block light and
+never receive it. Raised mountains/walls/counters block rays from a 0.65-tile-high
+window, giving ground shadows. Vegetation uses a small soft blocking footprint;
+this is an approximation, not a projected per-leaf silhouette. Pools do not
+illuminate recessed water, cube faces, or actor cards. Cubes still depth-occlude
+the ground light normally. No gameplay, discovery or movement effects.
+
+Pool textures are built at 64x64 per settlement and reused until scenery, raised
+terrain options or party-relative layout changes. Night strength is a material
+opacity update. All textures/materials are disposed on rebuild and scene disposal.
+
+Manual review: /tools/preview-window-lights.html (no save or preference writes).
+Includes night/day, rotation, overhead, two settlements, a blocker and hidden tile.
+Automated tests: windowLights.test.ts and the building masks in expandedArt.test.ts.

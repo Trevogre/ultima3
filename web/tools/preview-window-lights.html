@@ -1,0 +1,87 @@
+<!doctype html>
+<html>
+  <body style="margin: 0; background: #202020; color: white; font: 16px sans-serif">
+    <button id="night">Night</button><button id="day">Day</button><button id="rotate">Rotate</button><button id="top">Overhead</button>
+    <canvas></canvas>
+    <script type="module">
+      import * as T from 'three';
+      import { GraphicsSet } from '/src/ui/graphics.ts';
+      import { BuildingBillboards } from '/src/ui/buildingBillboards.ts';
+      import { drawBuildingGround, isBuilding } from '/src/ui/billboardArt.ts';
+      import { WindowLights } from '/src/ui/windowLights.ts';
+      import { DEFAULT_3D_SETTINGS } from '/src/ui/view3DSettings.ts';
+      import { Shape } from '/src/game/tiles.ts';
+      const gfx = await GraphicsSet.load('Van Gogh', '/graphics/');
+      const renderer = new T.WebGLRenderer({ canvas: document.querySelector('canvas') });
+      renderer.setSize(1000, 750);
+      renderer.setClearColor('#161a28');
+      const scene = new T.Scene(),
+        camera = new T.OrthographicCamera(-5, 5, 3.75, -3.75, 0.1, 100);
+      const buildings = new BuildingBillboards({ value: false }),
+        lights = new WindowLights();
+      scene.add(buildings.mesh, lights.group);
+      const cells = Array.from({ length: 81 }, () => ({ base: Shape.Grass }));
+      cells[4 * 9 + 3].base = Shape.Town;
+      cells[4 * 9 + 6].base = Shape.Castle;
+      cells[5 * 9 + 5].base = Shape.Mountains;
+      cells[6 * 9 + 5].base = Shape.Void;
+      const floors = [],
+        sides = [];
+      for (let i = 0; i < 81; i++) {
+        const c = document.createElement('canvas');
+        c.width = c.height = 64;
+        if (isBuilding(cells[i].base)) drawBuildingGround(c.getContext('2d'), gfx, cells[i].base, 0, 0, 64);
+        else gfx.drawShape(c.getContext('2d'), cells[i].base === Shape.Mountains ? Shape.Grass : cells[i].base, 0, 0, 64);
+        const texture = new T.CanvasTexture(c);
+        texture.colorSpace = T.SRGBColorSpace;
+        texture.magFilter = T.NearestFilter;
+        const material = new T.MeshBasicMaterial({ map: texture });
+        floors.push(material);
+        const mesh = new T.Mesh(new T.PlaneGeometry(1, 1), material);
+        mesh.position.set((i % 9) - 4, 4 - Math.floor(i / 9), 0);
+        scene.add(mesh);
+      }
+      const boxMaterial = new T.MeshBasicMaterial({ color: '#9e8a73' });
+      sides.push(boxMaterial);
+      const box = new T.Mesh(new T.BoxGeometry(1, 1, 1), boxMaterial);
+      box.position.set(1, -1, 0.5);
+      scene.add(box);
+      buildings.set(null, cells, gfx, true);
+      lights.set(null, cells, DEFAULT_3D_SETTINGS, true);
+      let tilt = Math.PI / 4,
+        yaw = (5 * Math.PI) / 180,
+        night = true;
+      function render() {
+        camera.position.set(20 * Math.sin(yaw) * Math.sin(tilt), -20 * Math.cos(yaw) * Math.sin(tilt), 20 * Math.cos(tilt));
+        camera.up.set(-Math.sin(yaw) * Math.cos(tilt), Math.cos(yaw) * Math.cos(tilt), Math.sin(tilt));
+        camera.lookAt(0, 0, 0);
+        buildings.faceCamera(camera, tilt);
+        const colour = night ? [0.35, 0.43, 0.65] : [1, 1, 1];
+        buildings.setDaylight(colour);
+        buildings.setWindowNight(night && tilt > 0 ? 1 : 0);
+        lights.setNight(night && tilt > 0 ? 1 : 0);
+        floors.forEach((m) => m.color.setRGB(...colour));
+        boxMaterial.color.setRGB(...colour);
+        renderer.render(scene, camera);
+      }
+      document.querySelector('#night').onclick = () => {
+        night = true;
+        render();
+      };
+      document.querySelector('#day').onclick = () => {
+        night = false;
+        render();
+      };
+      document.querySelector('#rotate').onclick = () => {
+        yaw += Math.PI / 2;
+        tilt = Math.PI / 4;
+        render();
+      };
+      document.querySelector('#top').onclick = () => {
+        tilt = 0;
+        render();
+      };
+      render();
+    </script>
+  </body>
+</html>

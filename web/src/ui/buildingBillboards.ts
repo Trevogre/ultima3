@@ -59,6 +59,9 @@ export class BuildingBillboards {
   private readonly up = new Vector3();
   private readonly rotation = new Quaternion();
   private readonly euler = new Euler();
+  private readonly windowGlow = { value: 0 };
+  private night = 0;
+  private paintedWindows = false;
   private lastTilt = 0;
   private lastYaw: number | null = null;
   private continuousYaw = 0;
@@ -91,13 +94,21 @@ export class BuildingBillboards {
     });
     this.material.onBeforeCompile = (shader) => {
       shader.uniforms.mapInverted = inverted;
+      shader.uniforms.windowGlow = this.windowGlow;
       shader.vertexShader = `attribute float buildingTile;\n${shader.vertexShader}`.replace(
         '#include <uv_vertex>',
         '#include <uv_vertex>\nvMapUv.x = (buildingTile + vMapUv.x) / 8.0;',
       );
-      shader.fragmentShader = `uniform bool mapInverted;\n${shader.fragmentShader}`.replace(
+      shader.fragmentShader = `uniform bool mapInverted; uniform float windowGlow;\n${shader.fragmentShader}`.replace(
         '#include <dithering_fragment>',
-        '#include <dithering_fragment>\nif (mapInverted) gl_FragColor.rgb = vec3(1.0) - gl_FragColor.rgb;',
+        `#include <dithering_fragment>
+          vec2 pixel = vec2(fract(vMapUv.x * 8.0), 1.0-vMapUv.y)*64.0;
+          float slot = mod(floor(vMapUv.x*8.0),4.0);
+          bool townWindow = slot<0.5 && pixel.x>16.0 && pixel.x<22.0 && pixel.y>27.0 && pixel.y<37.0;
+          bool castleWindow = slot>0.5 && slot<1.5 && ((pixel.x>13.0 && pixel.x<21.0)||(pixel.x>45.0 && pixel.x<54.0)) && ((pixel.y>22.0 && pixel.y<31.0)||(pixel.y>45.0 && pixel.y<56.0));
+          if ((townWindow || castleWindow) && gl_FragColor.b>gl_FragColor.r*1.12 && gl_FragColor.r<0.3)
+            gl_FragColor.rgb = mix(gl_FragColor.rgb,vec3(1.0,0.57,0.17),windowGlow);
+          if (mapInverted) gl_FragColor.rgb = vec3(1.0) - gl_FragColor.rgb;`,
       );
     };
     this.filter = addZoomFiltering(this.material, this.texture, 8, 1, true);
@@ -112,6 +123,8 @@ export class BuildingBillboards {
 
   set(landscape: Landscape | null, cells: ViewCell[], gfx: GraphicsSet, enabled: boolean): void {
     enabled = enabled && (this.kind === 'buildings' || !!gfx.forestCard || !!gfx.brushCards);
+    this.paintedWindows = this.kind === 'buildings' && !!gfx.buildingCards?.src.includes('Van%20Gogh');
+    this.windowGlow.value = this.paintedWindows ? this.night : 0;
     this.positions.length = 0;
     this.mesh.visible = enabled;
     this.mesh.count = 0;
@@ -238,6 +251,11 @@ export class BuildingBillboards {
     this.material.dispose();
     this.geometry.dispose();
     this.mesh.dispose();
+  }
+
+  setWindowNight(night: number): void {
+    this.night = night;
+    this.windowGlow.value = this.paintedWindows ? night : 0;
   }
 
   setDaylight(colour: [number, number, number]): void {

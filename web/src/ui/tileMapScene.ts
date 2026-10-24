@@ -39,6 +39,7 @@ import { WaterSurface } from './waterSurface.ts';
 import { cardGroundLift } from './cardGroundLift.ts';
 import { ModelScene } from './modelScene.ts';
 import type { ModelActor } from './modelActors.ts';
+import { WindowLights, windowNight } from './windowLights.ts';
 import { DoorCards } from './doorCards.ts';
 
 export interface ScreenRect {
@@ -62,6 +63,7 @@ export class TileMapScene {
   private characterCutouts = false;
   private buildingBlend = 0;
   private readonly movement = new CameraMovement();
+  private readonly windows = new WindowLights();
   private readonly grass = new GrassDepth();
   private readonly filters: ReturnType<typeof addZoomFiltering>[] = [];
   private readonly shading = { value: 1 };
@@ -220,7 +222,7 @@ export class TileMapScene {
     this.textures.push(shadowTexture);
     this.sunShadows = new SunShadows(shadowTexture, this.buildings.shadowTexture, this.trees.shadowTexture);
     this.scene.add(this.sunShadows.actors.mesh, this.sunShadows.buildings.mesh, this.sunShadows.trees.mesh);
-    this.scene.add(this.localTerrain);
+    this.scene.add(this.localTerrain, this.windows.group);
     this.scene.add(this.shadows.mesh);
     for (let i = 0; i < 4; i++) {
       const geometry = new PlaneGeometry(0.5, 0.5);
@@ -344,6 +346,12 @@ export class TileMapScene {
         : (solidSide - 1) / 2 - Math.floor(i / solidSide);
       this.solidCells.add(`${x},${y}`);
     });
+    this.windows.set(
+      landscape,
+      cells,
+      this.options,
+      this.options.buildings && this.options.dayNight && !this.modelMode && this.tilt > 0.001,
+    );
     this.models.group.visible = this.modelMode;
     if (this.modelMode) {
       this.models.setLandscape(landscape, cells, gfx, this.options.recessedWater, cliffHosts);
@@ -533,6 +541,8 @@ export class TileMapScene {
 
   /** Tint only the map; menus, status text and the moon indicators stay bright. */
   setDaylight(colour: [number, number, number]): void {
+    this.windows.setNight(windowNight(colour));
+    this.buildings.setWindowNight(this.tilt > 0.001 ? windowNight(colour) : 0);
     this.townFigures.setDaylight(colour);
     this.entranceFaces.material.color.setRGB(...colour);
     this.doors.material.color.setRGB(...colour);
@@ -731,6 +741,7 @@ export class TileMapScene {
   }
 
   dispose(): void {
+    this.windows.dispose();
     this.townFigures.dispose();
     this.entranceFaces.dispose();
     this.doors.dispose();
