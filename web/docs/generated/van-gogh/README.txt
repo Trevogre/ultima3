@@ -34,6 +34,9 @@ The alternate NPC column clears the neighbouring force-field gutter before
 resampling, preserving figure placement without opaque animation-edge lines.
 The jester reuses one fixed outfit and pose, with only a small raised-hand
 wave; head, torso and feet stay fixed and the red/blue legs never swap sides.
+Class figures use their own reviewed row seams. In particular the ranger
+(the second starter party member) ends before the extra whirlpool row;
+neighbouring sprites cannot appear below his feet in either animation pose.
 
 This is a first art pass, not a claim that every generated silhouette is
 final. UI, font and first-person dungeon art currently use the existing

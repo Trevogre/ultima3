@@ -20,10 +20,15 @@ source = Image.open(OUT / 'Standard-Tiles.png').convert('RGBA')
 # extra right column and bottom rows; never resize a malformed atlas wholesale.
 xs = [0, 103, 177, 261, 344, 428, 512, 596, 680, 764, 848, 932, 1016]
 ys = [0, 83, 162, 241, 321, 399, 477, 555, 633, 712, 790, 868, 946, 1023, 1100, 1176, 1255]
+# Reviewed transparent seams for the shared/class figures. The generated rows
+# drift upward near the bottom: a generic row 14 crop clips the ranger's sword
+# and includes the whirlpool beneath his feet. Both poses share these bounds.
+class_ys = [0,84,165,242,319,399,475,554,631,711,789,865,942,1019,1095,1167]
 atlas = Image.new('RGBA', (12*N, 16*N))
 for col in range(12):
     for row in range(16):
-        cell = draft.crop((xs[col], ys[row], xs[col+1], ys[row+1]))
+        top,bottom = class_ys[row:row+2] if col in [8,9] and row<15 else ys[row:row+2]
+        cell = draft.crop((xs[col], top, xs[col+1], bottom))
         if col == 3:
             # This generated column's last four pixels belong to the adjacent
             # force field, not the alternate NPC frame. Keep the existing cell

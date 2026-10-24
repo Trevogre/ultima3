@@ -42,6 +42,17 @@ function rgba(file: string) {
 }
 
 describe('opt-in Van Gogh art package', () => {
+  it('keeps the starter ranger frames clear of the whirlpool below the class figures', () => {
+    const atlas = rgba('Tiles');
+    for (const frame of [0, 1]) {
+      for (let y = 124; y < 128; y++) {
+        let opaque = 0;
+        for (let x = 0; x < 128; x++) if (atlas((8 + frame) * 128 + x, 14 * 128 + y)[3] >= 8) opaque++;
+        expect(opaque).toBeLessThan(100); // feet are allowed, a full-width next tile is not
+      }
+      for (const x of [0, 127]) expect(atlas((8 + frame) * 128 + x, 15 * 128 - 1)[3]).toBeLessThan(8);
+    }
+  });
   it('keeps the jester outfit, head and feet fixed while only his raised hand waves', () => {
     const atlas = rgba('Tiles');
     let changed = 0;
