@@ -77,6 +77,12 @@ back to the set's own blue/ochre procedural palette, not the VGA palette.
 No historical artwork or game rules are changed.
 
 Repack interiors: python3 tools/prepare-van-gogh-interiors.py, then
-npm run graphics-index. The manifest hashes all twelve shipped Van Gogh PNGs.
+npm run graphics-index. The manifest hashes all thirteen shipped Van Gogh PNGs.
 Review in tools/preview-van-gogh-interiors.html: corridor, wall, door, chest,
 ladder and low-torch scenes, menus and a complete readability sample.
+
+The fixed 3D door uses Van Gogh-DoorCard.png: the native front-panel crop
+(30,0)-(104,120) of the alternate I/door tile. This excludes the adjacent
+letter remnant, blue side jamb and bottom grid rule before fitting the panel
+to a tile-wide opening. The original overhead tile and door orientation are
+unchanged. Derived card pixels are copied without repainting.

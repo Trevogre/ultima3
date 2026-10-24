@@ -63,6 +63,11 @@ describe('opt-in Van Gogh art package', () => {
       expect(clear).toBeGreaterThan(4000);
     }
   });
+  it('fits the reviewed Van Gogh door front without neighboring lettering, side padding or repainted pixels', () => {
+    const atlas = rgba('Tiles'),
+      door = rgba('DoorCard');
+    for (let y = 0; y < 120; y++) for (let x = 0; x < 74; x++) expect(door(x, y)).toEqual(atlas(5 * 128 + 30 + x, 14 * 128 + y));
+  });
   it('keeps the starter ranger frames clear of the whirlpool below the class figures', () => {
     const atlas = rgba('Tiles');
     for (const frame of [0, 1]) {
@@ -155,6 +160,7 @@ describe('opt-in Van Gogh art package', () => {
     const dimensions: Record<string, number[]> = {
       Tiles: [1536, 2048],
       ChestCards: [256, 128],
+      DoorCard: [74, 120],
       DungeonMaterials: [1024, 1024],
       MenuBackground: [512, 512],
       Font: [3072, 32],
@@ -172,7 +178,7 @@ describe('opt-in Van Gogh art package', () => {
       const suffix = name.replace('Van Gogh-', '').replace('.png', '');
       expect([bytes.readUInt32BE(16), bytes.readUInt32BE(20)]).toEqual(dimensions[suffix]);
     }
-    expect(Object.keys(manifest.files)).toHaveLength(12);
+    expect(Object.keys(manifest.files)).toHaveLength(13);
     expect(VEGETATION_LAYOUTS['Van Gogh']).toEqual(VEGETATION_LAYOUTS.Standard);
   });
 

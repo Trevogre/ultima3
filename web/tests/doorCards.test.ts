@@ -19,12 +19,14 @@ describe('fixed door cards', () => {
         }),
       }),
     });
+    const drawShape = vi.fn();
     const doors = new DoorCards({ value: false }),
-      gfx = { drawShape: vi.fn() } as unknown as GraphicsSet;
+      gfx = { drawShape } as unknown as GraphicsSet;
     const cells: ViewCell[] = Array.from({ length: 9 }, () => ({ base: Shape.Floor }));
     cells[4].overlay = Shape.Door;
     cells[3].base = cells[5].base = Shape.Wall;
     doors.set(null, cells, gfx, true);
+    expect(drawShape).toHaveBeenCalledWith(expect.anything(), Shape.Door, 0, 0, 64, { masked: true, card: true });
     expect(doors.mesh.count).toBe(1);
     expect(doors.material.side).toBe(DoubleSide);
     expect(doors.material.depthWrite).toBe(true);

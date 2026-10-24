@@ -61,7 +61,7 @@ export class DoorCards {
     const source = this.artwork.getContext('2d', { willReadFrequently: true })!;
     source.imageSmoothingEnabled = false;
     source.clearRect(0, 0, 64, 64);
-    gfx.drawShape(source, Shape.Door, 0, 0, 64, { masked: true });
+    gfx.drawShape(source, Shape.Door, 0, 0, 64, { masked: true, card: true });
     const pixels = source.getImageData(0, 0, 64, 64).data;
     let left = 64,
       right = -1,

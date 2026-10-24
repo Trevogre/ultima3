@@ -194,6 +194,10 @@ for frame,outline in enumerate(chest_outlines):
     chest_cards.paste(tile,(frame*N,0))
 chest_cards.save(OUT / 'Van Gogh-ChestCards.png')
 
+# The door's visible front occupies only this reviewed rectangle. Exclude
+# the neighboring letter remnant, blue side jamb and bottom grid rule.
+# Keep native pixels in the derived card; DoorCards fits it to the opening.
+get(46,1).crop((30,0,104,120)).save(OUT / 'Van Gogh-DoorCard.png')
 atlas.save(OUT / 'Van Gogh-Tiles.png')
 
 # Buildings get explicit cutouts: the new painted grass is not pixel-identical

@@ -226,6 +226,8 @@ export class GraphicsSet {
     readonly chestCards: HTMLImageElement | null = null,
     /** A set-specific painted menu surface; other sets keep their original black windows. */
     readonly menuBackground: HTMLImageElement | null = null,
+    /** Reviewed door front without surrounding glyphs or side-wall padding. */
+    readonly doorCard: HTMLImageElement | null = null,
   ) {
     this.tileSize = tiles.width / TILE_COLUMNS;
     this.opaqueTiles = document.createElement('canvas');
@@ -312,6 +314,7 @@ export class GraphicsSet {
       await tryLoad('BuildingGrounds', ['png'], false),
       chestCards,
       await tryLoad('MenuBackground', ['png'], false),
+      await tryLoad('DoorCard', ['png'], false),
     );
   }
 
@@ -346,7 +349,10 @@ export class GraphicsSet {
     // Doors are the alternate frame of the letter "I"; `altFrame` forces the
     // second frame (used for the "HIT" balls).
     let rect = shape === Shape.Door ? this.tileRect(Shape.Door >> 1, true) : this.tileRect(shape >> 1, opts.altFrame ? true : undefined);
-    if (opts.masked && opts.card && shape === Shape.Chest && this.chestCards) {
+    if (opts.masked && opts.card && shape === Shape.Door && this.doorCard) {
+      src = this.doorCard;
+      rect = { x: 0, y: 0, w: this.doorCard.width, h: this.doorCard.height };
+    } else if (opts.masked && opts.card && shape === Shape.Chest && this.chestCards) {
       src = this.chestCards;
       const size = this.chestCards.height;
       rect = { x: ((rect.x / this.tileSize) % 2) * size, y: 0, w: size, h: size };
