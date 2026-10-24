@@ -1,0 +1,119 @@
+{
+  "library": "VSCO 2 Community Edition",
+  "license": "CC0-1.0",
+  "repository": "https://github.com/sgossner/VSCO-2-CE",
+  "revision": "440300901dfe9275fd84e0b7763af1f8443ae62e",
+  "processing": "Mono 22050 Hz PCM16; leading silence trimmed; peak normalized to 0.72; 3s crossfaded sustain loops or 3.5s harp with fade.",
+  "samples": [
+    {
+      "id": "violin-low",
+      "instrument": "violin",
+      "file": "violin-low.wav",
+      "root": 55,
+      "loopStart": 0.88,
+      "loopEnd": 3,
+      "source": "Strings/Violin Section/susVib/VlnEns_susVib_G2_v1.wav",
+      "sourceSha256": "feb96c5064fbef43087c495d61a9cab9f70ff1be5b22905147c1f86d5f89547c",
+      "sha256": "85434c6e178ffff851b525f4ee2edab679aef13509564369dbd6405d8bf3fee9"
+    },
+    {
+      "id": "violin-high",
+      "instrument": "violin",
+      "file": "violin-high.wav",
+      "root": 72,
+      "loopStart": 0.88,
+      "loopEnd": 3,
+      "source": "Strings/Violin Section/susVib/VlnEns_susVib_C4_v1.wav",
+      "sourceSha256": "c07edd5b2119fa1da2207aba996961b50dd616f69bbcf2300ab271bc6c16239f",
+      "sha256": "319e09eb8caed252160eda9b96d2c9f5ad13fbaf8484cd603a34edee09cb91b3"
+    },
+    {
+      "id": "cello-bass",
+      "instrument": "cello",
+      "file": "cello-bass.wav",
+      "root": 36,
+      "loopStart": 0.88,
+      "loopEnd": 3,
+      "source": "Strings/Cello Section/susvib/susvib_C1_v1_1.wav",
+      "sourceSha256": "abdcea431f384e135c469b0f3e4ac2a437f282f521dc5bcbe22abc221536e8de",
+      "sha256": "5f20a1ebf4b1df4a8932e5f166eed15be2588ad04205950671c429ca9872bc5d"
+    },
+    {
+      "id": "cello-low",
+      "instrument": "cello",
+      "file": "cello-low.wav",
+      "root": 60,
+      "loopStart": 0.88,
+      "loopEnd": 3,
+      "source": "Strings/Cello Section/susvib/susvib_C3_v1_1.wav",
+      "sourceSha256": "a614ee7ca821b44660236e47b89620cf914ec6ad27a99bc0d9764f47dbe512e1",
+      "sha256": "15d17a9b76d6001e550aecea3355d6538563304316b59603957f1252d154e725"
+    },
+    {
+      "id": "cello-high",
+      "instrument": "cello",
+      "file": "cello-high.wav",
+      "root": 67,
+      "loopStart": 0.88,
+      "loopEnd": 3,
+      "source": "Strings/Cello Section/susvib/susvib_G3_v1_1.wav",
+      "sourceSha256": "8d658346b8d2054fd534b3222b5d7a23196d22a83a68c3a04ffb76b21853a3db",
+      "sha256": "1ab70b12f799bac22f8f321500b34e5e31191f971a8835fe481e63e6642baa3b"
+    },
+    {
+      "id": "flute-low",
+      "instrument": "flute",
+      "file": "flute-low.wav",
+      "root": 60,
+      "loopStart": 0.88,
+      "loopEnd": 3,
+      "source": "Woodwinds/Flute/susvib/LDFlute_susvib_C3_v1_1.wav",
+      "sourceSha256": "073631c8442b275d803e608e840c2ce6cad3b08320018e08510cf3cb57373154",
+      "sha256": "cc5a3f937a789abb738482e59631ef6396dc118f2b369a738fe6b806174f66fd"
+    },
+    {
+      "id": "flute-mid",
+      "instrument": "flute",
+      "file": "flute-mid.wav",
+      "root": 72,
+      "loopStart": 0.88,
+      "loopEnd": 3,
+      "source": "Woodwinds/Flute/susvib/LDFlute_susvib_C4_v1_1.wav",
+      "sourceSha256": "e88a0ff35e6b8c29fd88bc778a4c817d955b2c3a2934def97a7d093b72e2ae97",
+      "sha256": "bd39bd8ceef132db447e6f04949cab7fdb739e6284a5a843ec901444d5f48193"
+    },
+    {
+      "id": "flute-high",
+      "instrument": "flute",
+      "file": "flute-high.wav",
+      "root": 84,
+      "loopStart": 0.88,
+      "loopEnd": 3,
+      "source": "Woodwinds/Flute/susvib/LDFlute_susvib_C5_v1_1.wav",
+      "sourceSha256": "ecb78c59069866ea7c3327594851827cd2f50c5d411aad422269a88e53614fbe",
+      "sha256": "fabe85d3a2cef1eb2cc130ad7af1f98a4e91dce78105fab784f1fbe608be5b39"
+    },
+    {
+      "id": "harp-low",
+      "instrument": "harp",
+      "file": "harp-low.wav",
+      "root": 48,
+      "loopStart": 0,
+      "loopEnd": 0,
+      "source": "Strings/Harp/KSHarp_C3_mf.wav",
+      "sourceSha256": "e5d232771704e140959819de8cf2a3e0ba49d021ca77354c42664ce4fce6d9f3",
+      "sha256": "c016a13fa34446ea72c7fe659e1796c0c4d18dcd5e4d844b99c141ea7cddb4d6"
+    },
+    {
+      "id": "harp-high",
+      "instrument": "harp",
+      "file": "harp-high.wav",
+      "root": 72,
+      "loopStart": 0,
+      "loopEnd": 0,
+      "source": "Strings/Harp/KSHarp_C5_mf.wav",
+      "sourceSha256": "7c8b862f6fd3f1442ed87537af976d84bda8c05a5b4900e8907d570b5202a517",
+      "sha256": "899daa69290d496e66c5498639e580dc684692cc767bd776fcf84f8f97952c2f"
+    }
+  ]
+}

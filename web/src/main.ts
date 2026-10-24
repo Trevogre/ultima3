@@ -37,6 +37,7 @@ import { TouchPad } from './ui/touch.ts';
 import { fullScreen } from './ui/fullScreen.ts';
 import { bootHold } from './ui/bootHold.ts';
 import { MusicPlayer } from './ui/music.ts';
+import { readMusicStyle, type MusicStyle } from './ui/orchestra.ts';
 import { Screen } from './ui/screen.ts';
 import { TILE_SETS } from './ui/help.ts';
 import { DEFAULT_3D_SETTINGS, read3DSettings, type View3DSettings } from './ui/view3DSettings.ts';
@@ -63,6 +64,7 @@ interface Prefs {
   music: boolean;
   /** The Music level, 0 to LEVELS; LEVELS is how loud the music always was. */
   musicLevel: number;
+  musicStyle: MusicStyle;
   dungeonMap: MapMode;
   /** The virtual controller shown; on first visit, shown on a touch screen. */
   touchPad: boolean;
@@ -83,6 +85,7 @@ const DEFAULT_PREFS: Prefs = {
   effectsLevel: LEVELS,
   music: true,
   musicLevel: LEVELS,
+  musicStyle: 'Classic',
   dungeonMap: 'off',
   touchPad: typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches,
 };
@@ -104,6 +107,7 @@ function loadPrefs(): Prefs {
     if (!SOUND_SETS.includes(prefs.soundSet)) prefs.soundSet = 'Standard';
     prefs.effectsLevel = validLevel(prefs.effectsLevel);
     prefs.musicLevel = validLevel(prefs.musicLevel);
+    prefs.musicStyle = readMusicStyle(prefs.musicStyle);
     return prefs;
   } catch {
     return { ...DEFAULT_PREFS };
@@ -254,6 +258,7 @@ async function start(): Promise<void> {
   sounds.level = prefs.effectsLevel;
   const music = new MusicPlayer();
   music.level = prefs.musicLevel;
+  music.style = prefs.musicStyle;
   sounds.onLong = (seconds) => music.duck(seconds); // long effects duck the music
   music.enabled = prefs.music;
   const keyboard = new Keyboard();
@@ -295,6 +300,7 @@ async function start(): Promise<void> {
       effectsLevel: sounds.level,
       music: music.enabled,
       musicLevel: music.level,
+      musicStyle: music.style,
       dungeonMap: world.mapMode,
       touchPad: prefs.touchPad,
     });

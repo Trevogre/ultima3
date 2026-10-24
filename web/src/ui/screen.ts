@@ -1149,6 +1149,7 @@ export class Screen implements GameIO {
         { key: 'S', label: `Sound FX: ${w.soundEnabled ? this.sounds.set : 'Off'}` },
         { key: 'F', label: `FX level: ${levelLabel(this.sounds.level)}` },
         { key: 'M', label: `Music: ${onOff(this.musicPlayer.enabled)}` },
+        { key: 'O', label: `Style: ${this.musicPlayer.style}`, hint: this.musicPlayer.styleHint },
         { key: 'U', label: `Music level: ${levelLabel(this.musicPlayer.level)}` },
       ],
       async (key, place) => {
@@ -1166,6 +1167,9 @@ export class Screen implements GameIO {
             break;
           case 'M':
             this.musicPlayer.enabled = !this.musicPlayer.enabled; // the player stops or resumes the current track itself
+            break;
+          case 'O':
+            this.musicPlayer.style = this.musicPlayer.style === 'Classic' ? 'Orchestral' : 'Classic';
             break;
           case 'F':
             // Each step is heard: a footstep at the new level, where sound effects are on.

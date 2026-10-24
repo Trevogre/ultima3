@@ -181,8 +181,30 @@ Everything the Apple II game had:
 - Party management: creation, forming, marching order, handing equipment,
   ztats, death and resurrection, save and resume.
 - Music: the original QuickTime music files are decoded and played on a
-  small Web Audio synthesizer (`src/ui/music.ts`).
+  small Web Audio synthesizer by default (`src/ui/music.ts`).
+  **Audio → Style: Classic / Orchestral** switches to a sampled arrangement
+  of cello, violin section, flute and harp, preserving the original note
+  pitches and timing. Some tunes flatten their musical parts, so the
+  arrangement uses pitch registers and short-note harp accents. Switching
+  styles restarts the current tune; volume, pause/resume, ducking and Off
+  apply to both styles. The choice is saved independently of visual presets.
 - Auto-combat, a LairWare addition.
+
+The offline orchestral bank is a 1.3 MiB processed subset of **VSCO 2 Community
+Edition**, by Versilian Studios / Sam Gossner, with Ivy Audio / Simon Dalzell
+credited where applicable. The publisher releases the recordings under
+[CC0](https://versilian-studios.com/vsco-community/).
+`public/music/orchestra/` includes the full license, upstream README, credits
+and a manifest with pinned source revision, original paths and SHA-256 hashes.
+The WAV files and license texts are bundled into the production/offline cache;
+playback never contacts a sample CDN. Classic does not load the sample bank.
+If sample loading fails, the player falls back to Classic and reports that
+in the style option's hint. Restarting retries the load.
+
+To reproduce the bank, run `python3 tools/fetch-orchestra.py /tmp/vsco-source`
+and `python3 tools/prepare-orchestra.py /tmp/vsco-source` from `web/` (NumPy
+required for preparation), then format the generated TypeScript and JSON
+with Prettier. These are development tools, not build or runtime dependencies.
 
 Left out on purpose, all additions LairWare made for the Mac rather than
 parts of the game: the animated intro and attract mode, auto-heal, the

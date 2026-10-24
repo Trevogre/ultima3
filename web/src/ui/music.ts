@@ -5,7 +5,7 @@
  * QuickTime Music Architecture files: not audio, but a list of note events
  * that QuickTime's software synthesizer played. Browsers cannot play them,
  * so this module reads the note list itself and plays it with Web Audio
- * oscillators.
+ * oscillators (Classic) or a bundled sample bank (Orchestral).
  *
  * File layout (QuickTime container): the `stco` atom lists chunk offsets
  * and `stsz` the sample sizes; concatenated, the samples are a stream of
@@ -25,6 +25,7 @@
  */
 
 import { LEVELS, levelGain } from './sound.ts';
+import { loadOrchestra, nearestSample, readMusicStyle, type LoadedSample, type MusicStyle } from './orchestra.ts';
 
 export interface MusicNote {
   /** Start time in seconds from the beginning of the tune. */
@@ -174,8 +175,29 @@ export class MusicPlayer {
   /** Heard though the game is paused: the Music level's dial is turning (Screen), so the player hears each step. */
   private hearing = false;
   private levelValue = LEVELS;
+  private styleValue: MusicStyle = 'Classic';
+  private bank: Promise<LoadedSample[] | null> | null = null;
+  private samples: LoadedSample[] | null = null;
+  private sampleFailure = false;
 
   constructor(private readonly baseUrl = 'music/') {}
+
+  get style(): MusicStyle {
+    return this.styleValue;
+  }
+  set style(value: MusicStyle) {
+    const style = readMusicStyle(value);
+    if (style === this.styleValue) return;
+    this.styleValue = style;
+    this.stopScheduling();
+    this.sync();
+  }
+
+  get styleHint(): string {
+    return this.sampleFailure && this.styleValue === 'Orchestral'
+      ? 'Samples unavailable; playing Classic. Restart to retry.'
+      : 'Recorded strings, flute and harp. Changing style restarts the tune.';
+  }
 
   /** Music on or off (the Settings toggle). Turning it on resumes the wanted track. */
   get enabled(): boolean {
@@ -294,14 +316,26 @@ export class MusicPlayer {
 
   private start(track: number): void {
     const token = ++this.startToken;
-    void this.load(track).then((tune) => {
+    const bank = this.styleValue === 'Orchestral' ? this.loadSamples() : Promise.resolve(null);
+    void Promise.all([this.load(track), bank]).then(([tune, samples]) => {
       if (!tune || token !== this.startToken || this.activeTrack !== track || !this.context) return;
+      this.samples = samples;
       this.tune = tune;
       this.loopStart = this.context.currentTime + 0.1;
       this.nextNote = 0;
       this.schedule();
       this.timer = setInterval(() => this.schedule(), SCHEDULER_MS);
     });
+  }
+
+  private loadSamples(): Promise<LoadedSample[] | null> {
+    if (!this.bank)
+      this.bank = loadOrchestra(this.context!, this.baseUrl).catch(() => {
+        this.sampleFailure = true;
+        console.warn('Orchestral samples unavailable; using Classic music.');
+        return null;
+      });
+    return this.bank;
   }
 
   private stopScheduling(): void {
@@ -342,6 +376,10 @@ export class MusicPlayer {
   }
 
   private playNote(note: MusicNote, at: number): void {
+    if (this.samples) {
+      this.playSample(note, at);
+      return;
+    }
     const ctx = this.context!;
     const osc = ctx.createOscillator();
     osc.type = note.part === 0 ? 'triangle' : 'square';
@@ -359,5 +397,34 @@ export class MusicPlayer {
     osc.stop(end + 0.01);
     this.playing.add(osc);
     osc.onended = () => this.playing.delete(osc);
+  }
+
+  private playSample(note: MusicNote, at: number): void {
+    const ctx = this.context!;
+    const { spec, buffer } = nearestSample(note, this.samples!);
+    const source = ctx.createBufferSource();
+    source.buffer = buffer;
+    source.playbackRate.value = 2 ** ((note.pitch - spec.root) / 12);
+    source.loop = spec.loopEnd > 0;
+    source.loopStart = spec.loopStart;
+    source.loopEnd = spec.loopEnd;
+    const gain = ctx.createGain();
+    const peak = (note.volume / 127) * (spec.instrument === 'flute' ? 0.35 : 0.5);
+    const end = at + Math.max(0.05, note.duration);
+    const attack = Math.min(0.05, Math.max(0.01, note.duration / 4));
+    gain.gain.setValueAtTime(0, at);
+    gain.gain.linearRampToValueAtTime(peak, at + attack);
+    gain.gain.setValueAtTime(peak, end);
+    gain.gain.linearRampToValueAtTime(0, end + 0.18);
+    source.connect(gain);
+    gain.connect(this.master!);
+    source.start(at);
+    source.stop(end + 0.2);
+    this.playing.add(source);
+    source.onended = () => {
+      this.playing.delete(source);
+      source.disconnect();
+      gain.disconnect();
+    };
   }
 }

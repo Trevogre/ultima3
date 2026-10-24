@@ -1,0 +1,20 @@
+Orchestral instrument samples: VSCO 2 Community Edition
+Versilian Studios / Sam Gossner; Ivy Audio / Simon Dalzell where applicable.
+Publisher: https://versilian-studios.com/vsco-community/
+Source: https://github.com/sgossner/VSCO-2-CE
+Pinned revision: 440300901dfe9275fd84e0b7763af1f8443ae62e
+License: CC0 1.0 Universal. Full legal text: LICENSE.txt.
+Original author documentation: UPSTREAM-README.txt.
+
+This game bundles a small derived subset, not the full sample library.
+Recordings were downmixed to mono, low-pass filtered and resampled to
+22050 Hz PCM16, trimmed, peak-normalized, and given sustain crossfades
+or harp release fades. Exact source paths and source/output SHA-256
+hashes are recorded in manifest.json. No new compositions replace the
+existing game music: the original note events drive a register-based
+arrangement of cello, violin section, flute and harp.
+
+The instruments use different source octave naming conventions. Manifest
+root pitches were checked against the recordings, rather than inferred
+uniformly from file names. The original game music has its existing
+provenance and is not relicensed by this sample-bank license.
