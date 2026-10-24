@@ -15,7 +15,12 @@ describe('terrain cubes', () => {
     const cells = Array.from({ length: 25 }, (_, i) => ({ base: i < 20 ? 76 + i * 2 : Shape.Door }));
     cubes.set(null, cells, DEFAULT_3D_SETTINGS);
     expect(cubes.mesh.count).toBe(20);
-    for (let i = 0; i < 20; i++) expect(cubes.backgrounds.getX(i)).toBe(1);
+    for (let i = 0; i < 20; i++) {
+      expect(cubes.backgrounds.getX(i)).toBe(1);
+      const matrix = new Matrix4();
+      cubes.mesh.getMatrixAt(i, matrix);
+      expect(new Vector3(0, 0, 1).applyMatrix4(matrix).z).toBe(0.5);
+    }
     cubes.set(null, cells, { ...DEFAULT_3D_SETTINGS, walls: false });
     expect(cubes.mesh.count).toBe(0);
     cubes.dispose();
@@ -70,6 +75,9 @@ describe('terrain cubes', () => {
     const matrix = new Matrix4();
     cubes.mesh.getMatrixAt(0, matrix);
     expect(new Vector3().setFromMatrixPosition(matrix).toArray()).toEqual([-1, 1, 0]);
+    expect(new Vector3(0, 0, 1).applyMatrix4(matrix).z).toBe(1);
+    cubes.mesh.getMatrixAt(1, matrix);
+    expect(new Vector3(0, 0, 1).applyMatrix4(matrix).z).toBe(0.5);
     cubes.set(null, cells, { ...DEFAULT_3D_SETTINGS, walls: false, steppedMountains: false });
     expect(cubes.mesh.count).toBe(1);
     expect([cubes.slots.getX(0), cubes.slots.getY(0)]).toEqual([8, 15]);

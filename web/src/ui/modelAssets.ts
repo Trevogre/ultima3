@@ -94,7 +94,9 @@ export function modelGeometry(shape: number): BufferGeometry {
     rock(0.47, 0x79817b, 0, 0.1, 0.34);
     box(0.26, 0.035, 0.36, 0x172327, 0, -0.3, 0.18);
     part(new TorusGeometry(0.2, 0.065, 4, 8).rotateX(Math.PI / 2), 0xa4a593, 0, -0.33, 0.23);
-  } else if (shape === Shape.Wall || shape === Shape.Wall + 4) {
+  } else if (shape === Shape.Wall + 4) {
+    box(1, 1, 0.5, 0x858c86);
+  } else if (shape === Shape.Wall) {
     box(1, 1, 0.7, 0x858c86);
     for (const x of [-0.34, 0, 0.34]) box(0.2, 0.2, 0.15, 0xa5aa9a, x, -0.3, 0.775);
   } else if (shape === Shape.Door) {

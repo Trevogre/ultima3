@@ -12,7 +12,7 @@ import { newWorld, savedCopy } from './helpers.ts';
 const actor: ModelActor = { id: 'party', shape: 136, x: 0, y: 0, worldX: 63, worldY: 10, size: 1, ground: Shape.Grass };
 
 describe('separate low-poly presentation', () => {
-  it('makes town letter barriers full-height solid blocks in model mode too', () => {
+  it('makes town letter barriers half-height solid blocks in model mode too', () => {
     vi.stubGlobal('document', { createElement: () => ({ width: 0, height: 0, getContext: () => ({}) }) });
     const scene = new ModelScene();
     try {
@@ -20,7 +20,7 @@ describe('separate low-poly presentation', () => {
       const sign = scene.group.children.filter((c): c is InstancedMesh => c instanceof InstancedMesh).at(-1)!;
       const matrix = new Matrix4();
       sign.getMatrixAt(0, matrix);
-      expect(new Vector3(0, 0, 0.5).applyMatrix4(matrix).z).toBe(1);
+      expect(new Vector3(0, 0, 0.5).applyMatrix4(matrix).z).toBe(0.5);
       expect(new Vector3(0, 0, -0.5).applyMatrix4(matrix).z).toBe(0);
       expect(sign.castShadow).toBe(true);
     } finally {

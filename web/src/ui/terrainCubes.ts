@@ -3,7 +3,7 @@ import { landscapeOffset, type Landscape } from '../game/landscape.ts';
 import { Shape } from '../game/tiles.ts';
 import type { ViewCell } from '../game/viewport.ts';
 import type { View3DSettings } from './view3DSettings.ts';
-import { MOUNTAIN_STEPS, raisedTerrain, shorelineUsesBackground } from './terrainDepth.ts';
+import { barrierHeight, MOUNTAIN_STEPS, raisedTerrain, shorelineUsesBackground } from './terrainDepth.ts';
 
 /** One tile wide and deep, standing one tile above the original ground plane. */
 export function terrainCubeGeometry(): BoxGeometry {
@@ -49,7 +49,8 @@ export class TerrainCubes {
       const y = landscape
         ? -landscapeOffset(Math.floor(i / side), landscape.partyY, side, landscape.wraps)
         : (side - 1) / 2 - Math.floor(i / side);
-      const steps = shape === Shape.Mountains && options.steppedMountains ? MOUNTAIN_STEPS : [{ width: 1, height: 1, base: 0 }];
+      const steps =
+        shape === Shape.Mountains && options.steppedMountains ? MOUNTAIN_STEPS : [{ width: 1, height: barrierHeight(shape), base: 0 }];
       for (const step of steps) {
         this.matrix.makeScale(step.width, step.width, step.height).setPosition(x, y, step.base);
         this.mesh.setMatrixAt(count, this.matrix);

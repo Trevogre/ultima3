@@ -9,6 +9,10 @@ export function raisedTerrain(shape: number, options: View3DSettings): boolean {
 }
 
 export const WATER_DEPTH = 0.2;
+/** Shop counters and town lettering are low barriers, not enclosing walls. */
+export function barrierHeight(shape: number): number {
+  return shape === Shape.Wall + 4 || shorelineUsesBackground(shape) ? 0.5 : 1;
+}
 export const MOUNTAIN_STEPS = [
   { width: 1, height: 0.45, base: 0 },
   { width: 0.72, height: 0.4, base: 0.45 },

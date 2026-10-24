@@ -20,6 +20,7 @@ import type { GraphicsSet } from './graphics.ts';
 import { hasTerrainModel, modelGeometry, modelGroundColour } from './modelAssets.ts';
 import { ModelHeadings, type ModelActor } from './modelActors.ts';
 import { sunShadow } from './sunShadows.ts';
+import { barrierHeight } from './terrainDepth.ts';
 
 /** Separate solid-mesh presentation, sharing only the visibility-filtered map. */
 export class ModelScene {
@@ -148,7 +149,8 @@ export class ModelScene {
       this.group.add(mesh);
     }
     // Functional sign art stays on the top of a solid block, never a billboard.
-    this.matrix.makeScale(1, 1, 1).setPosition(x, y, 0.5);
+    const height = barrierHeight(shape);
+    this.matrix.makeScale(1, 1, height).setPosition(x, y, height / 2);
     sign.mesh.setMatrixAt(sign.mesh.count++, this.matrix);
   }
 

@@ -25,7 +25,10 @@
       >
     </div>
     <canvas aria-label="Wall clearance fixture"></canvas>
-    <p>NPC at left: wall behind. Party in centre. NPC at right: foreground wall. Raised letter barriers at rear. No game state.</p>
+    <p>
+      NPC at left: full wall behind. Party in centre. NPC at right: half-height counter in front. Half-height letters at rear. No game
+      state.
+    </p>
     <script type="module">
       import * as T from 'three';
       import { TileMapScene } from '/src/ui/tileMapScene.ts';
@@ -39,7 +42,7 @@
       const cells = Array.from({ length: 121 }, () => ({ base: Shape.Floor }));
       const index = (x, y) => (5 - y) * 11 + x + 5;
       for (const x of [-2, 0]) cells[index(x, 1)].base = Shape.Wall;
-      cells[index(2, -1)].base = Shape.Wall;
+      cells[index(2, -1)].base = Shape.Wall + 4;
       for (let x = -2; x <= 2; x++) cells[index(x, 3)].base = 76 + (x + 2) * 2;
       cells[index(0, 0)].party = true;
       let gfx;
