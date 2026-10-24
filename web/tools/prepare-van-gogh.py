@@ -77,6 +77,38 @@ for index,crop in ship_specs.items():
                 alternate.putpixel((x,y),base.getpixel((x,sy)))
     put(index,0,base);put(index,1,alternate)
 
+# Reviewed ship silhouettes for angled sprite cards. Keep RGB paint, including
+# cool sail shading and dark hull planks; only the derived alpha changes.
+ship_cards=Image.new('RGBA',(4*N,N))
+ship_parts={
+    11: [
+        [(3,77),(54,88),(94,87),(126,81),(123,96),(113,116),(101,125),(86,127),(36,127),(23,122),(14,110),(8,94)],
+        [(55,4),(64,4),(64,90),(54,90)],
+        [(64,5),(74,5),(64,15)],
+        [(87,4),(95,4),(95,90),(87,90)],
+        [(94,4),(122,5),(118,12),(109,20),(94,17)],
+        [(54,23),(43,25),(36,34),(30,44),(23,59),(15,71),(30,74),(54,76)],
+        [(64,26),(87,69),(77,74),(64,76)],
+        [(95,27),(105,44),(123,71),(111,73),(95,74)],
+    ],
+    15: [
+        [(4,76),(57,86),(93,85),(125,81),(123,94),(113,110),(98,124),(77,127),(39,127),(26,122),(18,111),(10,94)],
+        [(59,5),(65,5),(65,25),(70,25),(70,86),(59,86)],
+        [(82,3),(91,3),(91,87),(82,87)],
+        [(89,3),(114,3),(114,9),(102,17),(89,16)],
+        [(59,25),(47,26),(39,36),(30,47),(20,62),(19,66),(39,65),(58,72),(70,68),(70,25)],
+        [(89,18),(106,43),(120,70),(89,70)],
+        [(45,62),(49,63),(50,86),(46,86)],
+    ],
+}
+for slot,index in enumerate([11,15]):
+    mask=Image.new('L',(N,N)); painter=ImageDraw.Draw(mask)
+    for outline in ship_parts[index]: painter.polygon(outline,fill=255)
+    for frame in range(2):
+        tile=get(index,frame); tile.putalpha(ImageChops.multiply(tile.getchannel('A'),mask))
+        ship_cards.paste(tile,((slot+frame*2)*N,0))
+ship_cards.save(OUT / 'Van Gogh-ShipCards.png')
+
 # Trim the draft's thin grid rules from continuous terrain. The unused second
 # water/floor frames must remain terrain too, rather than generated empty art.
 for index in [0,1,4,8,32,33,35,37]:
@@ -278,6 +310,12 @@ for row,index in enumerate([13,14]):
         sea_review.alpha_composite(get(index,frame).resize((2*N,2*N),Image.Resampling.NEAREST),(frame*2*N,row*2*N+20))
 ImageDraw.Draw(sea_review).text((8,4),'Serpent / Man-O-War: frame A, frame B',fill='white')
 sea_review.convert('RGB').save(DOC/'sea-creature-review.png')
+
+ship_review=Image.new('RGBA',(8*N,2*N+20),'#777777')
+for slot in range(4):
+    ship_review.alpha_composite(ship_cards.crop((slot*N,0,(slot+1)*N,N)).resize((2*N,2*N),Image.Resampling.NEAREST),(slot*2*N,20))
+ImageDraw.Draw(ship_review).text((8,4),'Frigate / pirate cutouts: A, A, B, B (native paint, derived alpha)',fill='white')
+ship_review.convert('RGB').save(DOC/'ship-card-review.png')
 
 # Neutral background inspection sheet makes alpha holes visible in review.
 review=Image.new('RGBA',atlas.size,'#777777'); review.alpha_composite(atlas)

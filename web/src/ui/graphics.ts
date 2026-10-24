@@ -228,6 +228,8 @@ export class GraphicsSet {
     readonly menuBackground: HTMLImageElement | null = null,
     /** Reviewed door front without surrounding glyphs or side-wall padding. */
     readonly doorCard: HTMLImageElement | null = null,
+    /** Frigate/pirate cutouts, followed by their alternate flag frames. */
+    readonly shipCards: HTMLImageElement | null = null,
   ) {
     this.tileSize = tiles.width / TILE_COLUMNS;
     this.opaqueTiles = document.createElement('canvas');
@@ -315,6 +317,7 @@ export class GraphicsSet {
       chestCards,
       await tryLoad('MenuBackground', ['png'], false),
       await tryLoad('DoorCard', ['png'], false),
+      await tryLoad('ShipCards', ['png'], false),
     );
   }
 
@@ -356,6 +359,11 @@ export class GraphicsSet {
       src = this.chestCards;
       const size = this.chestCards.height;
       rect = { x: ((rect.x / this.tileSize) % 2) * size, y: 0, w: size, h: size };
+    } else if (opts.masked && opts.card && (shape === Shape.Frigate || shape === Shape.Pirate) && this.shipCards) {
+      src = this.shipCards;
+      const cell = this.shipCards.height;
+      const frame = (rect.x / this.tileSize) % 2;
+      rect = { x: ((shape === Shape.Pirate ? 1 : 0) + frame * 2) * cell, y: 0, w: cell, h: cell };
     } else if (opts.masked && opts.card && characterCard(shape)) {
       const key = `${rect.x}:${rect.y}`;
       let card = this.characterCards.get(key);

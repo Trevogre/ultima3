@@ -55,3 +55,34 @@ describe('reviewed door front routing', () => {
     expect(drawImage).toHaveBeenLastCalledWith(tiles, 5 * 128, 14 * 128, 128, 128, 0, 0, 64, 64);
   });
 });
+
+describe('reviewed ship card rendering', () => {
+  it('selects each ship and flag frame only for 3D cards, retaining full Classic tiles', () => {
+    const gfx = Object.create(GraphicsSet.prototype) as GraphicsSet;
+    const tiles = {},
+      cards = { height: 128 },
+      swapped = new Uint8Array(192);
+    Object.assign(gfx, {
+      tileSize: 128,
+      maskedTiles: tiles,
+      opaqueTiles: tiles,
+      shipCards: cards,
+      hasClassFigures: true,
+      swapped,
+      scroll: new Map(),
+    });
+    const drawImage = vi.fn(),
+      ctx = { drawImage } as unknown as CanvasRenderingContext2D;
+    for (const [slot, shape] of [
+      [0, Shape.Frigate],
+      [1, Shape.Pirate],
+    ])
+      for (const frame of [0, 1]) {
+        swapped[shape >> 1] = frame;
+        gfx.drawShape(ctx, shape, 0, 0, 64, { masked: true, card: true });
+        expect(drawImage).toHaveBeenLastCalledWith(cards, (slot + frame * 2) * 128, 0, 128, 128, 0, 0, 64, 64);
+        gfx.drawShape(ctx, shape, 0, 0, 64, { masked: true, card: false });
+        expect(drawImage).toHaveBeenLastCalledWith(tiles, frame * 128, (shape >> 1) * 128, 128, 128, 0, 0, 64, 64);
+      }
+  });
+});

@@ -98,6 +98,25 @@ describe('opt-in Van Gogh art package', () => {
     for (let index = 16; index <= 23; index++)
       for (let y = 0; y < 128; y++) for (const x of [126, 127]) expect(atlas(3 * 128 + x, (index % 16) * 128 + y)[3]).toBe(0);
   });
+  it('cuts painted backgrounds from both ship animations without repainting or altering Classic', () => {
+    const atlas = rgba('Tiles'),
+      cards = rgba('ShipCards');
+    for (const [slot, index] of [
+      [0, 11],
+      [1, 15],
+    ])
+      for (const frame of [0, 1]) {
+        const start = (slot + frame * 2) * 128;
+        expect(cards(start + 2, 2)[3]).toBe(0);
+        expect(cards(start + 78, 80)[3]).toBe(0);
+        expect(cards(start + 60, 100)).toEqual(atlas(frame * 128 + 60, index * 128 + 100));
+        expect(cards(start + 90, 40)).toEqual(atlas(frame * 128 + 90, index * 128 + 40));
+        expect(atlas(frame * 128 + 2, index * 128 + 2)[3]).toBeGreaterThan(200);
+        for (let y = 0; y < 128; y++)
+          for (let x = 0; x < 128; x++)
+            expect(cards(start + x, y).subarray(0, 3)).toEqual(atlas(frame * 128 + x, index * 128 + y).subarray(0, 3));
+      }
+  });
   it('keeps frigate and pirate hulls, masts, sails and backgrounds fixed while only red flag cloth animates', () => {
     const atlas = rgba('Tiles');
     for (const index of [11, 15]) {
@@ -217,6 +236,7 @@ describe('opt-in Van Gogh art package', () => {
     const dimensions: Record<string, number[]> = {
       Tiles: [1536, 2048],
       ChestCards: [256, 128],
+      ShipCards: [512, 128],
       DoorCard: [74, 120],
       DungeonMaterials: [1024, 1024],
       MenuBackground: [512, 512],
@@ -235,7 +255,7 @@ describe('opt-in Van Gogh art package', () => {
       const suffix = name.replace('Van Gogh-', '').replace('.png', '');
       expect([bytes.readUInt32BE(16), bytes.readUInt32BE(20)]).toEqual(dimensions[suffix]);
     }
-    expect(Object.keys(manifest.files)).toHaveLength(13);
+    expect(Object.keys(manifest.files)).toHaveLength(14);
     expect(VEGETATION_LAYOUTS['Van Gogh']).toEqual(VEGETATION_LAYOUTS.Standard);
   });
 
